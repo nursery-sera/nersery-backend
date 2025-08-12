@@ -261,6 +261,31 @@
 
     .info-panel{ left: 140px; font-size: clamp(12px, 3.2vw, 15px); max-height:140px; min-width:260px; }
     /* ===== 上書きここまで ===== */
+    
+    /* 全体の最大幅をGAS時代の表示感に合わせる */
+body {
+  max-width: 480px;  /* スマホ画面幅相当 */
+  margin: 0 auto;
+  font-size: 16px;   /* 全体文字サイズを下げる */
+}
+
+/* 商品一覧カードの調整 */
+.product-item {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* 商品画像の調整 */
+.product-item img {
+  width: 100%;
+  height: auto;
+}
+
+/* 商品名や価格の文字サイズ */
+.product-name, .product-price {
+  font-size: 1rem; /* 16px */
+}
   </style>
 </head>
 <body>
