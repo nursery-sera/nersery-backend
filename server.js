@@ -1,4 +1,4 @@
-// server.js（完全版）
+// server.js（Not Found対策・デバッグ付き 完全版）
 import express from "express";
 import cors from "cors";
 import fs from "fs";
@@ -6,11 +6,10 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { Pool } from "pg";
 
-// __dirname 相当（ESM：いーえすえむ）
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ===== DB接続（でーたべーす・せつぞく）=====================================
+// ===== DB接続 =====
 const pool = process.env.DATABASE_URL
   ? new Pool({
       connectionString: process.env.DATABASE_URL,
@@ -18,15 +17,13 @@ const pool = process.env.DATABASE_URL
     })
   : null;
 
-// 管理トークン（とうくん）
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "dev-token";
 
-// ===== App 基本設定 ========================================================
 const app = express();
-app.set("trust proxy", true); // ぷろきし越しの https 判定を正しく
+app.set("trust proxy", true);
 app.use(express.json({ limit: "5mb" }));
 
-// CORS（こーず：他オリジン許可）→ www ドメインだけ許可
+// CORS：wwwのみ
 app.use(
   cors({
     origin: ["https://www.nurserysera.com"],
@@ -34,83 +31,133 @@ app.use(
   })
 );
 
-// 静的ファイル（/public）
+// 静的ファイル
 app.use("/public", express.static(path.join(__dirname, "public")));
 
-// ページ格納ディレクトリ
+// 探索ディレクトリ
 const PAGES_DIR = path.join(__dirname, "pages");
+const ROOT_DIR = __dirname; // 念のためプロジェクト直下も探す
 
-// 現在の正しいベースURLを作る（x-forwarded-proto/host 優先）
+// Base URL
 function getBaseUrl(req) {
   const proto = (req.headers["x-forwarded-proto"] || req.protocol || "http")
     .toString()
     .split(",")[0];
   const host = req.headers["x-forwarded-host"] || req.get("host");
-  return `${proto}://${host}`; // 例: https://www.nurserysera.com
+  return `${proto}://${host}`;
 }
 
-// ===== HTMLレンダリング（GASタグ置換対応）===================================
-// - <? var url = getScriptUrl(); ?> は削除
-// - <?= url ?> は自ドメイン（baseUrl）に置換（ちかん）
-// - window.API_BASE を head 終了直前に注入
-function renderPage(rawPage, req, res) {
-  const page = (rawPage || "index").toLowerCase();
-  if (!/^[a-z0-9-]+$/.test(page)) return res.status(400).send("Bad Request");
+// 安全なページ名に正規化（.htmlを削除、英数ハイフン以外除去）
+function normalizePage(raw) {
+  const s = String(raw || "index").trim().toLowerCase();
+  const noHtml = s.replace(/\.html$/i, "");
+  return noHtml.replace(/[^a-z0-9-]/g, "") || "index";
+}
 
-  const file = path.join(PAGES_DIR, `${page}.html`);
-  if (!fs.existsSync(file)) return res.status(404).send("Not Found");
+// 実際に探す候補パスを列挙
+function candidateFiles(page) {
+  return [
+    path.join(PAGES_DIR, `${page}.html`), // 1) pages/page.html
+    path.join(ROOT_DIR, `${page}.html`)   // 2) root/page.html（保険）
+  ];
+}
 
-  const baseUrl = getBaseUrl(req);
-  let html = fs.readFileSync(file, "utf8");
-
-  // GASテンプレタグ置換
-  html = html.replace(/\<\?\s*var\s+url\s*=\s*getScriptUrl\(\);\s*\?\>/g, ""); // 宣言削除
-  html = html.replace(/\<\?\=\s*url\s*\?\>/g, baseUrl);                          // <?= url ?> → baseUrl
-
-  // API_BASE（えーぴーあい・べーす）を注入（未定義なら入れる）
+// HTMLを読み、GASタグ置換とAPI_BASE注入
+function loadAndPatchHtml(filePath, baseUrl) {
+  let html = fs.readFileSync(filePath, "utf8");
+  // GAS宣言削除
+  html = html.replace(/\<\?\s*var\s+url\s*=\s*getScriptUrl\(\);\s*\?\>/g, "");
+  // <?= url ?> → baseUrl
+  html = html.replace(/\<\?\=\s*url\s*\?\>/g, baseUrl);
+  // API_BASE注入（未定義なら）
   if (!/window\.API_BASE/.test(html)) {
     html = html.replace(
       /<\/head>/i,
       `<script>window.API_BASE='${baseUrl}/api';</script></head>`
     );
   }
-
-  res.setHeader("Content-Type", "text/html; charset=UTF-8");
-  res.send(html);
+  return html;
 }
 
-// ===== ルーティング（るーてぃんぐ）=========================================
-// 0) /index.html /cart.html など “.html あり” への直接アクセスにも対応
+// レンダリング（見つからなければ index.html にフォールバック）
+function renderPage(rawPage, req, res) {
+  const page = normalizePage(rawPage);
+  const baseUrl = getBaseUrl(req);
+  const tried = [];
+
+  for (const fp of candidateFiles(page)) {
+    tried.push(fp);
+    if (fs.existsSync(fp)) {
+      const html = loadAndPatchHtml(fp, baseUrl);
+      res.setHeader("Content-Type", "text/html; charset=UTF-8");
+      return res.send(html);
+    }
+  }
+
+  // フォールバック：index.html
+  for (const fp of candidateFiles("index")) {
+    tried.push(fp);
+    if (fs.existsSync(fp)) {
+      const html = loadAndPatchHtml(fp, baseUrl);
+      res.setHeader("Content-Type", "text/html; charset=UTF-8");
+      return res.send(html);
+    }
+  }
+
+  // ここに来たら本当にファイルが無い
+  res.status(404).send(
+    "Not Found (no html found at:)\n" + tried.map(p => "- " + p).join("\n")
+  );
+}
+
+// ===== デバッグ用：今サーバが何を見ているかを表示（本番安定後は消してOK）=====
+app.get("/__debug", (req, res) => {
+  const page = normalizePage(req.query.page || "index");
+  const tried = candidateFiles(page).concat(candidateFiles("index"));
+  res.setHeader("Content-Type", "text/plain; charset=UTF-8");
+  res.end(
+    [
+      `cwd: ${process.cwd()}`,
+      `__dirname: ${__dirname}`,
+      `PAGES_DIR: ${PAGES_DIR}`,
+      `ROOT_DIR: ${ROOT_DIR}`,
+      `page(query): ${req.query.page || "index"} -> normalized: ${page}`,
+      `candidates:`,
+      ...tried.map((p) => `  - ${p}  ${fs.existsSync(p) ? "[EXISTS]" : "[NONE]"}`)
+    ].join("\n")
+  );
+});
+
+// ===== ルーティング =====
+
+// .html直アクセス（/index.html /cart.html）
 app.get(/^\/([a-z0-9-]+)\.html$/i, (req, res) => {
-  const page = req.params[0]; // "index" や "cart"
+  const page = req.params[0];
   return renderPage(page, req, res);
 });
 
-// 1) クエリ形式 /?page=index
+// クエリ形式（/?page=index や /?page=index.html）
 app.get("/", (req, res, next) => {
   if (req.path.startsWith("/api") || req.path.startsWith("/public")) return next();
-  const page = String(req.query.page || "index");
+  const page = req.query.page || "index";
   return renderPage(page, req, res);
 });
 
-// 2) パス形式 /index /cart ... （/api と /public は除外）
+// パス形式（/index /cart など。/api と /public は除外）
 app.get(/^\/(?!api\/|public\/)([a-z0-9-]+)?$/i, (req, res) => {
   const page = req.params[0] || "index";
   return renderPage(page, req, res);
 });
 
-// ===== API（えーぴーあい）===================================================
-// ヘルスチェック
+// ===== API =====
 app.get("/api/health", (_, res) => res.json({ ok: true }));
 
-// 商品一覧（DB未設定なら空配列）
 app.get("/api/products", async (_, res) => {
   if (!pool) return res.json([]);
   const { rows } = await pool.query("SELECT * FROM products ORDER BY id DESC");
   res.json(rows);
 });
 
-// 商品の簡易追加（管理用）
 app.post("/api/products/quick-add", async (req, res) => {
   if (req.body?.token !== ADMIN_TOKEN) {
     return res.status(401).json({ error: "unauthorized" });
@@ -133,7 +180,6 @@ app.post("/api/products/quick-add", async (req, res) => {
   res.json(rows[0]);
 });
 
-// 注文作成
 app.post("/api/orders", async (req, res) => {
   if (!pool) return res.status(500).json({ error: "DB not available" });
 
@@ -155,7 +201,6 @@ app.post("/api/orders", async (req, res) => {
   );
   const orderId = o.rows[0].id;
 
-  // Brevo（ぶれぼ：メール送信API）で自動返信
   if (process.env.BREVO_API_KEY) {
     const body = {
       sender: {
@@ -187,14 +232,12 @@ app.post("/api/orders", async (req, res) => {
   res.json({ orderId, total });
 });
 
-// 入金反映
 app.put("/api/orders/:id/paid", async (req, res) => {
   if (!pool) return res.status(500).json({ error: "DB not available" });
   await pool.query("UPDATE orders SET is_paid = TRUE WHERE id = $1", [req.params.id]);
   res.json({ ok: true });
 });
 
-// 集計
 app.get("/api/reports/category", async (_, res) => {
   if (!pool) return res.json([]);
   const { rows } = await pool.query(
@@ -208,6 +251,5 @@ app.get("/api/reports/all", async (_, res) => {
   res.json(rows[0] || { total_amount: 0, total_orders: 0 });
 });
 
-// ===== Listen（りすん：待受）=================================================
 const port = process.env.PORT || 8080;
 app.listen(port, () => console.log(`App running on :${port}`));
