@@ -1,14 +1,14 @@
 {
-  "name": "nursery-gas-like",
+  "name": "nurserysera",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "NODE_ENV=development node server.js"
+  },
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.19.2",
     "pg": "^8.11.5"
-  },
-  "scripts": {
-    "start": "node server.js"
   }
 }
