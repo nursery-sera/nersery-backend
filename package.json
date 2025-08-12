@@ -1,5 +1,5 @@
 {
-  "name": "nursery-backend",
+  "name": "nursery-gas-like",
   "private": true,
   "type": "module",
   "engines": { "node": ">=18" },
