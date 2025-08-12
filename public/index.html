@@ -87,7 +87,22 @@
 /* iPhoneの自動拡大対策（フォームフォーカス時などのズームを抑える） */
 html { -webkit-text-size-adjust: 100%; }
 
+/* === モバイル時だけタイトル系を段階的に縮小（見た目はそのまま・はみ出し防止） === */
+@media (max-width: 600px){
+  .main-title { font-size: 96px; }
+  .subtitle1  { font-size: 84px; }
+}
+@media (max-width: 480px){
+  .main-title { font-size: 72px; }
+  .subtitle1  { font-size: 72px; }
+}
+@media (max-width: 390px){ /* iPhone mini系 */
+  .main-title { font-size: 56px; }
+  .subtitle1  { font-size: 60px; }
+}
 
+/* iPhoneの自動拡大を無効化（フォームで勝手に拡大するのを抑える） */
+html { -webkit-text-size-adjust: 100%; }
     @media (max-width:480px){
       .product-name{font-size:34px}
       .price{font-size:32px}
