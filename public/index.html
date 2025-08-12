@@ -2,9 +2,9 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <!-- 等倍表示（iPhoneでのドアップ防止） -->
+  <!-- iPhone等でのドアップ防止（等倍表示） -->
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
-  <!-- このページ内で遷移を完結させる -->
+  <!-- 同一タブ遷移 -->
   <base target="_self">
   <title>nursery sera - 商品一覧</title>
 
@@ -20,10 +20,27 @@
   </script>
 
   <style>
-    /* ===== ベース（あなたのデザインそのまま） ===== */
-    html,body{margin:0;padding:0;font-size:20px;-webkit-text-size-adjust:100%;font-family:Arial,sans-serif;background:#fff0f5;color:#333;box-sizing:border-box}
-    *,*:before,*:after{box-sizing:inherit}
-    .container{max-width:1100px;margin:0 auto;padding:0 16px}
+    /* ===== ベース（あなたのデザインを尊重） ===== */
+    html,body{
+      margin:0; padding:0; font-size:20px;
+      -webkit-text-size-adjust:100%;
+      text-size-adjust:100%;
+      font-family:Arial,sans-serif;
+      background:#fff0f5; color:#333;
+      box-sizing:border-box;
+      /* 横はみ出し時に強制でカット（自動拡大を防ぐ保険） */
+      overflow-x:hidden;
+    }
+    *,*:before,*:after{ box-sizing:inherit }
+    .container{ max-width:1100px; margin:0 auto; padding:0 16px }
+
+    /* ===== スマホ幅の額縁（最大幅固定でドアップ防止） ===== */
+    .phone-viewport{
+      width:100%;
+      max-width:480px;
+      margin:0 auto;
+      font-size: clamp(14px, 3.6vw, 16px);
+    }
 
     /* ===== ヘッダー ===== */
     .header-bar{
@@ -37,18 +54,21 @@
       width:48px; height:40px; cursor:pointer; background:none; border:none;
       padding:0; margin:0; transform:translateX(20px);
     }
-    .menu-icon span{
-      display:block; height:3px; width:100%; background:#333; border-radius:2px;
-    }
+    .menu-icon span{ display:block; height:3px; width:100%; background:#333; border-radius:2px }
     .main-title{
       font-family:'Bayon', cursive;
-      font-size:120px; margin:0; white-space:nowrap; transform:translateX(20px);
+      /* 元:120px → 端末幅で自動調整 */
+      font-size: clamp(32px, 12vw, 56px);
+      margin:0; white-space:nowrap; transform:translateX(6px);
       cursor:pointer;
+      line-height:1.1;
     }
     .cart-button{
       background-image:url('https://gist.githubusercontent.com/nursery-sera/3bfad5863718f7147d193844bdaca462/raw/d7f9244ea2cbbaf4c13a67c30831022e37076b17/plantcart-icon.svg');
       background-size:contain; background-repeat:no-repeat;
-      width:100px; height:100px; border:none; background-color:transparent; cursor:pointer;
+      width: clamp(36px, 10vw, 56px);
+      height: clamp(36px, 10vw, 56px);
+      border:none; background-color:transparent; cursor:pointer;
     }
 
     /* ===== メニュー（スライド＋オーバーレイ） ===== */
@@ -56,8 +76,7 @@
       position:fixed; inset:0; width:100vw; height:100vh;
       background:rgba(0,0,0,.3); z-index:2000; display:none;
     }
-    .overlay.show{ display:block; }
-
+    .overlay.show{ display:block }
     .category-menu{
       position:fixed; top:0; left:0;
       width:66vw; height:55vh;
@@ -70,222 +89,160 @@
       transition:transform .4s ease, opacity .4s ease;
       padding:30px;
     }
-    .category-menu.show{
-      transform:translateX(0); opacity:1; pointer-events:auto;
-    }
-
+    .category-menu.show{ transform:translateX(0); opacity:1; pointer-events:auto }
     .category-header{
       font-family:'Cinzel', serif;
-      font-size:60px; margin-bottom:40px; letter-spacing:3px; color:#000;
-      text-align:center;
+      font-size:60px; margin-bottom:40px; letter-spacing:3px; color:#000; text-align:center;
     }
-    .category-menu ul{ list-style:none; padding:0; margin:0; }
+    .category-menu ul{ list-style:none; padding:0; margin:0 }
     .category-menu li{
       font-size:26px; margin:20px 0; padding-bottom:10px; position:relative;
       border-bottom:1px solid rgba(0,0,0,.1);
       transition:transform .2s ease, color .2s ease;
       cursor:pointer; font-weight:bold; color:#000; text-align:left; padding-right:20px;
     }
-    .category-menu li:hover{ color:#c2185b; transform:scale(1.05); }
+    .category-menu li:hover{ color:#c2185b; transform:scale(1.05) }
     .category-menu li::after{
       content:"＞"; position:absolute; right:0; top:2px; color:#bbb; font-size:20px;
     }
 
     /* ===== フッター ===== */
-    footer{
-      margin-top:200px; padding:30px 20px; background:#fff0f5; text-align:center;
-    }
-    .footer-icons{
-      display:flex; justify-content:center; gap:60px; margin-bottom:16px;
-    }
-    .footer-icons img{ width:60px; height:60px; }
+    footer{ margin-top:200px; padding:30px 20px; background:#fff0f5; text-align:center }
+    .footer-icons{ display:flex; justify-content:center; gap:60px; margin-bottom:16px }
+    .footer-icons img{ width:60px; height:60px }
     .footer-links a{
       display:inline-block; margin:0 20px; color:#444; font-size:24px; text-decoration:none;
     }
-    .footer-links a:hover{ text-decoration:underline; }
+    .footer-links a:hover{ text-decoration:underline }
 
-    .subtitle1 {
-      font-family: 'Tangerine', cursive;
-      font-size: 100px;
-      text-align: center;
-      opacity: 0.7;
-      margin-top: -30px;
-      margin-bottom: 10px;
+    .subtitle1{
+      font-family:'Tangerine', cursive;
+      font-size: clamp(36px, 12vw, 64px);
+      text-align:center; opacity:.7; margin-top:-10px; margin-bottom:10px;
     }
 
-    /* ===== 上部フィルタ & カテゴリ ===== */
-    /* 上部カテゴリ（1本だけ使う） */
+    /* ===== 上部カテゴリ ===== */
     .top-row .categories{
-      display:flex;
-      gap:20px;
-      padding:18px 0 36px;
-      overflow-x:auto;
-      white-space:nowrap;
-      -webkit-overflow-scrolling:touch;
-      scrollbar-width:none;
-      flex-wrap:nowrap;          /* 折り返し禁止 */
-      margin-top: 50px;
+      display:flex; gap:12px;
+      padding:18px 0 24px;
+      overflow-x:auto; white-space:nowrap;
+      -webkit-overflow-scrolling:touch; scrollbar-width:none;
+      flex-wrap:nowrap; margin-top: 24px;
     }
-    .top-row .categories::-webkit-scrollbar{ display:none; }
+    .top-row .categories::-webkit-scrollbar{ display:none }
     .top-row .categories button{
-      flex:0 0 auto;             /* 横幅が勝手に伸びない */
-      font-size:38px;
-      padding:20px 80px;
-      background:#f8c6dc;
-      border:0;
-      border-radius:60px;
-      font-weight:300;
-      color:#333;
-      box-shadow:1px 1px 6px rgba(0,0,0,.1);
+      flex:0 0 auto;
+      font-size: clamp(14px, 3.8vw, 18px);
+      padding:12px 24px;
+      background:#f8c6dc; border:0; border-radius:999px;
+      font-weight:300; color:#333; box-shadow:1px 1px 6px rgba(0,0,0,.1);
     }
 
-    /* ===== 商品カード ===== */
-    .product-item{display:flex;margin-left:20px;gap:48px;align-items:flex-start;padding:20px 10px;border-bottom:1px solid #e7cfd8}
-    .product-img{width:286px;height:286px;object-fit:cover;border-radius:16px;display:block;cursor:pointer}
+    /* ===== 商品カード（PC/タブレット基準） ===== */
+    .product-item{
+      display:flex;
+      margin-left:20px;
+      gap:48px;
+      align-items:flex-start;
+      padding:20px 10px;
+      border-bottom:1px solid #e7cfd8;
+    }
+    .product-img{
+      width:286px; height:286px; object-fit:cover; border-radius:16px; display:block; cursor:pointer;
+    }
+    .product-right{ flex:1; display:flex; flex-direction:column; min-width:0; position:relative }
+    .title-row{ display:flex; align-items:center; justify-content:flex-start; margin-top:25px }
+    .product-name{
+      font-size: clamp(18px, 5vw, 28px);
+      font-weight:500; line-height:1.2; margin:0 16px 0 0; margin-top:-8px;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .mid{ margin:10px 0 12px; display:flex; align-items:center; justify-content:space-between; gap:12px }
+    .price{ font-size: clamp(18px, 4.8vw, 24px); font-weight:400; margin-top:10px }
+    .info-btn{
+      margin-top:-40px; width:40px; height:40px; border-radius:50%;
+      border:2px solid #cfcfcf; background:#fff0f5; color:#7a7a7a;
+      font-size:18px; font-weight:bold; display:flex; align-items:center; justify-content:center; flex:0 0 auto
+    }
+    .subtext{ font-size: clamp(12px, 3.4vw, 16px); margin:8px 0 0 }
 
-    .product-right{flex:1;display:flex;flex-direction:column;min-width:0; position:relative;}
-    .title-row{display:flex;align-items:center;justify-content:flex-start;margin-top:25px}
-    .product-name{font-size:40px;font-weight:500;line-height:1.15;margin:0 16px 0 0;margin-top:-20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .bottom-row{ margin-top:6px; display:flex; align-items:center; gap:16px; flex-wrap:nowrap }
+    .like-btn{
+      width: clamp(40px, 10vw, 52px); height: clamp(40px, 10vw, 52px);
+      border-radius:50%; border:2px solid #e91e63; background:none; color:#e91e63;
+      font-size: clamp(18px, 5vw, 24px);
+      display:flex; align-items:center; justify-content:center; cursor:pointer; flex:0 0 auto;
+    }
+    .like-btn.liked{ background:#e91e63; color:#fff }
 
-    .mid{margin:10px 0 12px;display:flex;align-items:center;justify-content:space-between;gap:12px}
-    .price{font-size:38px;font-weight:400;margin-top:20px}
-    .info-btn{margin-top:-100px;width:48px;height:48px;border-radius:50%;border:2px solid #cfcfcf;background:#fff0f5;color:#7a7a7a;font-size:22px;font-weight:bold;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+    .qty-wrap{ flex:0 0 auto; position:relative }
+    .qty-select{ display:none } /* iOSの全画面ピッカーを出さない */
 
-    .subtext{font-size:24px;margin:8px 0 0;margin-top:px}
-
-    .bottom-row{margin-top:0px;display:flex;align-items:center;gap:40px;flex-wrap:nowrap}
-    .like-btn{width:66px;height:66px;border-radius:50%;border:2px solid #e91e63;background:none;color:#e91e63none;font-size:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:0 0 auto}
-    .like-btn.liked{background:#e91e63;color:#fff}
-
-    /* --- 数量（ネイティブselectは保持するが非表示） --- */
-    .qty-wrap{flex:0 0 auto; position:relative;}
-    .qty-select{display:none;} /* ←iOSの全画面ピッカーは出さない */
-
-    /* 表示ボタン（見た目は従来のselectと同じ） */
     .qty-display{
-      height:65px; padding:0 50px; width:150px;
+      height:46px; padding:0 36px; width:120px;
       border:2px solid #e7e7e7; border-radius:16px; background:#fff;
-      font-size:33px; line-height:65px; text-align:center; cursor:pointer;
-      position:relative;
+      font-size: clamp(14px, 3.6vw, 16px); line-height:46px; text-align:center; cursor:pointer; position:relative;
     }
     .qty-display::after{
-      content:""; position:absolute; right:18px; top:50%; width:8px; height:8px;
+      content:""; position:absolute; right:14px; top:50%; width:8px; height:8px;
       transform:translateY(-50%) rotate(45deg);
       border-right:2px solid #888; border-bottom:2px solid #888;
     }
-
-    /* ドロップダウン（押した場所の直下に表示） */
     .qty-menu{
-      position:absolute; left:0; top:0;
-      width:150px; max-height:350px; overflow:auto;
+      position:absolute; left:0; top:0; width:150px; max-height:260px; overflow:auto;
       background:#fff; border:2px solid #e7e7e7; border-radius:14px;
       box-shadow:0 6px 18px rgba(0,0,0,.08); display:none; z-index:30;
     }
-    .qty-menu.show{display:block;}
-    .qty-item{
-      padding:10px 0; text-align:center; font-size:33px; cursor:pointer;
-    }
-    .qty-item:hover{background:#f6f6f6}
-
-    .add-btn{
-      height:65px !important;
-      min-width:180px !important;
-      padding:0 50px !important;
-      border:0;
-      border-radius:28px;
-      background:#f8c6dc;
-      color:#333;
-      font-weight:500;
-      font-size:30px !important;
-      line-height:65px;         /* 縦中央きっちり */
-      white-space:nowrap;
-      cursor:pointer;
-      flex:0 0 auto;
-    }
-
-    /* ===== インフォ（枠なし・背景なし・文字のみ、右の余白に重ね表示） ===== */
-    .info-panel{
-      position:absolute; right:0; top:0; width:60%; left: 180px;
-      display:none; z-index:10;
-      background:transparent; border:none; box-shadow:none; padding:0; margin:0;
-      color:#333; font-size:18px; line-height:1.5;
-      max-height:160px;min-width:300px; overflow:auto;margin-top: -10px
-    }
-    .info-panel.show{ display:block; }
-    .info-list{margin:0; padding:0; list-style:none;}
-    .info-list li{ margin:4px 0; padding-left:1em; text-indent:-1em; }
-    .info-list li::before{ content:"・"; }
-
-    /* モーダル（画像拡大） */
-    #modal{display:none;position:fixed;inset:0;z-index:10;background:rgba(0,0,0,.7)}
-    #modal img{display:block;max-width:80%;max-height:80%;margin:200px auto 50px;border:4px solid #fff}
-
-    /* iPhone幅の微調整 */
-    @media (max-width:480px){
-      .product-name{font-size:34px}
-      .price{font-size:32px}
-      .subtext{font-size:22px}
-      .add-btn{font-size:20px}
-      .info-panel{ position:static; width:100%; max-height:none; overflow:visible; }
-    }
-
-    /* ===== ここから “さっきのサイズ安定策” を上書きで適用 ===== */
-    /* スマホ幅の額縁（PCでも最大幅を固定してドアップ防止） */
-    .phone-viewport{ width:100%; max-width:480px; margin:0 auto; font-size: clamp(14px, 3.6vw, 16px); }
-
-    /* 巨大化しやすい要素を clamp で自動調整 */
-    .main-title{ font-size: clamp(32px, 12vw, 56px); line-height:1.1; transform:translateX(6px); }
-    .cart-button{ width: clamp(36px, 10vw, 56px); height: clamp(36px, 10vw, 56px); background-size:contain; }
-    .menu-icon{ width: clamp(28px, 8vw, 40px); height: clamp(22px, 6vw, 32px); transform:translateX(6px); }
-    .menu-icon span{ height:2px; }
-
-    .product-img{ width: clamp(140px, 40vw, 240px); height: clamp(140px, 40vw, 240px); object-fit:cover; }
-    .product-name{ font-size: clamp(18px, 5vw, 28px); }
-    .price{       font-size: clamp(18px, 4.8vw, 24px); }
-    .subtext{     font-size: clamp(12px, 3.4vw, 16px); }
+    .qty-menu.show{ display:block }
+    .qty-item{ padding:10px 0; text-align:center; font-size: clamp(14px, 3.6vw, 16px); cursor:pointer }
+    .qty-item:hover{ background:#f6f6f6 }
 
     .add-btn{
       height: clamp(42px, 10vw, 54px) !important;
       line-height: normal !important;
       padding: 0 clamp(16px, 4.8vw, 24px) !important;
       font-size: clamp(14px, 3.8vw, 18px) !important;
-      border-radius: 999px;
-      min-width: auto !important;
+      border:0; border-radius:999px; background:#f8c6dc; color:#333; font-weight:500;
+      white-space:nowrap; cursor:pointer; flex:0 0 auto;
+      min-width:auto !important;
     }
 
-    .like-btn{ width: clamp(40px, 10vw, 52px); height: clamp(40px, 10vw, 52px); font-size: clamp(18px, 5vw, 24px); }
+    /* ===== インフォ（枠なし・背景なし・文字のみ、右の余白に重ね表示） ===== */
+    .info-panel{
+      position:absolute; right:0; top:0; width:60%; left:180px;
+      display:none; z-index:10; background:transparent; border:none; box-shadow:none;
+      padding:0; margin:0; color:#333; font-size: clamp(12px, 3.2vw, 15px); line-height:1.5;
+      max-height:140px; min-width:260px; overflow:auto; margin-top:-10px;
+    }
+    .info-panel.show{ display:block }
+    .info-list{ margin:0; padding:0; list-style:none }
+    .info-list li{ margin:4px 0; padding-left:1em; text-indent:-1em }
+    .info-list li::before{ content:"・" }
 
-    .qty-display{ height:46px; line-height:46px; font-size: clamp(14px, 3.6vw, 16px); width:120px; padding:0 36px; }
-    .qty-menu{ max-height:260px; }
-    .qty-item{ font-size: clamp(14px, 3.6vw, 16px); }
-
-    .info-panel{ left: 140px; font-size: clamp(12px, 3.2vw, 15px); max-height:140px; min-width:260px; }
-    /* ===== 上書きここまで ===== */
-    
-    /* 全体の最大幅をGAS時代の表示感に合わせる */
-body {
-  max-width: 480px;  /* スマホ画面幅相当 */
-  margin: 0 auto;
-  font-size: 16px;   /* 全体文字サイズを下げる */
-}
-
-/* 商品一覧カードの調整 */
-.product-item {
-  width: 100%;
-  max-width: 100%;
-  box-sizing: border-box;
-}
-
-/* 商品画像の調整 */
-.product-item img {
-  width: 100%;
-  height: auto;
-}
-
-/* 商品名や価格の文字サイズ */
-.product-name, .product-price {
-  font-size: 1rem; /* 16px */
-}
+    /* ====== ここが超重要：モバイルではカードを縦並びに ====== */
+    @media (max-width: 520px){
+      .container{ padding: 0 12px }
+      .product-item{
+        flex-direction: column;   /* ← 横並び → 縦並びに */
+        gap:16px;
+        margin-left:0;
+      }
+      .product-img{
+        width:100%;       /* 画像は枠いっぱい */
+        height:auto;      /* 比率維持 */
+        max-height:420px; /* 暴れ防止の上限（必要なら調整） */
+      }
+      .info-panel{
+        position:static;  /* 右の余白に重ねず、本文内表示 */
+        width:100%;
+        max-height:none;
+        left:auto;
+        margin-top:0;
+      }
+      .mid{ gap:10px }
+      .bottom-row{ gap:12px; flex-wrap:wrap }
+      .qty-display{ width: 120px }
+    }
   </style>
 </head>
 <body>
