@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>nursery sera — ご注文フォーム</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bayon&family=Tangerine:wght@700&display=swap" rel="stylesheet">
+  <style>
+    /* ===== ベース（下のコードの見た目を踏襲） ===== */
+    html, body {
+      margin: 0; padding: 0; font-size: 20px; -webkit-text-size-adjust: 100%;
+      font-family: Arial, sans-serif; background:#ffffff; color:#333; box-sizing: border-box; min-height:100vh; scroll-behavior:smooth;
+    }
+    *, *::before, *::after { box-sizing: inherit; }
+
+    /* ===== ヘッダー/メニュー（下のコード） ===== */
+    .header-bar { position: sticky; top: -50px; z-index: 1000; background: transparent; display:flex; align-items:center; justify-content:space-between; padding:20px; transition: top 0.5s ease; }
+    .menu-icon { display:flex; flex-direction:column; justify-content:space-between; width:48px; height:40px; cursor:pointer; background:none; border:none; padding:0; margin:0; transform: translateX(20px); }
+    .menu-icon span { display:block; height:3px; width:100%; background-color:#333; border-radius:2px; }
+    .main-title { font-family:'Bayon', cursive; font-size:120px; margin:0; white-space:nowrap; transform: translateX(20px); }
+    .cart-button { background-image:url('https://gist.githubusercontent.com/nursery-sera/3bfad5863718f7147d193844bdaca462/raw/d7f9244ea2cbbaf4c13a67c30831022e37076b17/plantcart-icon.svg'); background-size:contain; background-repeat:no-repeat; width:100px; height:100px; border:none; background-color:transparent; cursor:pointer; }
+
+    .overlay { position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.3); z-index:2000; display:none; }
+    .overlay.show { display:block; }
+
+    .category-menu { position:fixed; top:0; left:0; width:66vw; height:55vh; background-color:rgba(255,255,255,0.7); backdrop-filter: blur(8px); z-index:3000;
+      border:2px solid rgba(0,0,0,0.1); box-shadow:4px 0 20px rgba(0,0,0,0.2); transform: translateX(-100%); opacity:0; transition: transform .4s ease, opacity .4s ease; pointer-events:none; padding:30px; }
+    .category-menu.show { transform: translateX(0); opacity:1; pointer-events:auto; }
+    .category-header { font-family:'Cinzel', serif; font-size:60px; margin-bottom:40px; letter-spacing:3px; color:#000; text-align:center; }
+    .category-menu ul { list-style:none; padding:0; margin:0; }
+    .category-menu li { font-size:26px; margin:20px 0; border-bottom:1px solid rgba(0,0,0,0.1); padding-bottom:10px; transition:.2s ease; cursor:pointer; font-weight:bold; color:#000; position:relative; text-align:left; padding-right:20px; }
+    .category-menu li:hover { color:#c2185b; transform: scale(1.05); }
+    .category-menu li::after { content:"＞"; position:absolute; right:0; color:#bbb; font-size:20px; top:2px; }
+
+    /* ===== フッター（下のコード） ===== */
+    footer { margin-top:200px; padding:30px 20px; background:#fff; text-align:center; }
+    .footer-icons { display:flex; justify-content:center; gap:60px; margin-bottom:16px; }
+    .footer-icons img { width:42px; height:42px; }
+    .footer-links a { display:inline-block; margin:0 20px; color:#444; font-size:24px; text-decoration:none; }
+    .footer-links a:hover { text-decoration: underline; }
+
+    /* ===== 見出し ===== */
+    .subtitle-x { font-family:'Tangerine', cursive; font-size:100px; opacity:.6; margin-top:-30px; text-align:center;color: #555555;}
+    .subtitle { font-family:'Tangerine', cursive; font-size:39px; opacity:.; margin:66px 0 -10px; text-align:center; color: #000000 !important;}
+
+    /* ===== 入力フォーム（上のコード準拠。背景色に馴染むよう label 背景は inherit） ===== */
+    form{ width:100vw; padding:0 5vw; }
+    .form-group{ position:relative; margin-top:48px; }
+    .form-group input, .form-group textarea{
+      width:100%; padding:28px 12px 12px 12px; font-size:42px; border:none; border-bottom:2px solid #aaa; background:transparent; outline:none;
+      font-weight:300;
+    }
+    .form-group textarea{ min-height:6em; resize:vertical; }
+    .form-group label{ position:absolute; left:12px; top:22px; color:#888; background: inherit; padding:0 6px; transition:.2s ease; pointer-events:none; font-size:36px; }
+    .form-group input:focus + label,
+    .form-group input:not(:placeholder-shown) + label,
+    .form-group textarea:focus + label,
+    .form-group textarea:not(:placeholder-shown) + label{ top:-16px; left:8px; font-size:28px; color:#444; }
+
+    /* PHの見え方（押したら両方見せる用途） */
+    input::placeholder{ opacity:0; transition:opacity .2s ease; }
+    input:focus::placeholder{ opacity:1; }
+    .ph-on::placeholder{ opacity:1 !important; }
+
+    .row{ display:flex; gap:16px; }
+    .row .form-group{ flex:1; margin-top:48px; }
+
+    .zip-btn{ position:absolute; right:0; top:0; height:100%; font-size:36px; padding:0 20px; background:#000000; color:#fff; border:none; cursor:pointer; border-radius:0px; font-weight:300; }
+
+    /* 都道府県：カスタムリスト */
+    .pref-wrap{ position:relative; }
+    .pref-list{ position:absolute; left:0; right:0; top:100%; background:#fff; border:1px solid #aaa; z-index:9999; max-height:280px; overflow:auto; display:none; }
+    .pref-list button{ display:block; width:100%; text-align:left; background:#fff; border:0; padding:12px; font-size:32px; cursor:pointer; border-bottom:1px solid #eee; }
+    .pref-list button:hover{ background:#f7f7f7; }
+
+    .submit-button{ background:#000000; color:#fff; border:none; margin-top:48px; padding:20px; font-size:48px; width:100%; cursor:pointer; font-weight:300; }
+
+    @media (min-width:1024px){
+      html{ font-size:16px; }
+      .main-title{ font-size:100px; }
+      .subtitle{ font-size:20px; }
+      form{ max-width:720px; margin:0 auto; padding:0 32px; }
+      .form-group input,.form-group textarea{ font-size:16px; padding:12px 10px; }
+      .form-group label{ font-size:14px; top:14px; }
+      .form-group input:focus + label,
+      .form-group input:not(:placeholder-shown) + label,
+      .form-group textarea:focus + label,
+      .form-group textarea:not(:placeholder-shown) + label{ font-size:12px; top:-10px; }
+      .zip-btn{ font-size:14px; padding:0 14px; }
+      .pref-list button{ font-size:14px; }
+      .submit-button{ font-size:18px; padding:14px; }
+    }
+  </style>
+
+  <!-- ★ APIベースURL：RailwayのURLに差し替え（API：えーぴーあい＝アプリ同士の窓口） -->
+  <script>
+    window.API_BASE = 'https://<あなたのRailwayドメイン>/api';
+  </script>
+</head>
+<body>
+  <? var url = getScriptUrl(); ?>
+  <!-- ===== ヘッダー（下のコード） ===== -->
+  <div class="header-bar" id="titleBar">
+    <div class="menu-icon" onclick="toggleMenu(event)">
+      <span></span><span></span><span></span>
+    </div>
+    <div class="main-title" onclick="window.top.location.href='<?= url ?>?page=index'">nursery sera</div>
+    <button class="cart-button" onclick="window.top.location.href='<?= url ?>?page=cart'"></button>
+  </div>
+  <div class="category-menu" id="categoryMenu">
+    <h1 class="category-header">MENU</h1>
+    <ul>
+      <li onclick="window.top.location.href='<?= url ?>?page=index'">商品ページ</li>
+      <li onclick="window.top.location.href='<?= url ?>?page=cart'">カート</li>
+      <li onclick="window.top.location.href='<?= url ?>?page=policy'">各種ポリシー</li>
+      <li onclick="window.top.location.href='<?= url ?>?page=form'">お問い合わせ</li>
+    </ul>
+  </div>
+  <div class="overlay" id="overlay" onclick="closeMenu()"></div>
+
+  <!-- ===== 見出し ===== -->
+  <p class="subtitle-x">order form</p>
+  <p class="subtitle">配送先住所</p>
+
+  <!-- ===== 入力フォーム（上のコード：カナ自動なし版） ===== -->
+  <form id="contact-form">
+    <!-- お名前（姓/名） -->
+    <div class="row">
+      <div class="form-group">
+        <input id="lastName" name="lastName" type="text" placeholder="お名前" autocomplete="family-name" required>
+        <label id="nameMasterLabel">お名前</label>
+      </div>
+      <div class="form-group">
+        <input id="firstName" name="firstName" type="text" placeholder="" autocomplete="given-name" required>
+        <label></label>
+      </div>
+    </div>
+
+    <!-- フリガナ（手入力。自動変換なし） -->
+    <div class="row">
+      <div class="form-group">
+        <input id="lastKana" name="lastKana" type="text" placeholder="フリガナ（セイ）" required>
+        <label id="kanaMasterLabel">フリガナ</label>
+      </div>
+      <div class="form-group">
+        <input id="firstKana" name="firstKana" type="text" placeholder="フリガナ（メイ）" required>
+        <label></label>
+      </div>
+    </div>
+
+    <!-- 郵便番号 + 自動入力 -->
+    <div class="form-group">
+      <input type="text" id="zipcode" name="zipcode" placeholder="例:1234567(ハイフンなし)" maxlength="7" required>
+      <label>郵便番号</label>
+      <button type="button" class="zip-btn" id="zipBtn">住所自動入力</button>
+    </div>
+
+    <!-- 都道府県（カスタムリスト表示） -->
+    <div class="form-group pref-wrap">
+      <input type="text" id="prefecture" name="prefecture" placeholder=" " required readonly>
+      <label>都道府県</label>
+      <div class="pref-list" id="prefList"></div>
+    </div>
+
+    <!-- 市区町村（＝ address2：市/区 のみ） -->
+    <div class="form-group">
+      <input type="text" id="city" name="city" placeholder=" " required>
+      <label>市区町村</label>
+    </div>
+
+    <!-- 番地（＝ address3：町名 を自動入力／番地以降はユーザー追記） -->
+    <div class="form-group">
+      <input type="text" id="address" name="address" placeholder=" ">
+      <label>町番・番地</label>
+    </div>
+
+    <!-- 建物名 -->
+    <div class="form-group">
+      <input type="text" id="building" name="building" placeholder=" ">
+      <label>建物名・部屋番号</label>
+    </div>
+
+    <!-- メール -->
+    <div class="form-group">
+      <input type="email" id="email" name="email" placeholder=" " required autocomplete="email">
+      <label>連絡用メールアドレス</label>
+    </div>
+
+    <!-- お支払い方法 -->
+    <div class="form-group">
+      <input type="text" id="payment" name="payment" value="銀行振込（PayPay銀行）" readonly placeholder=" ">
+      <label>お支払い方法</label>
+    </div>
+
+    <!-- 備考 -->
+    <div class="form-group">
+      <textarea id="memo" name="memo" placeholder=" "></textarea>
+      <label>備考【任意】</label>
+    </div>
+
+    <button type="submit" class="submit-button">注文送信</button>
+  </form>
+
+  <!-- ===== フッター（下のコード） ===== -->
+  <footer>
+    <div class="footer-icons">
+      <a href="https://www.instagram.com/" target="_blank">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png" alt="Instagram">
+      </a>
+      <a href="https://line.me/ja/" target="_blank">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/4/41/LINE_logo.svg" alt="LINE">
+      </a>
+      <a href="https://www.threads.net/" target="_blank">
+        <img src="https://cdn.simpleicons.org/threads/000000" alt="Threads">
+      </a>
+    </div>
+    <div class="footer-links">
+      <a href="<?= url ?>?page=policy">ポリシー</a>
+      <a href="<?= url ?>?page=policy">利用規約</a>
+      <a href="<?= url ?>?page=policy">特定商取引法に基づく表記</a>
+      <a href="<?= url ?>?page=policy">お問い合わせ</a>
+    </div>
+  </footer>
+
+  <script>
+    /* ====== メニュー（下のコード） ====== */
+    function toggleMenu() {
+      const menu = document.getElementById("categoryMenu");
+      const overlay = document.getElementById("overlay");
+      const isVisible = menu.classList.contains("show");
+      document.body.style.overflow = isVisible ? "" : "hidden";
+      menu.classList.toggle("show", !isVisible);
+      overlay.classList.toggle("show", !isVisible);
+    }
+    function closeMenu() {
+      document.getElementById("categoryMenu").classList.remove("show");
+      document.getElementById("overlay").classList.remove("show");
+      document.body.style.overflow = "";
+    }
+    // スクロールでヘッダー表示/非表示
+    let lastScrollY = window.scrollY;
+    const titleBar = document.getElementById("titleBar");
+    const threshold = 10;
+    window.addEventListener("scroll", () => {
+      const currentScrollY = window.scrollY;
+      const diff = currentScrollY - lastScrollY;
+      if (Math.abs(diff) >= threshold) {
+        titleBar.style.top = diff < 0 ? "-50px" : "-200px";
+        lastScrollY = currentScrollY;
+      }
+    });
+
+  /* ====== プレースホルダー連動（自動カナは無し） ====== */
+  const lastName  = document.getElementById('lastName');
+  const firstName = document.getElementById('firstName');
+  const nameMasterLabel = document.getElementById('nameMasterLabel');
+
+  // 初期表示に戻す（お名前）
+  function resetNamePHIfEmpty(){
+    // どちらにもフォーカスが無く、両方未入力のときだけ初期に戻す
+    const noFocus = document.activeElement !== lastName && document.activeElement !== firstName;
+    if (noFocus && !lastName.value.trim() && !firstName.value.trim()){
+      lastName.placeholder = 'お名前';
+      firstName.placeholder = '';
+      lastName.classList.remove('ph-on');
+      firstName.classList.remove('ph-on');
+    }
+  }
+  // 表示（お名前）
+  function activateNamePH(){
+    lastName.placeholder='姓';
+    firstName.placeholder='名';
+    lastName.classList.add('ph-on');
+    firstName.classList.add('ph-on');
+  }
+  lastName.addEventListener('focus', activateNamePH);
+  firstName.addEventListener('focus', activateNamePH);
+  nameMasterLabel?.addEventListener('click', ()=>{ lastName.focus(); activateNamePH(); });
+
+  // ブラー時に初期へ（お名前）
+  [lastName, firstName].forEach(el=>{
+    el.addEventListener('blur', ()=>{
+      // フィールド間のフォーカス移動で即時リセットされないよう少し遅らせる
+      setTimeout(resetNamePHIfEmpty, 0);
+    });
+  });
+
+  // --- フリガナ ---
+  const lastKana  = document.getElementById('lastKana');
+  const firstKana = document.getElementById('firstKana');
+  const kanaMasterLabel = document.getElementById('kanaMasterLabel');
+
+  // 初期表示に戻す（フリガナ）
+  function resetKanaPHIfEmpty(){
+    const noFocus = document.activeElement !== lastKana && document.activeElement !== firstKana;
+    if (noFocus && !lastKana.value.trim() && !firstKana.value.trim()){
+      lastKana.placeholder = 'フリガナ（セイ）';
+      firstKana.placeholder = 'フリガナ（メイ）';
+      lastKana.classList.remove('ph-on');
+      firstKana.classList.remove('ph-on');
+    }
+  }
+  // 表示（フリガナ）
+  function activateKanaPH(){
+    lastKana.placeholder='セイ';
+    firstKana.placeholder='メイ';
+    lastKana.classList.add('ph-on');
+    firstKana.classList.add('ph-on');
+  }
+  lastKana.addEventListener('focus', activateKanaPH);
+  firstKana.addEventListener('focus', activateKanaPH);
+  kanaMasterLabel?.addEventListener('click', ()=>{ lastKana.focus(); activateKanaPH(); });
+
+  // ブラー時に初期へ（フリガナ）
+  [lastKana, firstKana].forEach(el=>{
+    el.addEventListener('blur', ()=>{
+      setTimeout(resetKanaPHIfEmpty, 0);
+    });
+  });
+
+    /* ====== 郵便番号 → 住所（市=address2／番地=address3／建物は触らない） ====== */
+    document.getElementById('zipBtn')?.addEventListener('click', ()=>{
+      const zip = (document.getElementById('zipcode')?.value || '').trim();
+      if (!/^\d{7}$/.test(zip)) { alert('正しい7桁の郵便番号を入力してください'); return; }
+      fetch('https://zipcloud.ibsnet.co.jp/api/search?zipcode=' + zip)
+        .then(r => r.json())
+        .then(data => {
+          if (!data.results) { alert('住所が見つかりませんでした。'); return; }
+          const r = data.results[0];
+          setPrefecture(r.address1);
+          document.getElementById('city').value    = (r.address2 || ''); // 市/区のみ
+          document.getElementById('address').value = (r.address3 || ''); // 町名
+          // 建物名(#building)は触らない
+        })
+        .catch(()=> alert('検索エラー'));
+    });
+
+    /* ====== 都道府県（カスタムリスト） ====== */
+    const PREFS=["北海道","青森県","岩手県","宮城県","秋田県","山形県","福島県","茨城県","栃木県","群馬県","埼玉県","千葉県","東京都","神奈川県","新潟県","富山県","石川県","福井県","山梨県","長野県","岐阜県","静岡県","愛知県","三重県","滋賀県","京都府","大阪府","兵庫県","奈良県","和歌山県","鳥取県","島根県","岡山県","広島県","山口県","徳島県","香川県","愛媛県","高知県","福岡県","佐賀県","長崎県","熊本県","大分県","宮崎県","鹿児島県","沖縄県"];
+    const prefInput = document.getElementById('prefecture');
+    const prefList  = document.getElementById('prefList');
+    if (prefInput && prefList){
+      PREFS.forEach(p=>{
+        const b=document.createElement('button');
+        b.type='button'; b.textContent=p;
+        b.addEventListener('click',()=>{ setPrefecture(p); hidePrefList(); });
+        prefList.appendChild(b);
+      });
+      function setPrefecture(p){ prefInput.value=p; }
+      function showPrefList(){ prefList.style.display='block'; }
+      function hidePrefList(){ prefList.style.display='none'; }
+      prefInput.addEventListener('click',(e)=>{ e.stopPropagation(); (prefList.style.display==='block'?hidePrefList():showPrefList()); });
+      document.addEventListener('click', hidePrefList);
+      window.setPrefecture = setPrefecture; // 郵便番号処理から呼ぶため外出し
+    } else {
+      window.setPrefecture = function(){};
+    }
+
+    /* ====== 送信（APIへPOST：DB保存＆Brevo自動返信はサーバー側） ====== */
+    document.getElementById('contact-form')?.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+
+      // カート確認（ローカル保存の購入品）
+      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      if (cart.length === 0) { alert('カートが空です。先に商品をお選びください。'); return; }
+
+      // 入力値を収集
+      const fd = new FormData(e.target);
+      const customer = {
+        lastName : (fd.get('lastName')  || '').toString().trim(),
+        firstName: (fd.get('firstName') || '').toString().trim(),
+        lastKana : (fd.get('lastKana')  || '').toString().trim(),
+        firstKana: (fd.get('firstKana') || '').toString().trim(),
+        zipcode  : (fd.get('zipcode')   || '').toString().trim(),
+        prefecture: (fd.get('prefecture') || '').toString().trim(),
+        city     : (fd.get('city')      || '').toString().trim(),
+        address  : (fd.get('address')   || '').toString().trim(),
+        building : (fd.get('building')  || '').toString().trim(),
+        email    : (fd.get('email')     || '').toString().trim(),
+        payment  : (fd.get('payment')   || '銀行振込（PayPay銀行）').toString()
+      };
+
+      // 注文アイテム
+      const items = cart.map(it => ({
+        productId  : it.productId ?? null,
+        productName: it.name,
+        unitPrice  : Number(it.price || 0),
+        quantity   : Number(it.quantity || 1)
+      }));
+
+      const payload = {
+        customer,
+        note: (fd.get('memo') || '').toString(),
+        items
+      };
+
+      try{
+        const res = await fetch(`${window.API_BASE}/orders`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error(await res.text() || '注文送信に失敗しました');
+
+        const data = await res.json(); // { orderId, total }
+
+        // 成功：案内（デザインは変えずアラート表示）
+        alert(`ありがとうございました。ご注文番号 #${data.orderId}（合計 ¥${Number(data.total).toLocaleString()}）を受け付けました。`);
+
+        // カートをクリア
+        localStorage.removeItem('cart');
+
+        // フォームリセット＆プレースホルダー初期化
+        e.target.reset();
+        lastName.placeholder='お名前'; firstName.placeholder='';
+        [lastName,firstName,lastKana,firstKana].forEach(el=>el.classList.remove('ph-on'));
+        lastKana.placeholder='フリガナ（セイ）'; firstKana.placeholder='フリガナ（メイ）';
+
+        // 必要ならトップへ戻す場合：
+        // window.top.location.href = '<?= url ?>?page=index';
+      }catch(err){
+        alert('エラー：' + err.message);
+      }
+    });
+  </script>
+</body>
+</html>
