@@ -410,14 +410,6 @@
   </div><!-- /.phone-viewport -->
 
   <script>
-  // ====== 自ドメイン遷移ユーティリティ ======
-  // BASE（べーす：基準URL。ここを替えるだけで全部の遷移先が切り替わる）
-  const BASE = 'https://www.nurserysera.com';
-  function go(path){
-    // path（ぱす：/index などの相対パス）
-    const url = new URL(path, BASE).toString();
-    window.top.location.href = url;
-  }
 
   // メニュー開閉
   function toggleMenu(event){
