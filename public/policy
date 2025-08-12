@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>nursery sera — Policy and Contact</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bayon&family=Tangerine:wght@700&display=swap" rel="stylesheet">
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-size: 20px;
+      -webkit-text-size-adjust: 100%;
+      font-family: Arial, sans-serif;
+      background: #fff0f5;
+      color: #333;
+      box-sizing: border-box;
+      min-height: 100vh;
+      scroll-behavior: smooth;
+    }
+    *, *::before, *::after { box-sizing: inherit; }
+
+    .header-bar {
+      position: sticky;
+      top: -50px;
+      z-index: 1000;
+      background: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px;
+      transition: top 0.5s ease;
+    }
+    .menu-icon {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      width: 48px;
+      height: 40px;
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 0;
+      margin: 0;
+      transform: translateX(20px);
+    }
+    .menu-icon span {
+      display: block;
+      height: 3px;
+      width: 100%;
+      background-color: #333;
+      border-radius: 2px;
+    }
+    .main-title {
+      font-family: 'Bayon', cursive;
+      font-size: 120px;
+      margin: 0 ;
+      left: 50%;
+      white-space: nowrap;
+      transform: translateX(20px);
+    }
+    .cart-button {
+      background-image: url('https://gist.githubusercontent.com/nursery-sera/3bfad5863718f7147d193844bdaca462/raw/d7f9244ea2cbbaf4c13a67c30831022e37076b17/plantcart-icon.svg');
+      background-size: contain;
+      background-repeat: no-repeat;
+      width: 100px;
+      height: 100px;
+      border: none;
+      background-color: transparent;
+      cursor: pointer;
+    }
+
+    .overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.3);  /* ← 透明な黒だけ */
+  z-index: 2000;
+  display: none;
+}
+.overlay.show {
+  display: block;
+}
+
+ .category-menu {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 66vw;
+  height: 55vh;
+  background-color: rgba(255, 255, 255, 0.7); /* 明るい透明白 */
+  backdrop-filter: blur(8px);                /* ← すりガラス加工はこっち */
+  z-index: 3000;
+  border: 2px solid rgba(0, 0, 0, 0.1);       /* 枠線 */
+  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.2);
+  transform: translateX(-100%);
+  opacity: 0;
+  transition: transform 0.4s ease, opacity 0.4s ease;
+  pointer-events: none;
+  padding: 30px;
+}
+
+
+
+.category-menu.show {
+  transform: translateX(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.category-header {
+  font-family: 'Cinzel', serif;
+  font-size: 60px;
+  margin-bottom: 40px;
+  letter-spacing: 3px;
+  color: #000;
+  align-items: center;
+  text-align: center;
+}
+
+
+.category-menu ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.category-menu li {
+  font-size: 26px;
+  margin: 20px 0;
+  border-bottom: 1px solid rgba(0,0,0,0.1);
+  padding-bottom: 10px;
+  transition: transform 0.2s ease, color 0.2s ease;
+  cursor: pointer;
+  font-weight: bold;
+  color: #000;
+  position: relative;
+  text-align: left;
+  padding-right: 20px;
+}
+
+.category-menu li:hover {
+  color: #c2185b;
+  transform: scale(1.05);
+}
+
+.category-menu li::after {
+  content: "＞";
+  position: absolute;
+  right: 0;
+  color: #bbb;
+  font-size: 20px;
+  top: 2px;
+}
+
+
+
+    footer {
+      margin-top: 200px;
+      padding: 30px 20px;
+      background: #fff0f5;
+      text-align: center;
+    }
+    .footer-icons {
+      display: flex;
+      justify-content: center;
+      gap: 60px;
+      margin-bottom: 16px;
+    }
+    .footer-icons img {
+      width: 60px;
+      height: 60px;
+    }
+    .footer-links a {
+      display: inline-block;
+      margin: 0 20px;
+      color: #444;
+      font-size: 24px;
+      text-decoration: none;
+    }
+    .footer-links a:hover {
+      text-decoration: underline;
+    }
+
+    #contact.subtitle-x {
+      font-size: 48px;
+      margin-top: 250px;
+    }
+
+        .subtitle-x {
+      font-family: 'Tangerine', cursive;
+      font-size: 80px;
+      opacity: 0.6;
+      margin-top: -20px;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    .policy-nav-vertical {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      margin: 175px 20px;
+      gap: 50px;
+      font-size: 28px;
+      font-weight: bold;
+    }
+    .policy-nav-vertical a {
+      text-decoration: none;
+      color: #c2185b;
+      transition: color 0.3s ease;
+    }
+    .policy-nav-vertical a:hover {
+      color: #9c0b3d;
+    }
+    .form-group {
+      position: relative;
+      margin-top: 48px;
+    }
+    .form-group input,
+    .form-group textarea {
+      width: 100%;
+      padding: 28px 12px 12px 12px;
+      font-size: 40px;
+      border: none;
+      border-bottom: 2px solid #aaa;
+      background: transparent;
+      outline: none;
+    }
+    .form-group label {
+      position: absolute;
+      left: 12px;
+      top: 22px;
+      color: #888;
+      background-color: #fff0f5;
+      padding: 0 6px;
+      transition: 0.2s ease;
+      pointer-events: none;
+      font-size: 36px;
+    }
+    .form-group input:focus + label,
+    .form-group input:not(:placeholder-shown) + label,
+    .form-group textarea:focus + label,
+    .form-group textarea:not(:placeholder-shown) + label {
+      top: -16px;
+      left: 8px;
+      font-size: 28px;
+      color: #444;
+    }
+    .submit-button {
+      background: #f8c6dc;
+      color: #fff;
+      border: none;
+      margin-top: 48px;
+      padding: 20px;
+      font-size: 48px;
+      width: 100%;
+      cursor: pointer;
+    }
+    #result {
+      text-align: center;
+      margin-top: 48px;
+      font-size: 48px;
+    }
+  </style>
+</head>
+<body>
+  <? var url = getScriptUrl(); ?>
+  <div class="header-bar" id="titleBar">
+    <div class="menu-icon" onclick="toggleMenu(event)">
+      <span></span><span></span><span></span>
+    </div>
+    <div class="main-title" onclick="window.top.location.href='<?= url ?>?page=index'">nursery sera</div>
+    <button class="cart-button" onclick="window.top.location.href='<?= url ?>?page=cart'"></button>
+  </div>
+ <div class="category-menu" id="categoryMenu">
+  <h1 class="category-header">MENU</h1>
+  <ul>
+     <li onclick="window.top.location.href='<?= url ?>?page=index'">商品ページ</li>
+    <li onclick="window.top.location.href='<?= url ?>?page=cart'">カート</li>
+    <li onclick="window.top.location.href='<?= url ?>?page=order'">注文フォーム</li>
+    <li onclick="window.top.location.href='<?= url ?>?page=policy'">ポリシー</li>
+    <li onclick="window.top.location.href='<?= url ?>?page=form'">お問い合わせ</li>
+  </ul>
+</div>
+  <div class="overlay" id="overlay" onclick="closeMenu()"></div>
+
+
+
+  <p class="subtitle-x">Policy and Contact</p>
+  <div class="policy-nav-vertical">
+    <a href="<?= url ?>?page=cancel">キャンセルポリシー</a>
+    <a href="<?= url ?>?page=refund">返金ポリシー</a>
+    <a href="<?= url ?>?page=privacy">プライバシーポリシー</a>
+    <a href="<?= url ?>?page=delivery">配送ポリシー</a>
+    <a href="<?= url ?>?page=terms">利用規約</a>
+    <a href="<?= url ?>?page=law">特定商取引法に基づく表記</a>
+  </div>
+
+  <h2 id="contact" class="subtitle-x">お問い合わせ</h2>
+  <form id="contact-form" style="padding: 0 5vw;">
+    <div class="form-group">
+      <input type="text" name="name" placeholder=" " required>
+      <label>お名前</label>
+    </div>
+    <div class="form-group">
+      <input type="email" name="email" placeholder=" " required>
+      <label>返信用メールアドレス</label>
+    </div>
+    <div class="form-group">
+      <textarea name="message" rows="4" placeholder=" " required></textarea>
+      <label>お問い合わせ内容</label>
+    </div>
+    <button type="submit" class="submit-button">送信する</button>
+    <p id="result"></p>
+  </form>
+
+  <footer>
+    <div class="footer-icons">
+      <a href="https://www.instagram.com/" target="_blank">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png" alt="Instagram">
+      </a>
+      <a href="https://line.me/ja/" target="_blank">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/4/41/LINE_logo.svg" alt="LINE">
+      </a>
+      <a href="https://www.threads.net/" target="_blank">
+        <img src="https://cdn.simpleicons.org/threads/000000" alt="Threads">
+      </a>
+    </div>
+    <div class="footer-links">
+      <a href="<?= url ?>?page=policy">ポリシー</a>
+      <a href="<?= url ?>?page=terms">利用規約</a>
+      <a href="<?= url ?>?page=law">特定商取引法に基づく表記</a>
+      <a href="<?= url ?>?page=form">お問い合わせ</a>
+    </div>
+  </footer>
+
+  <script>
+   function toggleMenu(event) {
+  const menu = document.getElementById("categoryMenu");
+  const overlay = document.getElementById("overlay");
+  const isVisible = menu.classList.contains("show");
+
+  if (!isVisible) {
+    document.body.style.overflow = "hidden"; // スクロール禁止
+  } else {
+    document.body.style.overflow = ""; // 元に戻す
+  }
+
+  menu.classList.toggle("show", !isVisible);
+  overlay.classList.toggle("show", !isVisible);
+}
+
+function closeMenu() {
+  document.getElementById("categoryMenu").classList.remove("show");
+  document.getElementById("overlay").classList.remove("show");
+  document.body.style.overflow = ""; // 忘れずに解除
+}
+ 
+
+
+    let lastScrollY = window.scrollY;
+    const titleBar = document.getElementById("titleBar");
+    const threshold = 10;
+    window.addEventListener("scroll", () => {
+      const currentScrollY = window.scrollY;
+      const diff = currentScrollY - lastScrollY;
+      if (Math.abs(diff) < threshold) return;
+      if (diff < 0) {
+        titleBar.style.top = "-50px";
+      } else {
+        titleBar.style.top = "-200px";
+      }
+      lastScrollY = currentScrollY;
+    });
+
+    document.getElementById("contact-form").addEventListener("submit", function (e) {
+      e.preventDefault();
+      document.getElementById("result").innerText = "ありがとうございました。お問い合わせを受け付けました。";
+      this.reset();
+    });
+  </script>
+</body>
+</html>
