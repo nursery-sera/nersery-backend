@@ -7,7 +7,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
   <title>nursery sera - 商品一覧</title>
   <link href="https://fonts.googleapis.com/css2?family=Bayon&family=Tangerine:wght@700&family=Italianno&family=Noto+Serif+JP&display=swap" rel="stylesheet">
-  <style>
+ <script>
+  // BASE（べーす：基準URL）を www に固定
+  const BASE = 'https://www.nurserysera.com';
+  function go(path){
+    window.top.location.href = new URL(path, BASE).toString();
+  }
+  // ※ server.js が head に注入する window.API_BASE は
+  //    https://www.nurserysera.com/api 固定なので、そのまま使えます
+</script>
+   <style>
     /* ===== ベース ===== */
     html,body{margin:0;padding:0;font-size:20px;-webkit-text-size-adjust:100%;text-size-adjust:100%;font-family:Arial,sans-serif;background:#fff0f5;color:#333;box-sizing:border-box}
     *,*:before,*:after{box-sizing:inherit}
