@@ -243,6 +243,152 @@
       .bottom-row{ gap:12px; flex-wrap:wrap }
       .qty-display{ width: 120px }
     }
+    
+    /* =========================
+   レスポンシブ上書きセット
+   （このブロックを <style> の一番下にそのまま追記）
+   ========================= */
+
+/* 1) ページの安全域（iPhoneノッチ対応） */
+:root {
+  --page-max: 1100px;            /* PC時の最大幅（デザインの .container と同じ） */
+  --phone-max: 480px;            /* スマホ時の“額縁”基準 */
+  --gutter: clamp(12px, 4vw, 20px);
+}
+html, body {
+  padding-left: max(0px, env(safe-area-inset-left));
+  padding-right: max(0px, env(safe-area-inset-right));
+}
+
+/* 2) 共通：画像やSVGは枠からはみ出さない */
+img, video, canvas, svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* 3) タイポグラフィ（画面幅に応じて自動調整） */
+html {
+  font-size: clamp(14px, 2.6vw, 16px); /* 画面が狭いほど少し小さく、広いほど16pxまで */
+}
+.main-title {
+  font-size: clamp(28px, 9vw, 56px);
+  line-height: 1.1;
+}
+.subtitle1 {
+  font-size: clamp(32px, 9vw, 64px);
+}
+
+/* 4) レイアウトの“額縁”（スマホは~480pxに収める） */
+.phone-viewport {
+  width: 100%;
+  max-width: var(--phone-max);
+  margin: 0 auto;
+  padding-left: var(--gutter);
+  padding-right: var(--gutter);
+}
+
+/* 5) 商品カード：幅に合わせて自動で組み替え */
+.product-item {
+  display: grid;
+  grid-template-columns: clamp(120px, 40vw, 240px) 1fr; /* 左：画像、右：テキスト */
+  gap: clamp(12px, 4vw, 24px);
+  align-items: start;
+  padding: clamp(10px, 3vw, 20px) 0;
+  border-bottom: 1px solid #e7cfd8;
+}
+.product-img {
+  width: 100%;                /* グリッドに任せる */
+  height: auto;               /* アスペクト比維持で拡大縮小 */
+  aspect-ratio: 1 / 1;        /* 正方形を保つ（古いSafariは無視してもOK） */
+  object-fit: cover;
+  border-radius: 16px;
+}
+
+.product-name { font-size: clamp(16px, 4.4vw, 24px); }
+.price        { font-size: clamp(16px, 4.2vw, 22px); }
+.subtext      { font-size: clamp(12px, 3.4vw, 16px); }
+
+/* 6) ボタンや数量UIも可変に */
+.add-btn{
+  height: clamp(40px, 9vw, 52px) !important;
+  padding: 0 clamp(14px, 4.4vw, 22px) !important;
+  font-size: clamp(14px, 3.6vw, 18px) !important;
+  line-height: normal !important;
+  border-radius: 999px;
+  min-width: auto !important;
+}
+.like-btn{
+  width: clamp(40px, 10vw, 52px);
+  height: clamp(40px, 10vw, 52px);
+  font-size: clamp(18px, 5vw, 24px);
+}
+.qty-display{
+  height: clamp(40px, 9vw, 48px);
+  line-height: clamp(40px, 9vw, 48px);
+  font-size: clamp(14px, 3.6vw, 16px);
+  width: clamp(110px, 28vw, 150px);
+  padding: 0 clamp(24px, 5vw, 36px);
+}
+.qty-menu{ max-height: clamp(200px, 60vw, 320px); }
+.qty-item{ font-size: clamp(14px, 3.6vw, 16px); }
+
+/* 7) ヘッダーまわり */
+.menu-icon{
+  width: clamp(28px, 8vw, 40px);
+  height: clamp(22px, 6vw, 32px);
+  transform: translateX(6px);
+}
+.menu-icon span{ height: 2px; }
+.cart-button{
+  width: clamp(36px, 9vw, 56px);
+  height: clamp(36px, 9vw, 56px);
+  background-size: contain;
+}
+
+/* 8) 情報パネルは小さい画面では下に回す（重なり回避） */
+@media (max-width: 480px){
+  .product-item{
+    grid-template-columns: 1fr;  /* 画像→テキストの縦積み */
+  }
+  .info-panel{
+    position: static;
+    width: 100%;
+    max-height: none;
+    min-width: 0;
+    margin-top: 8px;
+    font-size: clamp(13px, 3.4vw, 15px);
+  }
+}
+
+/* 9) 画面が広いときは“額縁”を外してデスクトップ向けに */
+@media (min-width: 768px){
+  .phone-viewport{
+    max-width: min(var(--page-max), 100%);
+  }
+  .product-item{
+    grid-template-columns: 240px 1fr; /* 充分幅があるときは固定で綺麗に */
+    gap: 24px;
+  }
+}
+
+/* 10) 入力での勝手ズーム対策（iOS） */
+input, select, textarea { font-size: 16px; }
+
+/* 11) オーバーレイ＆メニューはそのままでOK、見出しだけ抑制 */
+.category-header{
+  font-family:'Bayon', serif;
+  font-size: clamp(28px, 7vw, 48px);
+}
+
+/* 12) フッターリンクの文字も過不足なく */
+.footer-links a{
+  font-size: clamp(14px, 3.6vw, 18px);
+  margin: 0 clamp(8px, 2.6vw, 20px);
+}
+.footer-icons img{
+  width: clamp(36px, 10vw, 60px);
+  height: clamp(36px, 10vw, 60px);
+}
   </style>
 </head>
 <body>
