@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <meta charset="UTF-8">
   <base target="_top">
   <!-- viewport（ビューポート：画面の論理サイズ）を明示して自動拡大を防止 -->
@@ -240,6 +241,11 @@
       .add-btn{font-size:20px}
       .info-panel{ position:static; width:100%; max-height:none; overflow:visible; }
     }
+    
+    body {
+  max-width: 480px;  /* GAS時代と同じ横幅感 */
+  margin: 0 auto;
+}
   </style>
 </head>
 <body>
