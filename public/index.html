@@ -220,6 +220,20 @@
       .add-btn{font-size:20px}
       .info-panel{ position:static; width:100%; max-height:none; overflow:visible; }
     }
+    
+  /* ---- 全体縮小：GASの “見え方” に寄せる応急処置 ---- */
+  :root { --scale-fix: 0.80; } /* ←ここを0.75〜0.85で微調整 */
+
+  /* ビューポートを拡張しつつ見た目は縮小 */
+  html, body {
+    width: calc(100% / var(--scale-fix));
+    transform: scale(var(--scale-fix));
+    transform-origin: top center;
+  }
+
+  /* iOSのフォント勝手拡大を抑止（念のため） */
+  html { -webkit-text-size-adjust: 100%; }
+
   </style>
 </head>
 <body>
