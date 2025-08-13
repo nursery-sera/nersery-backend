@@ -1,525 +1,383 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <!-- iPhone等でのドアップ防止 -->
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
-  <!-- 同一タブ遷移 -->
-  <base target="_self">
-  <title>nursery sera - 商品一覧</title>
+  <meta charset="UTF-8">
+  <!-- iPhone等でのドアップ防止（等倍表示） -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+  <!-- 同一タブ遷移 -->
+  <base target="_self">
+  <title>nursery sera - 商品一覧</title>
 
-  <!-- フォント -->
-  <link href="https://fonts.googleapis.com/css2?family=Bayon&family=Tangerine:wght@700&family=Italianno&family=Noto+Serif+JP&display=swap" rel="stylesheet">
+  <!-- フォント -->
+  <link href="https://fonts.googleapis.com/css2?family=Bayon&family=Tangerine:wght@700&family=Italianno&family=Noto+Serif+JP&display=swap" rel="stylesheet">
 
-  <style>
-    /* ===== モバイルファースト ===== */
-    html,body {
-      margin: 0;
-      padding: 0;
-      font-size: 16px;
-      -webkit-text-size-adjust: 100%;
-      font-family: Arial, sans-serif;
-      background: #fff0f5;
-      color: #333;
-      box-sizing: border-box;
-      max-width: 480px; /* スマホ幅固定 */
-      margin: 0 auto;
-    }
-    *, *:before, *:after { box-sizing: inherit; }
+  <style>
+    /* ========== モバイルファースト 全体 ========== */
+    html,body{margin:0;padding:0;-webkit-text-size-adjust:100%;font-family:Arial,sans-serif;background:#fff0f5;color:#333}
+    *,*:before,*:after{box-sizing:border-box}
+    img{max-width:100%;height:auto;display:block}
+    ul{list-style:none;margin:0;padding:0}
+    button,input,select{appearance:none;-webkit-appearance:none;font:inherit;color:inherit;background:none;border:none;padding:0;margin:0}
 
-    /* ===== ヘッダー ===== */
-    .header-bar {
-      position: sticky;
-      top: -50px;
-      z-index: 1000;
-      background: transparent;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 12px;
-      transition: top .5s ease;
-    }
-    .menu-icon {
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      width: 32px;
-      height: 26px;
-      cursor: pointer;
-      background: none;
-      border: none;
-      padding: 0;
-      margin: 0;
-    }
-    .menu-icon span {
-      display: block;
-      height: 3px;
-      width: 100%;
-      background: #333;
-      border-radius: 2px;
-    }
-    .main-title {
-      font-family: 'Bayon', cursive;
-      font-size: clamp(36px, 10vw, 48px);
-      margin: 0;
-      white-space: nowrap;
-      cursor: pointer;
-    }
-    .cart-button {
-      background-image: url('https://gist.githubusercontent.com/nursery-sera/3bfad5863718f7147d193844bdaca462/raw/d7f9244ea2cbbaf4c13a67c30831022e37076b17/plantcart-icon.svg');
-      background-size: contain;
-      background-repeat: no-repeat;
-      width: 36px;
-      height: 36px;
-      border: none;
-      background-color: transparent;
-      cursor: pointer;
-    }
+    /* スマホ額縁（幅固定） */
+    .phone-viewport{max-width:480px;margin:0 auto;background:#fff0f5}
 
-    /* ===== 商品カード ===== */
-    .product-item {
-      display: flex;
-      gap: 12px;
-      padding: 10px;
-      border-bottom: 1px solid #e7cfd8;
-    }
-    .product-img {
-      width: 120px;
-      height: 120px;
-      object-fit: cover;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-    .product-right {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      min-width: 0;
-    }
-    .product-name {
-      font-size: clamp(18px, 5vw, 22px);
-      font-weight: 500;
-      margin: 0 0 4px;
-    }
-    .price {
-      font-size: clamp(16px, 4.5vw, 20px);
-      font-weight: 400;
-      margin: 4px 0;
-    }
-    .add-btn {
-      height: 40px;
-      padding: 0 20px;
-      border: 0;
-      border-radius: 20px;
-      background: #f8c6dc;
-      color: #333;
-      font-weight: 500;
-      font-size: clamp(14px, 4vw, 16px);
-      line-height: 40px;
-      cursor: pointer;
-      flex: 0 0 auto;
-    }
+    /* ========== ヘッダー ========== */
+    .header-bar{position:sticky;top:-50px;z-index:1000;display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:transparent;transition:top .5s ease}
+    .menu-icon{display:flex;flex-direction:column;justify-content:space-between;width:32px;height:24px;cursor:pointer}
+    .menu-icon span{height:3px;background:#333;border-radius:2px}
+    .main-title{font-family:'Bayon',cursive;font-size:clamp(32px,10vw,46px);margin:0;white-space:nowrap;cursor:pointer}
+    .cart-button{background-image:url('https://gist.githubusercontent.com/nursery-sera/3bfad5863718f7147d193844bdaca462/raw/d7f9244ea2cbbaf4c13a67c30831022e37076b17/plantcart-icon.svg');background-size:contain;background-repeat:no-repeat;width:36px;height:36px;cursor:pointer}
 
-    /* ===== メディアクエリ（PC拡張） ===== */
-    @media (min-width: 768px) {
-      html,body {
-        max-width: 1100px;
-        font-size: 18px;
-      }
-      .header-bar { padding: 20px; }
-      .main-title { font-size: 72px; }
-      .cart-button { width: 60px; height: 60px; }
-      .product-img { width: 200px; height: 200px; }
-      .product-name { font-size: 28px; }
-      .price { font-size: 24px; }
-      .add-btn { height: 50px; font-size: 18px; }
-    }
-  </style>
+    /* ========== スライドメニュー & オーバーレイ ========== */
+    .overlay{position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:2000;display:none}
+    .overlay.show{display:block}
+    .category-menu{position:fixed;top:0;left:0;width:80vw;max-width:360px;height:100vh;background-color:rgba(255,255,255,.9);backdrop-filter:blur(8px);z-index:3000;border-right:2px solid rgba(0,0,0,.08);box-shadow:4px 0 20px rgba(0,0,0,.2);transform:translateX(-100%);opacity:0;pointer-events:none;transition:transform .3s ease,opacity .3s ease;padding:18px}
+    .category-menu.show{transform:translateX(0);opacity:1;pointer-events:auto}
+    .category-header{font-family:'Noto Serif JP',serif;font-size:24px;margin:8px 0 12px;text-align:left}
+    .category-menu li{padding:12px 6px;border-bottom:1px solid #eee;font-size:16px;cursor:pointer}
+
+    /* ========== 見出し ========== */
+    .subtitle1{font-family:'Tangerine',cursive;font-size:72px;text-align:center;opacity:.7;margin:-10px 0 6px}
+
+    /* ========== 上部カテゴリ（横スクロール） ========== */
+    .top-row .categories{display:flex;gap:10px;padding:10px 12px 16px;overflow-x:auto;white-space:nowrap;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+    .top-row .categories::-webkit-scrollbar{display:none}
+    .top-row .categories button{flex:0 0 auto;font-size:16px;padding:10px 16px;background:#f8c6dc;border-radius:22px;color:#333;box-shadow:1px 1px 6px rgba(0,0,0,.08);cursor:pointer}
+    .like-only{width:44px;text-align:center}
+
+    /* ========== 商品カード（スマホ） ========== */
+    .container{padding:0 12px}
+    .product-item{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid #e7cfd8}
+    .product-img{width:120px;height:120px;object-fit:cover;border-radius:10px;cursor:pointer}
+    .product-right{flex:1;display:flex;flex-direction:column;min-width:0;position:relative}
+    .title-row{display:flex;align-items:center;gap:8px}
+    .product-name{font-size:clamp(18px,5vw,22px);font-weight:600;margin:2px 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .subtext{font-size:13px;opacity:.7;margin:0 0 4px}
+    .mid{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .price{font-size:clamp(16px,4.6vw,20px);margin:2px 0 6px}
+    .info-btn{width:28px;height:28px;border-radius:50%;border:2px solid #cfcfcf;background:#fff0f5;color:#777;font-size:14px;font-weight:bold;display:flex;align-items:center;justify-content:center}
+
+    .bottom-row{display:flex;align-items:center;gap:10px;flex-wrap:nowrap}
+    .like-btn{width:36px;height:36px;border-radius:50%;border:2px solid #e91e63;background:#fff;color:#e91e63;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+    .like-btn.liked{background:#e91e63;color:#fff}
+    .qty-wrap{position:relative}
+    .qty-select{display:none}
+    .qty-display{height:36px;min-width:80px;padding:0 28px;border:2px solid #e7e7e7;border-radius:12px;background:#fff;font-size:15px;line-height:36px;text-align:center;cursor:pointer;position:relative}
+    .qty-display::after{content:"";position:absolute;right:10px;top:50%;width:7px;height:7px;transform:translateY(-50%) rotate(45deg);border-right:2px solid #888;border-bottom:2px solid #888}
+    .qty-menu{position:absolute;left:0;top:40px;width:100%;max-height:220px;overflow:auto;background:#fff;border:2px solid #e7e7e7;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,.08);display:none;z-index:30}
+    .qty-menu.show{display:block}
+    .qty-item{padding:6px 0;text-align:center;font-size:15px;cursor:pointer}
+    .qty-item:hover{background:#f6f6f6}
+
+    .add-btn{height:40px;min-width:120px;padding:0 18px;border:0;border-radius:20px;background:#f8c6dc;color:#333;font-weight:600;font-size:15px;line-height:40px;white-space:nowrap;cursor:pointer}
+
+    /* ========== 情報パネル（スマホは下に出す） ========== */
+    .info-panel{position:static;width:100%;max-height:none;overflow:visible;color:#333;font-size:14px;line-height:1.5;display:none;margin:4px 0 0}
+    .info-panel.show{display:block}
+    .info-list li{margin:4px 0;padding-left:1em;text-indent:-1em}
+    .info-list li::before{content:"・"}
+
+    /* ========== 画像拡大モーダル ========== */
+    #modal{display:none;position:fixed;inset:0;z-index:4000;background:rgba(0,0,0,.7)}
+    #modal img{display:block;max-width:90%;max-height:80%;margin:80px auto 20px;border:4px solid #fff;border-radius:8px}
+
+    /* ========== PCで拡張（任意） ========== */
+    @media (min-width:768px){
+      .phone-viewport{max-width:1100px}
+      .main-title{font-size:72px}
+      .cart-button{width:56px;height:56px}
+      .product-img{width:200px;height:200px}
+      .product-name{font-size:26px}
+      .price{font-size:22px}
+      .add-btn{height:48px;line-height:48px;font-size:16px}
+    }
+  </style>
 </head>
 <body>
+<div class="phone-viewport">
+  <!-- ヘッダー -->
+  <div class="header-bar" id="titleBar">
+    <button class="menu-icon" onclick="toggleMenu(event)">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="main-title" onclick="go('/?page=index')">nursery sera</div>
+    <button class="cart-button" onclick="go('/?page=cart')"></button>
+  </div>
 
-  <!-- ヘッダー -->
-  <div class="header-bar">
-    <button class="menu-icon" onclick="toggleMenu()">
-      <span></span><span></span><span></span>
-    </button>
-    <h1 class="main-title" onclick="go('/index')">nursery sera</h1>
-    <button class="cart-button" onclick="go('/cart')"></button>
-  </div>
+  <!-- スライドメニュー -->
+  <div class="category-menu" id="categoryMenu">
+    <h1 class="category-header">MENU</h1>
+    <ul>
+      <li onclick="go('/?page=index')">All</li>
+      <li onclick="go('/?page=index&cat=monstera')">Monstera</li>
+      <li onclick="go('/?page=index&cat=alocasia')">Alocasia</li>
+      <li onclick="go('/?page=index&cat=anthurium')">Anthurium</li>
+      <li onclick="go('/?page=index&cat=philodendron')">Philodendron</li>
+      <li onclick="go('/?page=index&liked=1')">♡ いいねした商品</li>
+      <li onclick="go('/?page=form')">お問い合わせ</li>
+      <li onclick="go('/?page=policy')">各種ポリシー</li>
+    </ul>
+  </div>
+  <div class="overlay" id="overlay" onclick="closeMenu()"></div>
 
-  <!-- 商品一覧 -->
-  <div id="product-list">
-    <div class="product-item">
-      <img src="https://via.placeholder.com/120" alt="商品画像" class="product-img">
-      <div class="product-right">
-        <h2 class="product-name">モンステラ</h2>
-        <p class="price">¥2,000</p>
-        <button class="add-btn">カートに入れる</button>
-      </div>
-    </div>
-    <!-- 商品カードを繰り返し -->
-  </div>
+  <p class="subtitle1">plant list</p>
 
-  <script>
-    function go(path) {
-      window.location.href = "https://www.nurserysera.com" + path;
-    }
-    function toggleMenu() {
-      alert("メニュー開閉処理（未実装）");
-    }
-  </script>
+  <!-- 上部カテゴリ -->
+  <section class="container top-row">
+    <div id="topCategories" class="categories">
+      <button class="pill" onclick="filterCategory('all')">All</button>
+      <button class="like-only" onclick="filterLiked()" title="いいねだけ">♡</button>
+      <button onclick="filterCategory('monstera')">Monstera</button>
+      <button onclick="filterCategory('alocasia')">Alocasia</button>
+      <button onclick="filterCategory('anthurium')">Anthurium</button>
+      <button onclick="filterCategory('philodendron')">Philodendron</button>
+    </div>
+  </section>
 
-</body>
-</html>
-</head>
-<body>
- <? var url = getScriptUrl(); ?>
-<div class="header-bar" id="titleBar">
-  <button class="menu-icon" onclick="toggleMenu(event)">
-    <span></span><span></span><span></span>
-  </button>
-  <div class="main-title" onclick="window.top.location.href='<?= url ?>?page=index'">nursery sera</div>
-  <button class="cart-button" onclick="window.top.location.href='<?= url ?>?page=cart'"></button>
+  <!-- 商品カード -->
+  <section class="container">
+    <!-- 1 -->
+    <article class="product-item" data-category="alocasia">
+      <img class="product-img" src="https://i.imgur.com/WckseRA.jpg" alt="Alocasia Silver Dragon" onclick="enlargeImage(this)">
+      <div class="product-right">
+        <div class="title-row">
+          <h3 class="product-name">Alocasia Silver Dragon</h3>
+        </div>
+        <p class="subtext">tissue culture</p>
+        <div class="mid">
+          <p class="price">¥ 3,500</p>
+          <button class="info-btn" aria-label="info">i</button>
+        </div>
+        <div class="info-panel">
+          <ul class="info-list">
+            <li>発送方法：第四種郵便（速達・追跡付き）￥700</li>
+            <li>5,000円以上のご注文で送料半額</li>
+            <li>1万円以上のご注文で送料無料</li>
+            <li>画像タップで拡大できます</li>
+          </ul>
+        </div>
+        <div class="bottom-row">
+          <button class="like-btn" id="like-001" onclick="toggleLike('001')" aria-label="like">♡</button>
+          <div class="qty-wrap">
+            <select id="qty-001" class="qty-select"></select>
+            <div class="qty-display" data-for="qty-001">1</div>
+            <div class="qty-menu" data-for="qty-001"></div>
+          </div>
+          <button class="add-btn" onclick="addToCart('001','Alocasia Silver Dragon',3500)">Add to Cart</button>
+        </div>
+      </div>
+    </article>
+
+    <!-- 2 -->
+    <article class="product-item" data-category="anthurium">
+      <img class="product-img" src="https://i.imgur.com/oeHgMsY.jpg" alt="Anthurium KOS Hybrid" onclick="enlargeImage(this)">
+      <div class="product-right">
+        <div class="title-row">
+          <h3 class="product-name">Anthurium ‘King of Spades’ Hybrid</h3>
+        </div>
+        <p class="subtext">tissue culture</p>
+        <div class="mid">
+          <p class="price">¥ 1,200</p>
+          <button class="info-btn" aria-label="info">i</button>
+        </div>
+        <div class="info-panel">
+          <ul class="info-list">
+            <li>発送方法：第四種郵便（速達・追跡付き）￥700</li>
+            <li>5,000円以上のご注文で送料半額</li>
+            <li>1万円以上のご注文で送料無料</li>
+            <li>画像タップで拡大できます</li>
+          </ul>
+        </div>
+        <div class="bottom-row">
+          <button class="like-btn" id="like-002" onclick="toggleLike('002')" aria-label="like">♡</button>
+          <div class="qty-wrap">
+            <select id="qty-002" class="qty-select"></select>
+            <div class="qty-display" data-for="qty-002">1</div>
+            <div class="qty-menu" data-for="qty-002"></div>
+          </div>
+          <button class="add-btn" onclick="addToCart('002','Anthurium King of Spades Hybrid',1200)">Add to Cart</button>
+        </div>
+      </div>
+    </article>
+
+    <!-- 3 -->
+    <article class="product-item" data-category="monstera">
+      <img class="product-img" src="https://i.imgur.com/meNvwEL.jpg" alt="Monstera Variegata" onclick="enlargeImage(this)">
+      <div class="product-right">
+        <div class="title-row">
+          <h3 class="product-name">Monstera Variegata</h3>
+        </div>
+        <p class="subtext">tissue culture</p>
+        <div class="mid">
+          <p class="price">¥ 1,500</p>
+          <button class="info-btn" aria-label="info">i</button>
+        </div>
+        <div class="info-panel">
+          <ul class="info-list">
+            <li>発送方法：第四種郵便（速達・追跡付き）￥700</li>
+            <li>5,000円以上のご注文で送料半額</li>
+            <li>1万円以上のご注文で送料無料</li>
+            <li>画像タップで拡大できます</li>
+          </ul>
+        </div>
+        <div class="bottom-row">
+          <button class="like-btn" id="like-003" onclick="toggleLike('003')" aria-label="like">♡</button>
+          <div class="qty-wrap">
+            <select id="qty-003" class="qty-select"></select>
+            <div class="qty-display" data-for="qty-003">1</div>
+            <div class="qty-menu" data-for="qty-003"></div>
+          </div>
+          <button class="add-btn" onclick="addToCart('003','Monstera Variegata',1500)">Add to Cart</button>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <!-- 画像拡大モーダル -->
+  <div id="modal" onclick="this.style.display='none'">
+    <img id="modal-img" src="" alt="">
+  </div>
+
+  <!-- フッター -->
+  <footer class="container" style="padding:20px 12px 40px">
+    <div style="display:flex;justify-content:center;gap:26px;margin-bottom:12px">
+      <a href="https://www.instagram.com/" target="_blank" rel="noopener"><img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png" alt="Instagram" width="44" height="44"></a>
+      <a href="https://line.me/ja/" target="_blank" rel="noopener"><img src="https://upload.wikimedia.org/wikipedia/commons/4/41/LINE_logo.svg" alt="LINE" width="44" height="44"></a>
+      <a href="https://www.threads.net/" target="_blank" rel="noopener"><img src="https://cdn.simpleicons.org/threads/000000" alt="Threads" width="44" height="44"></a>
+    </div>
+    <div style="text-align:center;font-size:14px">
+      <a href="/?page=form">お問い合わせ</a> ・
+      <a href="/?page=policy">各種ポリシー</a> ・
+      <a href="/?page=terms">利用規約</a> ・
+      <a href="/?page=law">特定商取引法に基づく表記</a>
+    </div>
+  </footer>
 </div>
 
-<!-- スライドメニュー -->
-<div class="category-menu" id="categoryMenu">
-  <h1 class="category-header">MENU</h1>
- <ul>
-     <li onclick="window.top.location.href='<?= url ?>?page=index'">All</li>
-     <li onclick="window.top.location.href='<?= url ?>?page=index&cat=monstera'">Monstera</li>
-     <li onclick="window.top.location.href='<?= url ?>?page=index&cat=alocasia'">Alocasia</li>
-     <li onclick="window.top.location.href='<?= url ?>?page=index&cat=anthurium'">Anthurium</li>
-     <li onclick="window.top.location.href='<?= url ?>?page=index&cat=philodendron'">Philodendron</li>
-     <li onclick="window.top.location.href='<?= url ?>?page=index&liked=1'">♡ いいねした商品</li>
-     <li onclick="window.top.location.href='<?= url ?>?page=form'">お問い合わせ</li>
-     <li onclick="window.top.location.href='<?= url ?>?page=policy'">各種ポリシー</li>
-  </ul>
-  </div>
-<div class="overlay" id="overlay" onclick="closeMenu()"></div>
-  </div>
-
-  <p class="subtitle1">plant list</p>
-
-  <!-- 上部ボタン & カテゴリ -->
-  <section class="container top-row">
-  <div id="topCategories" class="categories">
-    <button class="pill" onclick="filterCategory('all')">All</button>
-    <button class="like-only" onclick="filterLiked()" title="いいねだけ">♡</button>
-    <button onclick="filterCategory('monstera')">Monstera</button>
-    <button onclick="filterCategory('alocasia')">Alocasia</button>
-    <button onclick="filterCategory('anthurium')">Anthurium</button>
-    <button onclick="filterCategory('philodendron')">Philodendron</button>
-  </div>
-</section>
-
-
-  <!-- 商品カード -->
-  <section class="container">
-    <!-- 1 -->
-    <article class="product-item" data-category="alocasia">
-      <img class="product-img" src="https://i.imgur.com/WckseRA.jpg" onclick="enlargeImage(this)">
-      <div class="product-right">
-        <div class="title-row">
-          <h3 class="product-name">Alocasia Silver Dragon</h3>
-        </div>
-          <p class="subtext">tissue culture</p>
-        <div class="mid">
-          <p class="price">¥ 3,500</p>
-          <button class="info-btn" aria-label="info">i</button>
-        </div>
-        <div class="info-panel">
-          <ul class="info-list">
-            <li>発送方法<br>第四種郵便（速達・追跡付き）￥700</li>
-            <li>5,000円以上のご注文で送料半額</li>
-            <li>1万円以上のご注文で送料無料</li>
-            <li>画像タップで拡大できます</li>
-          </ul>
-        </div>
-        <div class="bottom-row">
-          <button class="like-btn" id="like-001" onclick="toggleLike('001')" aria-label="like">♡</button>
-          <div class="qty-wrap">
-            <select id="qty-001" class="qty-select"></select>
-            <div class="qty-display" data-for="qty-001">1</div>
-            <div class="qty-menu" data-for="qty-001"></div>
-          </div>
-          <button class="add-btn" onclick="addToCart('001','Alocasia Silver Dragon',3500)">Add to Cart</button>
-        </div>
-      </div>
-    </article>
-
-    <!-- 2 -->
-    <article class="product-item" data-category="anthurium">
-      <img class="product-img" src="https://i.imgur.com/oeHgMsY.jpg" onclick="enlargeImage(this)">
-      <div class="product-right">
-        <div class="title-row">
-          <h3 class="product-name">Anthurium ‘King of Spades’ Hybrid</h3>
-        </div>
-        <p class="subtext">tissue culture</p>
-        <div class="mid">
-          <p class="price">¥ 1,200</p>
-          <button class="info-btn" aria-label="info">i</button>
-        </div>
-        <div class="info-panel">
-          <ul class="info-list">
-            <li>発送方法<br>第四種郵便（速達・追跡付き）￥700</li>
-            <li>5,000円以上のご注文で送料半額</li>
-            <li>1万円以上のご注文で送料無料</li>
-            <li>画像タップで拡大できます</li>
-          </ul>
-        </div>
-        <div class="bottom-row">
-          <button class="like-btn" id="like-002" onclick="toggleLike('002')" aria-label="like">♡</button>
-          <div class="qty-wrap">
-            <select id="qty-002" class="qty-select"></select>
-            <div class="qty-display" data-for="qty-002">1</div>
-            <div class="qty-menu" data-for="qty-002"></div>
-          </div>
-          <button class="add-btn" onclick="addToCart('002','Anthurium King of Spades Hybrid',1200)">Add to Cart</button>
-        </div>
-      </div>
-    </article>
-
-    <!-- 3 -->
-    <article class="product-item" data-category="monstera">
-      <img class="product-img" src="https://i.imgur.com/meNvwEL.jpg" onclick="enlargeImage(this)">
-      <div class="product-right">
-        <div class="title-row">
-          <h3 class="product-name">Monstera Variegata</h3>
-        </div>
-        <p class="subtext">tissue culture</p>
-        <div class="mid">
-          <p class="price">¥ 1,500</p>
-          <button class="info-btn" aria-label="info">i</button>
-        </div>
-        <div class="info-panel">
-          <ul class="info-list">
-            <li>発送方法<br>第四種郵便（速達・追跡付き）￥700</li>
-            <li>5,000円以上のご注文で送料半額</li>
-            <li>1万円以上のご注文で送料無料</li>
-            <li>画像タップで拡大できます</li>
-          </ul>
-        </div>
-        <div class="bottom-row">
-          <button class="like-btn" id="like-003" onclick="toggleLike('003')" aria-label="like">♡</button>
-          <div class="qty-wrap">
-            <select id="qty-003" class="qty-select"></select>
-            <div class="qty-display" data-for="qty-003">1</div>
-            <div class="qty-menu" data-for="qty-003"></div>
-          </div>
-          <button class="add-btn" onclick="addToCart('003','Monstera Variegata',1500)">Add to Cart</button>
-        </div>
-      </div>
-    </article>
-  </section>
-
-  <!-- 画像拡大モーダル -->
-  <div id="modal" onclick="this.style.display='none'"><img id="modal-img" src=""></div>
-
-  <!-- フッター -->
- <footer>
-  <div class="footer-icons">
-    <a href="https://www.instagram.com/" target="_blank">
-      <img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png" alt="Instagram">
-    </a>
-    <a href="https://line.me/ja/" target="_blank">
-      <img src="https://upload.wikimedia.org/wikipedia/commons/4/41/LINE_logo.svg" alt="LINE">
-    </a>
-    <a href="https://www.threads.net/" target="_blank">
-      <img src="https://cdn.simpleicons.org/threads/000000" alt="Threads">
-    </a>
-  </div>
-  <div class="footer-links">
-      <a href="<?= url ?>?page=form">お問い合わせ</a>
-      <a href="<?= url ?>?page=policy">各種ポリシー</a>
-      <a href="<?= url ?>?page=terms">利用規約</a>
-      <a href="<?= url ?>?page=law">特定商取引法に基づく表記</a>
-  </div>
-</footer>
-
 <script>
-// メニュー開閉
-function toggleMenu(event){
-  const menu = document.getElementById("categoryMenu");
-  const overlay = document.getElementById("overlay");
-  const isVisible = menu.classList.contains("show");
+  // 自ドメイン固定（www.nurserysera.com）
+  const BASE = "https://www.nurserysera.com";
+  function go(path){ window.location.href = new URL(path, BASE).toString(); }
 
-  document.body.style.overflow = isVisible ? "" : "hidden";
-  menu.classList.toggle("show", !isVisible);
-  overlay.classList.toggle("show", !isVisible);
-}
-function closeMenu(){
-  document.getElementById("categoryMenu").classList.remove("show");
-  document.getElementById("overlay").classList.remove("show");
-  document.body.style.overflow = "";
-}
+  // メニュー開閉
+  function toggleMenu(){
+    const menu=document.getElementById("categoryMenu");
+    const overlay=document.getElementById("overlay");
+    const isVisible=menu.classList.contains("show");
+    document.body.style.overflow = isVisible ? "" : "hidden";
+    menu.classList.toggle("show", !isVisible);
+    overlay.classList.toggle("show", !isVisible);
+  }
+  function closeMenu(){
+    document.getElementById("categoryMenu").classList.remove("show");
+    document.getElementById("overlay").classList.remove("show");
+    document.body.style.overflow = "";
+  }
 
-// スクロール方向でヘッダー表示/非表示
-let lastScrollY = window.scrollY;
-const titleBar = document.getElementById("titleBar");
-const threshold = 10;
+  // スクロール方向でヘッダー表示/非表示
+  let lastScrollY=window.scrollY; const titleBar=document.getElementById("titleBar"); const threshold=10;
+  window.addEventListener("scroll", ()=>{
+    const current=window.scrollY, diff=current-lastScrollY;
+    if(Math.abs(diff)<threshold) return;
+    titleBar.style.top = (diff < 0) ? "-50px" : "-200px";
+    lastScrollY=current;
+  });
 
-window.addEventListener("scroll", () => {
-  const current = window.scrollY;
-  const diff = current - lastScrollY;
-  if (Math.abs(diff) < threshold) return;
-  titleBar.style.top = (diff < 0) ? "-50px" : "-200px";
-  lastScrollY = current;
-});
+  // 画像拡大
+  function enlargeImage(img){
+    const m=document.getElementById('modal'), mi=document.getElementById('modal-img');
+    mi.src=img.src; m.style.display='block';
+  }
 
-/* 画像拡大 */
-function enlargeImage(img){
-  const m=document.getElementById('modal'), mi=document.getElementById('modal-img');
-  mi.src=img.src; m.style.display='block';
-}
+  // カテゴリ
+  function filterCategory(c){
+    document.querySelectorAll('.product-item').forEach(it=>{
+      const ok = c==='all' || it.getAttribute('data-category')===c;
+      it.style.display = ok ? 'flex' : 'none';
+    });
+  }
+  function filterLiked(){
+    const likes=JSON.parse(localStorage.getItem('likes')||'{}');
+    document.querySelectorAll('.product-item').forEach((it,idx)=>{
+      const id=String(idx+1).padStart(3,'0');
+      it.style.display = likes[id] ? 'flex' : 'none';
+    });
+  }
 
-/* カテゴリ */
-function filterCategory(c){
-  document.querySelectorAll('.product-item').forEach(it=>{
-    const ok = c==='all' || it.getAttribute('data-category')===c;
-    it.style.display = ok ? 'flex' : 'none';
-  });
-}
-function filterLiked(){
-  const likes=JSON.parse(localStorage.getItem('likes')||'{}');
-  document.querySelectorAll('.product-item').forEach((it,idx)=>{
-    const id=String(idx+1).padStart(3,'0');
-    it.style.display = likes[id] ? 'flex' : 'none';
-  });
-}
+  // いいね
+  function toggleLike(shortId){
+    const likes=JSON.parse(localStorage.getItem('likes')||'{}');
+    const id='like-'+shortId;
+    const btn=document.getElementById(id);
+    const liked=!likes[shortId];
+    likes[shortId]=liked;
+    localStorage.setItem('likes',JSON.stringify(likes));
+    btn.classList.toggle('liked', liked);
+    btn.textContent = liked ? '♥' : '♡';
+  }
 
-/* いいね */
-function toggleLike(shortId){
-  const likes=JSON.parse(localStorage.getItem('likes')||'{}');
-  const id='like-'+shortId;
-  const btn=document.getElementById(id);
-  const liked = !likes[shortId];
-  likes[shortId]=liked;
-  localStorage.setItem('likes',JSON.stringify(likes));
-  btn.classList.toggle('liked', liked);
-  btn.textContent = liked ? '♥' : '♡';
-}
+  // カート（ローカル保存）
+  function addToCart(id,name,price){
+    const sel=document.getElementById('qty-'+id);
+    const q=parseInt(sel.value||'1');
+    const cart=JSON.parse(localStorage.getItem('cart')||'[]');
+    const idx=cart.findIndex(i=>i.id===id);
+    const img=document.querySelector(`[id="qty-${id}"]`)?.closest('.product-item')?.querySelector('.product-img')?.getAttribute('src')||'';
+    const item={id,name,price,quantity:q,image:img};
+    if(idx>-1) cart[idx]=item; else cart.push(item);
+    localStorage.setItem('cart',JSON.stringify(cart));
+    alert(`${name} を ${q} 株カートに追加しました。`);
+  }
 
-/* カート（ローカル保存） */
-function addToCart(id, name, price){
-  const sel=document.getElementById('qty-'+id);
-  const q=parseInt(sel.value||'1');
-  const cart=JSON.parse(localStorage.getItem('cart')||'[]');
-  const idx=cart.findIndex(i=>i.id===id);
-  const img=document.querySelector(`[id="qty-${id}"]`)?.closest('.product-item')?.querySelector('.product-img')?.getAttribute('src')||'';
-  const item={id,name,price,quantity:q,image:img};
-  if(idx>-1) cart[idx]=item; else cart.push(item);
-  localStorage.setItem('cart',JSON.stringify(cart));
-  alert(`${name} を ${q} 株カートに追加しました。`);
-}
+  // Infoパネル
+  document.querySelectorAll('.info-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const card=btn.closest('.product-right');
+      const panel=card?.querySelector('.info-panel');
+      if(!panel) return;
+      document.querySelectorAll('.info-panel.show').forEach(p=>{ if(p!==panel) p.classList.remove('show'); });
+      panel.classList.toggle('show');
+      btn.setAttribute('aria-expanded', panel.classList.contains('show'));
+    });
+  });
 
+  // 数量メニュー生成
+  document.addEventListener('DOMContentLoaded', ()=>{
+    document.querySelectorAll('.qty-select').forEach(sel=>{
+      sel.innerHTML=''; for(let i=1;i<=100;i++){ const op=document.createElement('option'); op.value=i; op.textContent=i; sel.appendChild(op); }
+      sel.value='1';
+    });
+    document.querySelectorAll('.qty-display').forEach(btn=>{
+      const forId=btn.getAttribute('data-for');
+      const sel=document.getElementById(forId);
+      const menu=btn.parentElement.querySelector(`.qty-menu[data-for="${forId}"]`);
+      if(menu && menu.children.length===0){
+        for(let i=1;i<=100;i++){
+          const it=document.createElement('div'); it.className='qty-item'; it.textContent=i;
+          it.addEventListener('click', ()=>{ sel.value=String(i); btn.textContent=String(i); menu.classList.remove('show'); });
+          menu.appendChild(it);
+        }
+      }
+      btn.addEventListener('click',(e)=>{ e.stopPropagation(); document.querySelectorAll('.qty-menu.show').forEach(m=>{ if(m!==menu) m.classList.remove('show'); }); menu.classList.toggle('show'); });
+    });
+    document.addEventListener('click', ()=>{ document.querySelectorAll('.qty-menu.show').forEach(m=>m.classList.remove('show')); });
+  });
 
-/* Infoボタン（右側余白・同一カードのみ） */
-document.querySelectorAll('.info-btn').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    const card = btn.closest('.product-right');
-    const panel = card?.querySelector('.info-panel');
-    const subTxt = card?.querySelector('.subtext');
-    if(!panel) return;
-
-    document.querySelectorAll('.info-panel.show').forEach(p=>{
-      if(p!==panel) p.classList.remove('show');
-    });
-
-    if(subTxt){
-      panel.style.top = subTxt.offsetTop + 'px';
-    }else{
-      const mid = card?.querySelector('.mid');
-      if(mid) panel.style.top = mid.offsetTop + 'px';
-    }
-
-    panel.classList.toggle('show');
-    btn.setAttribute('aria-expanded', panel.classList.contains('show'));
-  });
-});
-
-/* ========= 数量：1〜100を生成し、押した場所の直下に自作メニューを表示 ========= */
-document.addEventListener('DOMContentLoaded', ()=>{
-  // 1) ネイティブselectへ1〜100を流し込む
-  document.querySelectorAll('.qty-select').forEach(sel=>{
-    sel.innerHTML='';
-    for(let i=1;i<=100;i++){
-      const op=document.createElement('option');
-      op.value=i; op.textContent=i;
-      sel.appendChild(op);
-    }
-    sel.value='1';
-  });
-
-  // 2) 自作ドロップダウンの構築
-  document.querySelectorAll('.qty-display').forEach(btn=>{
-    const forId = btn.getAttribute('data-for');
-    const sel = document.getElementById(forId);
-    const menu = btn.parentElement.querySelector(`.qty-menu[data-for="${forId}"]`);
-
-    // メニュー項目を生成（必要に応じて100まで）
-    if(menu && menu.children.length===0){
-      for(let i=1;i<=100;i++){
-        const it=document.createElement('div');
-        it.className='qty-item';
-        it.textContent=i;
-        it.addEventListener('click', ()=>{
-          sel.value=String(i);
-          btn.textContent=String(i);
-          menu.classList.remove('show');
-        });
-        menu.appendChild(it);
-      }
-    }
-
-    // 表示/非表示トグル（押した場所の直下に表示 = CSSでtop:100%）
-    btn.addEventListener('click', (e)=>{
-      e.stopPropagation();
-      document.querySelectorAll('.qty-menu.show').forEach(m=>{ if(m!==menu) m.classList.remove('show'); });
-      menu.classList.toggle('show');
-    });
-  });
-
-  // 3) 画面のどこかをクリックで閉じる
-  document.addEventListener('click', ()=>{
-    document.querySelectorAll('.qty-menu.show').forEach(m=>m.classList.remove('show'));
-  });
-});
-
-// ===== 商品名のフォントを自動で縮めて1行に収める =====
-(function(){
-  const MIN_PX = 14; // これ以下には下げない
-
-  function fitName(el){
-    // 現在のサイズを取得
-    let size = parseFloat(getComputedStyle(el).fontSize);
-
-    // はみ出している間だけ1pxずつ下げる
-    // ※安全のため 60 回までに制限
-    let guard = 60;
-    while (el.scrollWidth > el.clientWidth && size > MIN_PX && guard-- > 0){
-      size -= 1;
-      el.style.fontSize = size + 'px';
-    }
-  }
-
-  function fitAll(){
-    document.querySelectorAll('.product-name').forEach(el=>{
-      // まず CSS のサイズにリセットしてから再計算
-      el.style.fontSize = '';
-      fitName(el);
-    });
-  }
-
-  // DOM後＋フォント読み込み後（Webフォント対策）でも実行
-  document.addEventListener('DOMContentLoaded', fitAll);
-  window.addEventListener('load', fitAll);
-  window.addEventListener('resize', fitAll);
-})();
-
-
+  // 商品名1行合わせ
+  (function(){
+    const MIN_PX=14;
+    function fitName(el){
+      let size=parseFloat(getComputedStyle(el).fontSize), guard=60;
+      while(el.scrollWidth>el.clientWidth && size>MIN_PX && guard-- > 0){ size-=1; el.style.fontSize=size+'px'; }
+    }
+    function fitAll(){
+      document.querySelectorAll('.product-name').forEach(el=>{ el.style.fontSize=''; fitName(el); });
+    }
+    document.addEventListener('DOMContentLoaded', fitAll);
+    window.addEventListener('load', fitAll);
+    window.addEventListener('resize', fitAll);
+  })();
 </script>
 </body>
 </html>
-
-
