@@ -2,8 +2,8 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <!-- iPhone等でのドアップ防止（等倍表示） -->
-<meta name="viewport" content="width=480, initial-scale=1">
+  <!-- iPhone等でのドアップ防止 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
   <!-- 同一タブ遷移 -->
   <base target="_self">
   <title>nursery sera - 商品一覧</title>
@@ -11,224 +11,166 @@
   <!-- フォント -->
   <link href="https://fonts.googleapis.com/css2?family=Bayon&family=Tangerine:wght@700&family=Italianno&family=Noto+Serif+JP&display=swap" rel="stylesheet">
 
-  <script>
-    // 自ドメイン内遷移（親ウィンドウは触らない）
-    const BASE = window.location.origin; // 例: https://www.nurserysera.com
-    function go(path){
-      window.location.href = new URL(path, BASE).toString();
-    }
-  </script>
   <style>
-    /* ===== ベース ===== */
-html,body{margin:0;padding:0;font-size:20px;-webkit-text-size-adjust:100%;font-family:Arial,sans-serif;background:#fff0f5;color:#333;box-sizing:border-box}
-    *,*:before,*:after{box-sizing:inherit}
-    .container{max-width:1100px;margin:0 auto;padding:0 16px}
-
-   /* ===== ヘッダー ===== */
-.header-bar{
-  position:sticky; top:-50px; z-index:1000;
-  background:transparent;
-  display:flex; align-items:center; justify-content:space-between;
-  padding:20px; transition:top .5s ease;
-}
-.menu-icon{
-  display:flex; flex-direction:column; justify-content:space-between;
-  width:48px; height:40px; cursor:pointer; background:none; border:none;
-  padding:0; margin:0; transform:translateX(20px);
-}
-.menu-icon span{
-  display:block; height:3px; width:100%; background:#333; border-radius:2px;
-}
-.main-title{
-  font-family:'Bayon', cursive;
-  font-size:120px; margin:0; white-space:nowrap; transform:translateX(20px);
-  cursor:pointer;
-}
-.cart-button{
-  background-image:url('https://gist.githubusercontent.com/nursery-sera/3bfad5863718f7147d193844bdaca462/raw/d7f9244ea2cbbaf4c13a67c30831022e37076b17/plantcart-icon.svg');
-  background-size:contain; background-repeat:no-repeat;
-  width:100px; height:100px; border:none; background-color:transparent; cursor:pointer;
-}
-
-/* ===== メニュー（スライド＋オーバーレイ） ===== */
-.overlay{
-  position:fixed; inset:0; width:100vw; height:100vh;
-  background:rgba(0,0,0,.3); z-index:2000; display:none;
-}
-.overlay.show{ display:block; }
-
-.category-menu{
-  position:fixed; top:0; left:0;
-  width:66vw; height:55vh;
-  background-color:rgba(255,255,255,.7);
-  backdrop-filter:blur(8px);
-  z-index:3000;
-  border:2px solid rgba(0,0,0,.1);
-  box-shadow:4px 0 20px rgba(0,0,0,.2);
-  transform:translateX(-100%); opacity:0; pointer-events:none;
-  transition:transform .4s ease, opacity .4s ease;
-  padding:30px;
-}
-.category-menu.show{
-  transform:translateX(0); opacity:1; pointer-events:auto;
-}
-
-.category-header{
-  font-family:'Cinzel', serif;
-  font-size:60px; margin-bottom:40px; letter-spacing:3px; color:#000;
-  text-align:center;
-}
-.category-menu ul{ list-style:none; padding:0; margin:0; }
-.category-menu li{
-  font-size:26px; margin:20px 0; padding-bottom:10px; position:relative;
-  border-bottom:1px solid rgba(0,0,0,.1);
-  transition:transform .2s ease, color .2s ease;
-  cursor:pointer; font-weight:bold; color:#000; text-align:left; padding-right:20px;
-}
-.category-menu li:hover{ color:#c2185b; transform:scale(1.05); }
-.category-menu li::after{
-  content:"＞"; position:absolute; right:0; top:2px; color:#bbb; font-size:20px;
-}
-
-/* ===== フッター ===== */
-footer{
-  margin-top:200px; padding:30px 20px; background:#fff0f5; text-align:center;
-}
-.footer-icons{
-  display:flex; justify-content:center; gap:60px; margin-bottom:16px;
-}
-.footer-icons img{ width:60px; height:60px; }
-.footer-links a{
-  display:inline-block; margin:0 20px; color:#444; font-size:24px; text-decoration:none;
-}
-.footer-links a:hover{ text-decoration:underline; }
-
-
-    .subtitle1 {
-      font-family: 'Tangerine', cursive;
-      font-size: 100px;
-      text-align: center;
-      opacity: 0.7;
-      margin-top: -30px;
-      margin-bottom: 10px;
+    /* ===== モバイルファースト ===== */
+    html,body {
+      margin: 0;
+      padding: 0;
+      font-size: 16px;
+      -webkit-text-size-adjust: 100%;
+      font-family: Arial, sans-serif;
+      background: #fff0f5;
+      color: #333;
+      box-sizing: border-box;
+      max-width: 480px; /* スマホ幅固定 */
+      margin: 0 auto;
     }
+    *, *:before, *:after { box-sizing: inherit; }
 
-
-
-
-    /* ===== 上部フィルタ & カテゴリ ===== */
- /* 上部カテゴリ（1本だけ使う） */
-.top-row .categories{
-  display:flex;
-  gap:20px;
-  padding:18px 0 36px;
-  overflow-x:auto;
-  white-space:nowrap;
-  -webkit-overflow-scrolling:touch;
-  scrollbar-width:none;
-  flex-wrap:nowrap;          /* 折り返し禁止 */
-  margin-top: 50px;
-}
-.top-row .categories::-webkit-scrollbar{ display:none; }
-.top-row .categories button{
-  flex:0 0 auto;             /* 横幅が勝手に伸びない */
-  font-size:38px;
-  padding:20px 80px;
-  background:#f8c6dc;
-  border:0;
-  border-radius:60px;
-  font-weight:300;
-  color:#333;
-  box-shadow:1px 1px 6px rgba(0,0,0,.1);
-}
-
-
+    /* ===== ヘッダー ===== */
+    .header-bar {
+      position: sticky;
+      top: -50px;
+      z-index: 1000;
+      background: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px;
+      transition: top .5s ease;
+    }
+    .menu-icon {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      width: 32px;
+      height: 26px;
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 0;
+      margin: 0;
+    }
+    .menu-icon span {
+      display: block;
+      height: 3px;
+      width: 100%;
+      background: #333;
+      border-radius: 2px;
+    }
+    .main-title {
+      font-family: 'Bayon', cursive;
+      font-size: clamp(36px, 10vw, 48px);
+      margin: 0;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .cart-button {
+      background-image: url('https://gist.githubusercontent.com/nursery-sera/3bfad5863718f7147d193844bdaca462/raw/d7f9244ea2cbbaf4c13a67c30831022e37076b17/plantcart-icon.svg');
+      background-size: contain;
+      background-repeat: no-repeat;
+      width: 36px;
+      height: 36px;
+      border: none;
+      background-color: transparent;
+      cursor: pointer;
+    }
 
     /* ===== 商品カード ===== */
-    .product-item{display:flex;margin-left:20px;gap:48px;align-items:flex-start;padding:20px 10px;border-bottom:1px solid #e7cfd8}
-    .product-img{width:286px;height:286px;object-fit:cover;border-radius:16px;display:block;cursor:pointer}
-
-    .product-right{flex:1;display:flex;flex-direction:column;min-width:0; position:relative;}
-    .title-row{display:flex;align-items:center;justify-content:flex-start;margin-top:25px}
-    .product-name{font-size:40px;font-weight:500;line-height:1.15;margin:0 16px 0 0;margin-top:-20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-
-    .mid{margin:10px 0 12px;display:flex;align-items:center;justify-content:space-between;gap:12px}
-    .price{font-size:38px;font-weight:400;margin-top:20px}
-    .info-btn{margin-top:-100px;width:48px;height:48px;border-radius:50%;border:2px solid #cfcfcf;background:#fff0f5;color:#7a7a7a;font-size:22px;font-weight:bold;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
-
-    .subtext{font-size:24px;margin:8px 0 0;margin-top:px}
-
-    .bottom-row{margin-top:0px;display:flex;align-items:center;gap:40px;flex-wrap:nowrap}
-    .like-btn{width:66px;height:66px;border-radius:50%;border:2px solid #e91e63;background:none;color:#e91e63none;font-size:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:0 0 auto}
-    .like-btn.liked{background:#e91e63;color:#fff}
-
-    /* --- 数量（ネイティブselectは保持するが非表示） --- */
-    .qty-wrap{flex:0 0 auto; position:relative;}
-    .qty-select{display:none;} /* ←iOSの全画面ピッカーは出さない */
-
-
-    /* 表示ボタン（見た目は従来のselectと同じ） */
-    .qty-display{
-      height:65px; padding:0 50px; width:150px;
-      border:2px solid #e7e7e7; border-radius:16px; background:#fff;
-      font-size:33px; line-height:65px; text-align:center; cursor:pointer;
-      position:relative;
+    .product-item {
+      display: flex;
+      gap: 12px;
+      padding: 10px;
+      border-bottom: 1px solid #e7cfd8;
     }
-    .qty-display::after{
-      content:""; position:absolute; right:18px; top:50%; width:8px; height:8px;
-      transform:translateY(-50%) rotate(45deg);
-      border-right:2px solid #888; border-bottom:2px solid #888;
+    .product-img {
+      width: 120px;
+      height: 120px;
+      object-fit: cover;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .product-right {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    .product-name {
+      font-size: clamp(18px, 5vw, 22px);
+      font-weight: 500;
+      margin: 0 0 4px;
+    }
+    .price {
+      font-size: clamp(16px, 4.5vw, 20px);
+      font-weight: 400;
+      margin: 4px 0;
+    }
+    .add-btn {
+      height: 40px;
+      padding: 0 20px;
+      border: 0;
+      border-radius: 20px;
+      background: #f8c6dc;
+      color: #333;
+      font-weight: 500;
+      font-size: clamp(14px, 4vw, 16px);
+      line-height: 40px;
+      cursor: pointer;
+      flex: 0 0 auto;
     }
 
-    /* ドロップダウン（押した場所の直下に表示） */
-    .qty-menu{
-      position:absolute; left:0; top:0;
-      width:150px; max-height:350px; overflow:auto;
-      background:#fff; border:2px solid #e7e7e7; border-radius:14px;
-      box-shadow:0 6px 18px rgba(0,0,0,.08); display:none; z-index:30;
+    /* ===== メディアクエリ（PC拡張） ===== */
+    @media (min-width: 768px) {
+      html,body {
+        max-width: 1100px;
+        font-size: 18px;
+      }
+      .header-bar { padding: 20px; }
+      .main-title { font-size: 72px; }
+      .cart-button { width: 60px; height: 60px; }
+      .product-img { width: 200px; height: 200px; }
+      .product-name { font-size: 28px; }
+      .price { font-size: 24px; }
+      .add-btn { height: 50px; font-size: 18px; }
     }
-    .qty-menu.show{display:block;}
-    .qty-item{
-      padding:10px 0; text-align:center; font-size:33px; cursor:pointer;
-    }
-    .qty-item:hover{background:#f6f6f6}
-
-    .add-btn{
-  height:65px !important;
-  min-width:180px !important;
-  padding:0 50px !important;
-  border:0;
-  border-radius:28px;
-  background:#f8c6dc;
-  color:#333;
-  font-weight:500;
-  font-size:30px !important;
-  line-height:65px;         /* 縦中央きっちり */
-  white-space:nowrap;
-  cursor:pointer;
-  flex:0 0 auto;
-}
-
-
-    /* ===== インフォ（枠なし・背景なし・文字のみ、右の余白に重ね表示） ===== */
-    .info-panel{
-      position:absolute; right:0; top:0; width:60%; left: 180px;
-      display:none; z-index:10;
-      background:transparent; border:none; box-shadow:none; padding:0; margin:0;
-      color:#333; font-size:18px; line-height:1.5;
-      max-height:160px;min-width:300px; overflow:auto;margin-top: -10px
-    }
-    .info-panel.show{ display:block; }
-    .info-list{margin:0; padding:0; list-style:none;}
-    .info-list li{ margin:4px 0; padding-left:1em; text-indent:-1em; }
-    .info-list li::before{ content:"・"; }
-
-
-    /* モーダル（画像拡大） */
-    #modal{display:none;position:fixed;inset:0;z-index:10;background:rgba(0,0,0,.7)}
-    #modal img{display:block;max-width:80%;max-height:80%;margin:200px auto 50px;border:4px solid #fff}
-   }
   </style>
+</head>
+<body>
+
+  <!-- ヘッダー -->
+  <div class="header-bar">
+    <button class="menu-icon" onclick="toggleMenu()">
+      <span></span><span></span><span></span>
+    </button>
+    <h1 class="main-title" onclick="go('/index')">nursery sera</h1>
+    <button class="cart-button" onclick="go('/cart')"></button>
+  </div>
+
+  <!-- 商品一覧 -->
+  <div id="product-list">
+    <div class="product-item">
+      <img src="https://via.placeholder.com/120" alt="商品画像" class="product-img">
+      <div class="product-right">
+        <h2 class="product-name">モンステラ</h2>
+        <p class="price">¥2,000</p>
+        <button class="add-btn">カートに入れる</button>
+      </div>
+    </div>
+    <!-- 商品カードを繰り返し -->
+  </div>
+
+  <script>
+    function go(path) {
+      window.location.href = "https://www.nurserysera.com" + path;
+    }
+    function toggleMenu() {
+      alert("メニュー開閉処理（未実装）");
+    }
+  </script>
+
+</body>
+</html>
 </head>
 <body>
  <? var url = getScriptUrl(); ?>
