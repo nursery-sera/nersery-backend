@@ -38,8 +38,9 @@
     }
     .main-title{
       font-family:'Bayon', cursive;
-      font-size:120px; margin:0; white-space:nowrap; transform:translateX(20px);
+      font-size:109px; margin:0; white-space:nowrap; transform:translateX(20px);
       cursor:pointer;
+opacity:1;color:#333
     }
     .cart-button{
       background-image:url('https://gist.githubusercontent.com/nursery-sera/3bfad5863718f7147d193844bdaca462/raw/d7f9244ea2cbbaf4c13a67c30831022e37076b17/plantcart-icon.svg');
@@ -56,7 +57,7 @@
 
     .category-menu{
       position:fixed; top:0; left:0;
-      width:66vw; height:55vh;
+      width:55vw; height:100vh;
       background-color:rgba(255,255,255,.7);
       backdrop-filter:blur(8px);
       z-index:3000;
@@ -72,15 +73,16 @@
 
     .category-header{
       font-family:'Cinzel', serif;
-      font-size:60px; margin-bottom:40px; letter-spacing:3px; color:#000;
+      font-size:80px; margin-bottom:40px; letter-spacing:3px; color:#000;
       text-align:center;
     }
     .category-menu ul{ list-style:none; padding:0; margin:0; }
-    .category-menu li{
-      font-size:26px; margin:20px 0; padding-bottom:10px; position:relative;
+    .category-menu li{opacity: 0.8;
+font-family: 'Noto Serif JP', serif;
+      font-size:36px; margin:20px 0; padding-bottom:10px; position:relative;
       border-bottom:1px solid rgba(0,0,0,.1);
       transition:transform .2s ease, color .2s ease;
-      cursor:pointer; font-weight:bold; color:#000; text-align:left; padding-right:20px;
+      cursor:pointer; font-weight:400; color:#000; text-align:left; padding-right:20px;
     }
     .category-menu li:hover{ color:#c2185b; transform:scale(1.05); }
     .category-menu li::after{
@@ -105,7 +107,7 @@
       font-family: 'Tangerine', cursive;
       font-size: 100px;
       text-align: center;
-      opacity: 0.7;
+      opacity: 0.4;
       margin-top: -30px;
       margin-bottom: 10px;
     }
@@ -123,15 +125,16 @@
       margin-top: 50px;
     }
     .top-row .categories::-webkit-scrollbar{ display:none; }
-    .top-row .categories button{
+    .top-row .categories button{ font-family: 'Lustria;
       flex:0 0 auto;
       font-size:38px;
-      padding:20px 80px;
+      padding:15px 80px;
       background:#f8c6dc;
       border:0;
       border-radius:60px;
-      font-weight:300;
+      font-weight:400;
       color:#333;
+opacity:0.9;
       box-shadow:1px 1px 6px rgba(0,0,0,.1);
     }
 
@@ -141,7 +144,7 @@
 
     .product-right{flex:1;display:flex;flex-direction:column;min-width:0; position:relative;}
     .title-row{display:flex;align-items:center;justify-content:flex-start;margin-top:25px}
-    .product-name{font-size:40px;font-weight:500;line-height:1.15;margin:0 16px 0 0;margin-top:-20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .product-name{ font-family: 'Lustria', serif;font-size:48px;font-weight:600;line-height:1.5;margin:0 16px 0 0;margin-top:-20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#333;}
 
     .mid{margin:10px 0 12px;display:flex;align-items:center;justify-content:space-between;gap:12px}
     .price{font-size:38px;font-weight:400;margin-top:20px}
@@ -187,6 +190,7 @@
       border-radius:28px;
       background:#f8c6dc;
       color:#333;
+opacity:0.8;
       font-weight:500;
       font-size:30px !important;
       line-height:65px;
@@ -240,6 +244,21 @@ border:none; box-shadow:none; padding:0; margin:0;
 /* いいね未選択（♡）の文字色だけグレーに */
 .like-btn:not(.liked) { color:#999 !important; }
 
+.category-subtitle {
+  font-size: 48px;
+  font-family: 'Playfair Display SC', serif;
+  margin: 123px 0 10px;
+  color: #000000;
+  font-weight: 400;
+  border-bottom: 1px solid rgba(0,0,0,0.1);
+  padding-bottom: 4px;
+text-align:center;
+}
+.contact-links a {
+  color: #000;     
+  text-decoration: none; /* 下線消し */
+}
+
   </style>
 </head>
 <body>
@@ -254,16 +273,22 @@ border:none; box-shadow:none; padding:0; margin:0;
   <!-- スライドメニュー -->
   <div class="category-menu" id="categoryMenu">
     <h1 class="category-header">MENU</h1>
+<h2 class="category-subtitle">Category</h2>
     <ul>
       <li onclick="go('/?page=index')">All</li>
-      <li onclick="go('/?page=index&liked=1')">♡ </li>
+      <li onclick="go('/?page=index&liked=1')">like♡</li>
       <li onclick="go('/?page=index&cat=monstera')">Monstera</li>
       <li onclick="go('/?page=index&cat=alocasia')">Alocasia</li>
       <li onclick="go('/?page=index&cat=anthurium')">Anthurium</li>
       <li onclick="go('/?page=index&cat=philodendron')">Philodendron</li>
-      <li onclick="go('/?page=form')">お問い合わせ</li>
-      <li onclick="go('/?page=policy')">各種ポリシー</li>
-    </ul>
+</ul>
+<h2 class="category-subtitle">Contact</h2>
+<ul class="contact-links">
+  <li><a href="https://www.instagram.com/" target="_blank">Instagram</a></li>
+  <li><a href="https://line.me/ja/" target="_blank">LINE</a></li>
+  <li><a href="https://www.threads.net/" target="_blank">Threads</a></li>
+  <li onclick="go('/?page=form')">お問い合わせ</li>
+</ul>
   </div>
   <div class="overlay" id="overlay" onclick="closeMenu()"></div>
 
@@ -274,7 +299,7 @@ border:none; box-shadow:none; padding:0; margin:0;
     <section class="container top-row">
       <div id="topCategories" class="categories">
         <button class="pill" onclick="filterCategory('all')">All</button>
-        <button class="like-only" onclick="filterLiked()" title="いいねだけ">♡</button>
+ <button class="like-only" onclick="filterLiked()" title="いいねだけ">like♡</button>
         <button onclick="filterCategory('monstera')">Monstera</button>
         <button onclick="filterCategory('alocasia')">Alocasia</button>
         <button onclick="filterCategory('anthurium')">Anthurium</button>
@@ -407,7 +432,7 @@ border:none; box-shadow:none; padding:0; margin:0;
     </div>
   </footer>
 
-  <script>
+<script>
     /* ===== 元のJS（関数は変更しない） ===== */
     const BASE = window.location.origin;
     function go(path){
@@ -509,7 +534,14 @@ border:none; box-shadow:none; padding:0; margin:0;
           op.value=i; op.textContent=i;
           sel.appendChild(op);
         }
-        sel.value='1';
+        // ▼ ここだけ変更：localStorage(cart) から数量を復元（なければ1）
+        const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+        const pid = sel.id.replace('qty-','');
+        const cartItem = cart.find(i => i.id === pid);
+        sel.value = String(cartItem ? (cartItem.quantity || 1) : 1);
+        // qty-display の表示も同期
+        const display = document.querySelector(`.qty-display[data-for="${sel.id}"]`);
+        if (display) display.textContent = sel.value;
       });
 
       document.querySelectorAll('.qty-display').forEach(btn=>{
