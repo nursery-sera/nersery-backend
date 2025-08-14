@@ -4,15 +4,23 @@
   
   <meta charset="UTF-8">
   <base target="_top">
- <meta name="viewport" content="width=950, user-scalable=no">
+  <meta name="viewport" content="width=950, user-scalable=no">
   <title>nursery sera - 商品一覧</title>
   <link href="https://fonts.googleapis.com/css2?family=Bayon&family=Tangerine:wght@700&family=Italianno&family=Noto+Serif+JP&display=swap" rel="stylesheet">
   <style>
     /* ===== ベース ===== */
-    html,body{margin:0;padding:0;font-size:20px;-webkit-text-size-adjust:100%;font-family:Arial,sans-serif;background:#fff0f5;color:#333;box-sizing:border-box}
+    html,body{
+      margin:0;padding:0;font-size:20px;-webkit-text-size-adjust:100%;
+      font-family:Arial,sans-serif;background:#fff;color:#333;box-sizing:border-box
+    }
     *,*:before,*:after{box-sizing:inherit}
     .container{max-width:1100px;margin:0 auto;padding:0 16px}
 
+    /* ▼ 追加：縦フレックスで“底に吸いつく” */
+    html, body { height:100%; }
+    body { min-height:100vh; display:flex; flex-direction:column; }
+    main { flex:1 0 auto; }           /* 本文が余り高さを受け持つ */
+    
     /* ===== ヘッダー ===== */
     .header-bar{
       position:sticky; top:-50px; z-index:1000;
@@ -41,7 +49,7 @@
 
     /* ===== メニュー（スライド＋オーバーレイ） ===== */
     .overlay{
-      position:fixed; inset:0; width:100vw; height:100vh;
+      position:fixed; inset:0;             /* ← 100vw/100vh をやめてはみ出し防止 */
       background:rgba(0,0,0,.3); z-index:2000; display:none;
     }
     .overlay.show{ display:block; }
@@ -81,12 +89,13 @@
 
     /* ===== フッター ===== */
     footer{
-      margin-top:200px; padding:30px 20px; background:#fff0f5; text-align:center;
+      margin-top:auto; /* ← Flex で“底に吸いつく”（見た目のデザインは変わりません） */
+      padding:30px 20px; background:#fff; text-align:center;
     }
     .footer-icons{
       display:flex; justify-content:center; gap:60px; margin-bottom:16px;
     }
-    .footer-icons img{ width:60px; height:60px; }
+    .footer-icons img{ width:42px; height:42px; }
     .footer-links a{
       display:inline-block; margin:0 20px; color:#444; font-size:24px; text-decoration:none;
     }
@@ -190,7 +199,8 @@
     .info-panel{
       position:absolute; right:0; top:0; width:60%; left: 180px;
       display:none; z-index:10;
-      background:transparent; border:none; box-shadow:none; padding:0; margin:0;
+      background:transparent; 
+border:none; box-shadow:none; padding:0; margin:0;
       color:#333; font-size:18px; line-height:1.5;
       max-height:160px;min-width:300px; overflow:auto;margin-top: -10px
     }
@@ -211,6 +221,25 @@
       .add-btn{font-size:20px}
       .info-panel{ position:static; width:100%; max-height:none; overflow:visible; }
     }
+
+.info-btn { background:#fff !important; }
+
+/* いいねボタンの枠線だけをグレーに */
+.like-btn {
+  border: 1px solid #999; /* 枠だけグレー */
+  color: inherit;         /* 中身の色は変えない */
+  background: none;       /* 背景も変えない */
+}
+
+/* インフォボタンの中（背景）だけ白に */
+.info-btn { background:#fff !important; }
+
+/* いいねボタン：枠だけ常にグレー */
+.like-btn { border-color:#999 !important; }
+
+/* いいね未選択（♡）の文字色だけグレーに */
+.like-btn:not(.liked) { color:#999 !important; }
+
   </style>
 </head>
 <body>
@@ -227,132 +256,134 @@
     <h1 class="category-header">MENU</h1>
     <ul>
       <li onclick="go('/?page=index')">All</li>
+      <li onclick="go('/?page=index&liked=1')">♡ </li>
       <li onclick="go('/?page=index&cat=monstera')">Monstera</li>
       <li onclick="go('/?page=index&cat=alocasia')">Alocasia</li>
       <li onclick="go('/?page=index&cat=anthurium')">Anthurium</li>
       <li onclick="go('/?page=index&cat=philodendron')">Philodendron</li>
-      <li onclick="go('/?page=index&liked=1')">♡ いいねした商品</li>
       <li onclick="go('/?page=form')">お問い合わせ</li>
       <li onclick="go('/?page=policy')">各種ポリシー</li>
     </ul>
   </div>
   <div class="overlay" id="overlay" onclick="closeMenu()"></div>
 
-  <p class="subtitle1">plant list</p>
+  <main>
+    <p class="subtitle1">plant list</p>
 
-  <!-- 上部ボタン & カテゴリ -->
-  <section class="container top-row">
-    <div id="topCategories" class="categories">
-      <button class="pill" onclick="filterCategory('all')">All</button>
-      <button class="like-only" onclick="filterLiked()" title="いいねだけ">♡</button>
-      <button onclick="filterCategory('monstera')">Monstera</button>
-      <button onclick="filterCategory('alocasia')">Alocasia</button>
-      <button onclick="filterCategory('anthurium')">Anthurium</button>
-      <button onclick="filterCategory('philodendron')">Philodendron</button>
-    </div>
-  </section>
-
-  <!-- 商品カード -->
-  <section class="container">
-    <!-- 1 -->
-    <article class="product-item" data-category="alocasia">
-      <img class="product-img" src="https://i.imgur.com/WckseRA.jpg" onclick="enlargeImage(this)">
-      <div class="product-right">
-        <div class="title-row">
-          <h3 class="product-name">Alocasia Silver Dragon</h3>
-        </div>
-        <p class="subtext">tissue culture</p>
-        <div class="mid">
-          <p class="price">¥ 3,500</p>
-          <button class="info-btn" aria-label="info">i</button>
-        </div>
-        <div class="info-panel">
-          <ul class="info-list">
-            <li>発送方法<br>第四種郵便（速達・追跡付き）￥700</li>
-            <li>5,000円以上のご注文で送料半額</li>
-            <li>1万円以上のご注文で送料無料</li>
-            <li>画像タップで拡大できます</li>
-          </ul>
-        </div>
-        <div class="bottom-row">
-          <button class="like-btn" id="like-001" onclick="toggleLike('001')" aria-label="like">♡</button>
-          <div class="qty-wrap">
-            <select id="qty-001" class="qty-select"></select>
-            <div class="qty-display" data-for="qty-001">1</div>
-            <div class="qty-menu" data-for="qty-001"></div>
-          </div>
-          <button class="add-btn" onclick="addToCart('001','Alocasia Silver Dragon',3500)">Add to Cart</button>
-        </div>
+    <!-- 上部ボタン & カテゴリ -->
+    <section class="container top-row">
+      <div id="topCategories" class="categories">
+        <button class="pill" onclick="filterCategory('all')">All</button>
+        <button class="like-only" onclick="filterLiked()" title="いいねだけ">♡</button>
+        <button onclick="filterCategory('monstera')">Monstera</button>
+        <button onclick="filterCategory('alocasia')">Alocasia</button>
+        <button onclick="filterCategory('anthurium')">Anthurium</button>
+        <button onclick="filterCategory('philodendron')">Philodendron</button>
       </div>
-    </article>
+    </section>
 
-    <!-- 2 -->
-    <article class="product-item" data-category="anthurium">
-      <img class="product-img" src="https://i.imgur.com/oeHgMsY.jpg" onclick="enlargeImage(this)">
-      <div class="product-right">
-        <div class="title-row">
-          <h3 class="product-name">Anthurium ‘King of Spades’ Hybrid</h3>
-        </div>
-        <p class="subtext">tissue culture</p>
-        <div class="mid">
-          <p class="price">¥ 1,200</p>
-          <button class="info-btn" aria-label="info">i</button>
-        </div>
-        <div class="info-panel">
-          <ul class="info-list">
-            <li>発送方法<br>第四種郵便（速達・追跡付き）￥700</li>
-            <li>5,000円以上のご注文で送料半額</li>
-            <li>1万円以上のご注文で送料無料</li>
-            <li>画像タップで拡大できます</li>
-          </ul>
-        </div>
-        <div class="bottom-row">
-          <button class="like-btn" id="like-002" onclick="toggleLike('002')" aria-label="like">♡</button>
-          <div class="qty-wrap">
-            <select id="qty-002" class="qty-select"></select>
-            <div class="qty-display" data-for="qty-002">1</div>
-            <div class="qty-menu" data-for="qty-002"></div>
+    <!-- 商品カード -->
+    <section class="container">
+      <!-- 1 -->
+      <article class="product-item" data-category="alocasia">
+        <img class="product-img" src="https://i.imgur.com/WckseRA.jpg" onclick="enlargeImage(this)">
+        <div class="product-right">
+          <div class="title-row">
+            <h3 class="product-name">Alocasia Silver Dragon</h3>
           </div>
-          <button class="add-btn" onclick="addToCart('002','Anthurium King of Spades Hybrid',1200)">Add to Cart</button>
-        </div>
-      </div>
-    </article>
-
-    <!-- 3 -->
-    <article class="product-item" data-category="monstera">
-      <img class="product-img" src="https://i.imgur.com/meNvwEL.jpg" onclick="enlargeImage(this)">
-      <div class="product-right">
-        <div class="title-row">
-          <h3 class="product-name">Monstera Variegata</h3>
-        </div>
-        <p class="subtext">tissue culture</p>
-        <div class="mid">
-          <p class="price">¥ 1,500</p>
-          <button class="info-btn" aria-label="info">i</button>
-        </div>
-        <div class="info-panel">
-          <ul class="info-list">
-            <li>発送方法<br>第四種郵便（速達・追跡付き）￥700</li>
-            <li>5,000円以上のご注文で送料半額</li>
-            <li>1万円以上のご注文で送料無料</li>
-            <li>画像タップで拡大できます</li>
-          </ul>
-        </div>
-        <div class="bottom-row">
-          <button class="like-btn" id="like-003" onclick="toggleLike('003')" aria-label="like">♡</button>
-          <div class="qty-wrap">
-            <select id="qty-003" class="qty-select"></select>
-            <div class="qty-display" data-for="qty-003">1</div>
-            <div class="qty-menu" data-for="qty-003"></div>
+          <p class="subtext">tissue culture</p>
+          <div class="mid">
+            <p class="price">¥ 3,500</p>
+            <button class="info-btn" aria-label="info">i</button>
           </div>
-          <button class="add-btn" onclick="addToCart('003','Monstera Variegata',1500)">Add to Cart</button>
+          <div class="info-panel">
+            <ul class="info-list">
+              <li>発送方法<br>第四種郵便（速達・追跡付き）￥700</li>
+              <li>5,000円以上のご注文で送料半額</li>
+              <li>1万円以上のご注文で送料無料</li>
+              <li>画像タップで拡大できます</li>
+            </ul>
+          </div>
+          <div class="bottom-row">
+            <button class="like-btn" id="like-001" onclick="toggleLike('001')" aria-label="like">♡</button>
+            <div class="qty-wrap">
+              <select id="qty-001" class="qty-select"></select>
+              <div class="qty-display" data-for="qty-001">1</div>
+              <div class="qty-menu" data-for="qty-001"></div>
+            </div>
+            <button class="add-btn" onclick="addToCart('001','Alocasia Silver Dragon',3500)">Add to Cart</button>
+          </div>
         </div>
-      </div>
-    </article>
-  </section>
+      </article>
 
-  <!-- 画像拡大モーダル -->
-  <div id="modal" onclick="this.style.display='none'"><img id="modal-img" src=""></div>
+      <!-- 2 -->
+      <article class="product-item" data-category="anthurium">
+        <img class="product-img" src="https://i.imgur.com/oeHgMsY.jpg" onclick="enlargeImage(this)">
+        <div class="product-right">
+          <div class="title-row">
+            <h3 class="product-name">Anthurium ‘King of Spades’ Hybrid</h3>
+          </div>
+          <p class="subtext">tissue culture</p>
+          <div class="mid">
+            <p class="price">¥ 1,200</p>
+            <button class="info-btn" aria-label="info">i</button>
+          </div>
+          <div class="info-panel">
+            <ul class="info-list">
+              <li>発送方法<br>第四種郵便（速達・追跡付き）￥700</li>
+              <li>5,000円以上のご注文で送料半額</li>
+              <li>1万円以上のご注文で送料無料</li>
+              <li>画像タップで拡大できます</li>
+            </ul>
+          </div>
+          <div class="bottom-row">
+            <button class="like-btn" id="like-002" onclick="toggleLike('002')" aria-label="like">♡</button>
+            <div class="qty-wrap">
+              <select id="qty-002" class="qty-select"></select>
+              <div class="qty-display" data-for="qty-002">1</div>
+              <div class="qty-menu" data-for="qty-002"></div>
+            </div>
+            <button class="add-btn" onclick="addToCart('002','Anthurium King of Spades Hybrid',1200)">Add to Cart</button>
+          </div>
+        </div>
+      </article>
+
+      <!-- 3 -->
+      <article class="product-item" data-category="monstera">
+        <img class="product-img" src="https://i.imgur.com/meNvwEL.jpg" onclick="enlargeImage(this)">
+        <div class="product-right">
+          <div class="title-row">
+            <h3 class="product-name">Monstera Variegata</h3>
+          </div>
+          <p class="subtext">tissue culture</p>
+          <div class="mid">
+            <p class="price">¥ 1,500</p>
+            <button class="info-btn" aria-label="info">i</button>
+          </div>
+          <div class="info-panel">
+            <ul class="info-list">
+              <li>発送方法<br>第四種郵便（速達・追跡付き）￥700</li>
+              <li>5,000円以上のご注文で送料半額</li>
+              <li>1万円以上のご注文で送料無料</li>
+              <li>画像タップで拡大できます</li>
+            </ul>
+          </div>
+          <div class="bottom-row">
+            <button class="like-btn" id="like-003" onclick="toggleLike('003')" aria-label="like">♡</button>
+            <div class="qty-wrap">
+              <select id="qty-003" class="qty-select"></select>
+              <div class="qty-display" data-for="qty-003">1</div>
+              <div class="qty-menu" data-for="qty-003"></div>
+            </div>
+            <button class="add-btn" onclick="addToCart('003','Monstera Variegata',1500)">Add to Cart</button>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <!-- 画像拡大モーダル -->
+    <div id="modal" onclick="this.style.display='none'"><img id="modal-img" src=""></div>
+  </main>
 
   <!-- フッター -->
   <footer>
@@ -563,6 +594,121 @@
       const base = document.querySelector('base');
       if (base) base.setAttribute('target','_self');
     })();
+
+document.addEventListener('DOMContentLoaded', () => {
+  const likes = JSON.parse(localStorage.getItem('likes') || '{}');
+  Object.entries(likes).forEach(([shortId, liked]) => {
+    const btn = document.getElementById('like-' + shortId);
+    if (!btn) return;
+    btn.classList.toggle('liked', !!liked);
+    btn.textContent = liked ? '♥' : '♡';
+  });
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  // ===== カテゴリフィルタ設定 =====
+  const map = {
+    'all': 'all',
+    'monstera': 'monstera',
+    'alocasia': 'alocasia',
+    'anthurium': 'anthurium',
+    'philodendron': 'philodendron',
+    'liked': 'liked' // ← 追加
+  };
+
+  // ===== カテゴリボタン（横スクロールのボタン想定）=====
+  document.querySelectorAll('.category-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const category = btn.getAttribute('data-category');
+      filterCategory(category);
+      updateURL(category);
+    });
+  });
+
+  // ===== ハンバーガーメニュー対応（data-category が無くても動くように）=====
+  const menu = document.getElementById('categoryMenu');
+  if (menu) {
+    menu.querySelectorAll('li').forEach(li => {
+      // 1) data-category があればそれを使う
+      let category = (li.getAttribute('data-category') || '').trim().toLowerCase();
+
+      // 2) なければテキストから推測（♡/♥ → liked）
+      if (!category) {
+        const txt = (li.textContent || '').trim().toLowerCase();
+        if (txt.includes('♡') || txt.includes('♥')) category = 'liked';
+        else if (map[txt]) category = txt;
+      }
+
+      // 3) それでも無ければ onclick のURLから推測（&cat=... / &liked=1）
+      if (!category) {
+        const oc = li.getAttribute('onclick') || '';
+        const m1 = oc.match(/cat=([a-z]+)/i);
+        const m2 = oc.match(/liked=1/);
+        if (m1 && map[m1[1].toLowerCase()]) category = m1[1].toLowerCase();
+        if (m2) category = 'liked';
+      }
+
+      if (!category) return;
+
+      // 既存の go(...) を無効化して、その場でフィルタ
+      li.removeAttribute('onclick');
+      li.onclick = null;
+
+      li.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        filterCategory(category);
+        updateURL(category);
+        if (typeof closeMenu === 'function') closeMenu();
+        document.getElementById('topCategories')?.scrollIntoView({ behavior:'smooth', block:'nearest' });
+      }, { capture:true });
+    });
+  }
+
+  // ===== カテゴリフィルタ関数 =====
+  function filterCategory(category) {
+    const likes = JSON.parse(localStorage.getItem('likes') || '{}');
+
+    document.querySelectorAll('.product-item').forEach(item => {
+      const itemCategory = item.getAttribute('data-category');
+
+      // data-id があれば優先／なければ like ボタンの id から取得
+      let itemId = item.getAttribute('data-id');
+      if (!itemId) {
+        const likeBtn = item.querySelector('.like-btn[id^="like-"]');
+        if (likeBtn) itemId = likeBtn.id.replace('like-','');
+      }
+
+      if (category === 'all') {
+        item.style.display = 'flex';
+      } else if (category === 'liked') {
+        item.style.display = (itemId && likes[itemId]) ? 'flex' : 'none';
+      } else {
+        item.style.display = (itemCategory === category) ? 'flex' : 'none';
+      }
+    });
+  }
+
+  // ===== URL を現在の絞り込みに合わせて更新（リロードなし）=====
+  function updateURL(category){
+    const url =
+      category === 'all'   ? '/?page=index' :
+      category === 'liked' ? '/?page=index&liked=1' :
+                             `/?page=index&cat=${encodeURIComponent(category)}`;
+    history.replaceState(null, '', url);
+  }
+
+  // ===== 直アクセス時（/?page=index&liked=1 もしくは &cat=...）も反映 =====
+  const params = new URLSearchParams(location.search);
+  if (params.get('liked') === '1') {
+    filterCategory('liked');
+  } else {
+    const initCat = (params.get('cat') || 'all').toLowerCase();
+    filterCategory(map[initCat] ? initCat : 'all');
+  }
+});
+
+
   </script>
 </body>
 </html>
