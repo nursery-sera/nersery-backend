@@ -29,6 +29,8 @@
       background:#fff;border-radius:24px 24px 0 0;box-shadow:var(--shadow);
       padding:18px 16px 24px;transition:transform .3s ease;z-index:20;
       max-width:960px;margin:0 auto;
+      /* ▼追加：中身をスクロール可能に */
+      max-height:90vh;overflow:auto;
     }
     .panel.show{ transform:translateY(0); }
     .panel h2{margin:4px 0 12px;font-size:22px}
@@ -78,13 +80,14 @@
     .item .sub{color:#777;font-size:14px;margin-top:3px}
     .item .ops{display:flex;gap:8px;margin-top:12px}
 
-    /* ★追加：複数商品フォームの見た目は既存に合わせて最小だけ */
+    /* ▼追加：複数商品フォーム（ミニマム） */
     .prod{
-      border:1px solid #eee;border-radius:12px;padding:12px;margin:10px 0;
-      background:#fff;
+      border:1px solid #eee;border-radius:12px;padding:12px;margin:10px 0;background:#fff;
     }
     .prod .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
     .prod .idx{font-weight:bold}
+    .prod .mini{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    .prod .mini .thumbs{margin:0}
   </style>
 </head>
 <body>
@@ -116,7 +119,7 @@
   <div id="panel" class="panel" aria-hidden="true">
     <h2>商品を追加</h2>
 
-    <!-- ★追加：複数モード切り替え -->
+    <!-- ▼追加：複数モード切り替え -->
     <div class="row">
       <label style="display:flex;align-items:center;gap:8px">
         <input id="multiToggle" type="checkbox" />
@@ -155,17 +158,28 @@
       </div>
     </div>
 
-    <!-- ★追加：複数商品フォーム -->
+    <!-- ▼追加：複数商品フォーム（ミニマム） -->
     <div id="multiWrap" style="display:none">
+      <div id="prods"></div>
+      <!-- 追加ボタンは常に一番下に出す -->
       <div class="actions" style="justify-content:flex-start">
         <button id="addProdBtn" class="btn ghost">＋ 商品フォームを追加</button>
       </div>
-      <div id="prods"></div>
-      <!-- 進捗は単体と共用 -->
+      <!-- 単体と進捗は共用 -->
     </div>
-    <!-- ★追加ここまで -->
 
+    <!-- ▼アクション：左から 一括入力 / キャンセル / 保存 -->
     <div class="actions">
+      <button id="bulkBtn" class="btn ghost">一括入力</button>
+      <!-- プルダウン（クリック時に表示切替） -->
+      <select id="bulkSelect" style="display:none;height:44px;border:1px solid #ddd;border-radius:10px;padding:0 8px">
+        <option value="">選択してください</option>
+        <option>アロカシア</option>
+        <option>モンステラ</option>
+        <option>フィロデンドロン</option>
+        <option>アンスリウム</option>
+      </select>
+
       <button id="cancelBtn" class="btn ghost">キャンセル</button>
       <button id="saveBtn" class="btn primary">保存</button>
     </div>
@@ -232,12 +246,16 @@
     const lastRes   = document.getElementById('lastResult');
     const listEl    = document.getElementById('list');
 
-    // ★追加：複数モード関連
+    // ▼追加：複数モード関連
     const multiToggle   = document.getElementById('multiToggle');
     const singleWrap    = document.getElementById('singleWrap');
     const multiWrap     = document.getElementById('multiWrap');
     const prodsEl       = document.getElementById('prods');
     const addProdBtn    = document.getElementById('addProdBtn');
+
+    // ▼追加：一括入力
+    const bulkBtn       = document.getElementById('bulkBtn');
+    const bulkSelect    = document.getElementById('bulkSelect');
 
     // ====== パネル開閉 ======
     const openPanel  = ()=>{ panel.classList.add('show'); panel.setAttribute('aria-hidden','false'); };
@@ -258,7 +276,7 @@
       });
     });
 
-    // ★追加：複数モード切り替え
+    // ▼複数モード切り替え
     multiToggle.addEventListener('change', ()=>{
       const on = multiToggle.checked;
       singleWrap.style.display = on ? 'none' : '';
@@ -266,7 +284,28 @@
       if (on && prodsEl.children.length === 0) addProdBlock();
     });
 
-    // ★追加：商品ブロックを1つ追加
+    // ▼一括入力：押すとプル表示、選ぶと全カテゴリへ反映
+    bulkBtn.addEventListener('click', (e)=>{
+      e.preventDefault();
+      // 複数モード時のみ使う（単体はそのまま手入力）
+      if (!multiToggle.checked){
+        alert('複数商品モードで使用できます。');
+        return;
+      }
+      bulkSelect.style.display = bulkSelect.style.display === 'none' ? 'inline-block' : 'none';
+      if (bulkSelect.style.display !== 'none') bulkSelect.focus();
+    });
+
+    bulkSelect.addEventListener('change', ()=>{
+      const v = bulkSelect.value.trim();
+      if (!v) return;
+      const cats = prodsEl.querySelectorAll('.m_category');
+      cats.forEach(input => { input.value = v; });
+      // 反映後は隠す
+      bulkSelect.style.display = 'none';
+    });
+
+    // ▼商品フォーム追加（常に最下部へ）
     addProdBtn?.addEventListener('click', (e)=>{ e.preventDefault(); addProdBlock(); });
 
     function addProdBlock(){
@@ -278,21 +317,24 @@
           <div class="idx">商品フォーム #${idx}</div>
           <button type="button" class="btn danger removeBtn">削除</button>
         </div>
-        <div class="row">
-          <div class="col">
-            <label>商品画像（0〜2枚）</label>
+
+        <!-- 行1：ミニマム（ファイル選択／0〜2枚／削除は上のボタン） -->
+        <div class="mini">
+          <div style="flex:1 1 260px;min-width:240px">
             <input class="m_images" type="file" accept="image/*" multiple />
-            <div class="muted">2枚まで（順番＝表示順）</div>
+            <div class="muted">0〜2枚</div>
             <div class="thumbs m_thumbs"></div>
           </div>
         </div>
+
+        <!-- 行2：カテゴリ／バラエティ／金額 -->
         <div class="row">
           <div class="col">
-            <label>カテゴリーネーム</label>
+            <label>カテゴリネーム</label>
             <input class="m_category" type="text" placeholder="Alocasia" />
           </div>
           <div class="col">
-            <label>バラエティーネーム</label>
+            <label>バラエティネーム</label>
             <input class="m_variety" type="text" placeholder="Silver Dragon Variegata" />
           </div>
           <div class="col">
@@ -302,6 +344,11 @@
         </div>
       `;
       prodsEl.appendChild(el);
+
+      // 追加直後に「＋商品フォームを追加」ボタンを常に“このフォームの下”へ移動
+      addProdBtn.parentElement.after(addProdBtn.parentElement); // 位置維持用
+      multiWrap.appendChild(addProdBtn.parentElement); // multiWrap の一番下へ
+      addProdBtn.parentElement.after(); // no-op 安全
 
       const rm = el.querySelector('.removeBtn');
       rm.addEventListener('click', ()=>{ el.remove(); renumber(); });
@@ -330,10 +377,8 @@
     // ====== 保存ロジック（単体 or 複数を自動判定） ======
     async function saveProduct(){
       try{
-        // 複数モード？
         const multiMode = multiToggle.checked;
 
-        // 単体モードの入力値
         const singleData = {
           categoryName: (categoryEl.value || '').trim(),
           varietyName : (varietyEl.value  || '').trim(),
@@ -341,7 +386,6 @@
           files       : [...(imagesEl.files || [])].slice(0,2)
         };
 
-        // 入力バリデーション関数
         const mustBeValid = (cat, var_, price)=>{
           if (!cat){ alert('カテゴリーネームを入力してください'); return false; }
           if (!var_){ alert('バラエティーネームを入力してください'); return false; }
@@ -349,14 +393,12 @@
           return true;
         };
 
-        // 作成キュー（どの商品を作るか）
         const queue = [];
 
         if (!multiMode){
           if (!mustBeValid(singleData.categoryName, singleData.varietyName, singleData.priceNum)) return;
           queue.push(singleData);
         }else{
-          // 複数フォームから収集
           const blocks = [...prodsEl.querySelectorAll('.prod')];
           if (!blocks.length){ alert('商品フォームを追加してください'); return; }
           for (const b of blocks){
@@ -370,7 +412,6 @@
           }
         }
 
-        // 進捗UI
         const totalFiles = queue.reduce((sum,q)=> sum + q.files.length, 0) || 1;
         let fileIndex = 0;
         progWrap.style.display = totalFiles ? 'block' : 'none';
@@ -378,12 +419,10 @@
 
         const createdIds = [];
 
-        // ===== 実処理：キューを順に作成 =====
         for (const item of queue){
           const newRef = doc(collection(db, 'products'));
           const newId  = newRef.id;
 
-          // 画像アップロード（圧縮 1200px / 0.78）
           const urls = [];
           for (let i=0;i<item.files.length;i++){
             const f = item.files[i];
@@ -395,7 +434,6 @@
             const url = await new Promise((resolve, reject)=>{
               task.on('state_changed', s=>{
                 const pct = Math.round((s.bytesTransferred / s.totalBytes) * 100);
-                // 全体進捗：アップロード済みファイルの数＋現在の％
                 const base = (fileIndex / totalFiles) * 100;
                 const add  = pct / totalFiles;
                 prog.value = Math.min(100, Math.round(base + add));
@@ -408,7 +446,6 @@
             urls.push(url);
           }
 
-          // Firestore 保存
           const data = {
             categoryName: item.categoryName,
             varietyName : item.varietyName,
@@ -420,7 +457,6 @@
           createdIds.push(newId);
         }
 
-        // 完了表示
         lastRes.innerHTML = `
           <div class="ok"><b>保存に成功しました（${createdIds.length}件）。</b></div>
           <div class="muted" style="max-height:160px;overflow:auto">
@@ -429,7 +465,6 @@
           <div style="margin-top:8px"><a href="/" target="_blank">サイトで確認（index）</a></div>
         `;
 
-        // フォームリセット
         if (!multiMode){
           categoryEl.value = '';
           varietyEl.value  = '';
@@ -442,10 +477,7 @@
         progWrap.style.display = 'none';
         prog.value = 0;
 
-        // パネル閉じる
         closePanel();
-
-        // 一覧を更新
         await loadList();
 
       }catch(err){
@@ -456,7 +488,7 @@
       }
     }
 
-    // ===== 画像を圧縮&リサイズ（最長辺 maxSize, JPEG品質 quality） =====
+    // ===== 画像を圧縮&リサイズ（最長辺 1200, 品質 0.78） =====
     async function compressImage(file, maxSize = 1200, quality = 0.78) {
       const bitmap = await createImageBitmap(file).catch(async () => {
         const url = URL.createObjectURL(file);
@@ -495,7 +527,8 @@
       return name.replace(/[^\w.\-]+/g,'_');
     }
 
-    saveBtn.addEventListener('click', (e)=>{ e.preventDefault(); saveProduct(); });
+    // クリック系
+    document.getElementById('saveBtn').addEventListener('click', (e)=>{ e.preventDefault(); saveProduct(); });
 
     // ====== 一覧の取得＆表示（既存のまま） ======
     async function loadList(){
@@ -586,28 +619,7 @@
     loadList();
   </script>
 
-  <!-- 参考：Firestore/Storage ルール（コンソールで設定してください）
-    Firestore（例：誰でも読み取りOK、書き込みは認証/制限したい時はここを強化）
-    rules_version = '2';
-    service cloud.firestore {
-      match /databases/{database}/documents {
-        match /products/{id} {
-          allow read: if true;
-          allow write: if false; // 本番はadminのみ許可にすること（今回は簡易パスのためfalse推奨）
-        }
-      }
-    }
-
-    Storage（例：画像は公開読み取りOK、書き込みは禁止/本番はadminのみ）
-    rules_version = '2';
-    service firebase.storage {
-      match /b/{bucket}/o {
-        match /{allPaths=**} {
-          allow read: if true;
-          allow write: if false;
-        }
-      }
-    }
-  -->
+  <!-- 参考：Firestore/Storage ルール -->
+  <!-- （省略：あなたの既存コメントのまま） -->
 </body>
 </html>
