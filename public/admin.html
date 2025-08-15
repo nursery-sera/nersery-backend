@@ -385,7 +385,10 @@ function lockUI(lock){
 
 // ====== 保存ロジック（単体 or 複数を自動判定） ======
 async function saveProduct(){
+  lockUI(true);
   try{
+    setStatus('保存の準備中…');
+
     const multiMode = multiToggle.checked;
 
     const singleData = {
@@ -405,30 +408,35 @@ async function saveProduct(){
     const queue = [];
 
     if (!multiMode){
-      if (!mustBeValid(singleData.categoryName, singleData.varietyName, singleData.priceNum)) return;
+      if (!mustBeValid(singleData.categoryName, singleData.varietyName, singleData.priceNum)) { setStatus('入力不備があります'); lockUI(false); return; }
       queue.push(singleData);
     }else{
       const blocks = [...prodsEl.querySelectorAll('.prod')];
-      if (!blocks.length){ alert('商品フォームを追加してください'); return; }
+      if (!blocks.length){ alert('商品フォームを追加してください'); setStatus('商品フォームがありません'); lockUI(false); return; }
       for (const b of blocks){
         const cat = b.querySelector('.m_category')?.value.trim() || '';
         const va  = b.querySelector('.m_variety')?.value.trim()  || '';
         const pr  = Number((b.querySelector('.m_price')?.value || '').trim());
         const fs  = [...(b.querySelector('.m_images')?.files || [])].slice(0,2);
 
-        if (!mustBeValid(cat, va, pr)) return;
+        if (!mustBeValid(cat, va, pr)) { setStatus('入力不備があります'); lockUI(false); return; }
         queue.push({ categoryName:cat, varietyName:va, priceNum:pr, files:fs });
       }
     }
 
+    setStatus(`${queue.length}件の保存を開始します…`);
+
     const totalFiles = queue.reduce((sum,q)=> sum + q.files.length, 0) || 1;
     let fileIndex = 0;
-    progWrap.style.display = totalFiles ? 'block' : 'none';
+    progWrap.style.display = 'block';
     prog.value = 0;
 
     const createdIds = [];
 
-    for (const item of queue){
+    for (let qi=0; qi<queue.length; qi++){
+      const item = queue[qi];
+      setStatus(`(${qi+1}/${queue.length}) 画像アップロードの準備中…`);
+
       const newRef = doc(collection(db, 'products'));
       const newId  = newRef.id;
 
@@ -446,6 +454,7 @@ async function saveProduct(){
             const base = (fileIndex / totalFiles) * 100;
             const add  = pct / totalFiles;
             prog.value = Math.min(100, Math.round(base + add));
+            setStatus(`(${qi+1}/${queue.length}) 画像 ${i+1}/${item.files.length} をアップロード中… ${pct}%`);
           }, reject, async ()=>{
             const u = await getDownloadURL(task.snapshot.ref);
             fileIndex++;
@@ -455,6 +464,7 @@ async function saveProduct(){
         urls.push(url);
       }
 
+      setStatus(`(${qi+1}/${queue.length}) Firestore へ保存中…`);
       const data = {
         categoryName: item.categoryName,
         varietyName : item.varietyName,
@@ -464,6 +474,7 @@ async function saveProduct(){
       };
       await setDoc(newRef, data);
       createdIds.push(newId);
+      setStatus(`(${qi+1}/${queue.length}) 保存完了。次を処理します…`);
     }
 
     lastRes.innerHTML = `
@@ -473,6 +484,7 @@ async function saveProduct(){
       </div>
       <div style="margin-top:8px"><a href="/" target="_blank">サイトで確認（index）</a></div>
     `;
+    setStatus('すべての保存が完了しました。');
 
     if (!multiMode){
       categoryEl.value = '';
@@ -493,7 +505,10 @@ async function saveProduct(){
     console.error(err);
     alert('保存中にエラーが発生しました');
     lastRes.innerHTML = `<div class="err"><b>エラー：</b> ${String((err && err.message) || err)}</div>`;
+    setStatus('エラーが発生しました。');
     progWrap.style.display = 'none';
+  }finally{
+    lockUI(false);
   }
 }
 
