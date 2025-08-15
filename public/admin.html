@@ -77,6 +77,14 @@
     .item .title{font-weight:bold}
     .item .sub{color:#777;font-size:14px;margin-top:3px}
     .item .ops{display:flex;gap:8px;margin-top:12px}
+
+    /* ★追加：複数商品フォームの見た目は既存に合わせて最小だけ */
+    .prod{
+      border:1px solid #eee;border-radius:12px;padding:12px;margin:10px 0;
+      background:#fff;
+    }
+    .prod .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+    .prod .idx{font-weight:bold}
   </style>
 </head>
 <body>
@@ -108,45 +116,52 @@
   <div id="panel" class="panel" aria-hidden="true">
     <h2>商品を追加</h2>
 
+    <!-- ★追加：複数モード切り替え -->
     <div class="row">
-      <div class="col">
-        <label>商品画像（0〜2枚 / スマホOK）</label>
-        <!-- captureを付けない＝カメラロールから選べる -->
-        <input id="images" type="file" accept="image/*" multiple />
-        <div class="muted">2枚まで。順番＝スワイプ順。カメラロールから選べます。</div>
-        <div id="thumbs" class="thumbs"></div>
-        <div id="progWrap" style="display:none">
-          <div class="muted">アップロード中…</div>
-          <progress id="prog" max="100" value="0"></progress>
+      <label style="display:flex;align-items:center;gap:8px">
+        <input id="multiToggle" type="checkbox" />
+        複数商品モード（別内容をまとめて作成）
+      </label>
+    </div>
+
+    <!-- 単体フォーム（既存そのまま） -->
+    <div id="singleWrap">
+      <div class="row">
+        <div class="col">
+          <label>商品画像（0〜2枚 / スマホOK）</label>
+          <input id="images" type="file" accept="image/*" multiple />
+          <div class="muted">2枚まで。順番＝スワイプ順。カメラロールから選べます。</div>
+          <div id="thumbs" class="thumbs"></div>
+          <div id="progWrap" style="display:none">
+            <div class="muted">アップロード中…</div>
+            <progress id="prog" max="100" value="0"></progress>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col">
+          <label>カテゴリーネーム（例: Alocasia）</label>
+          <input id="categoryName" type="text" placeholder="Alocasia" />
+        </div>
+        <div class="col">
+          <label>バラエティーネーム（例: Silver Dragon Variegata）</label>
+          <input id="varietyName" type="text" placeholder="Silver Dragon Variegata" />
+        </div>
+        <div class="col">
+          <label>金額（半角数字）</label>
+          <input id="price" type="number" inputmode="numeric" placeholder="3500" />
         </div>
       </div>
     </div>
 
-    <div class="row">
-      <div class="col">
-        <label>カテゴリーネーム（例: Alocasia）</label>
-        <input id="categoryName" type="text" placeholder="Alocasia" />
+    <!-- ★追加：複数商品フォーム -->
+    <div id="multiWrap" style="display:none">
+      <div class="actions" style="justify-content:flex-start">
+        <button id="addProdBtn" class="btn ghost">＋ 商品フォームを追加</button>
       </div>
-      <div class="col">
-        <label>バラエティーネーム（例: Silver Dragon Variegata）</label>
-        <input id="varietyName" type="text" placeholder="Silver Dragon Variegata" />
-      </div>
-      <div class="col">
-        <label>金額（半角数字）</label>
-        <input id="price" type="number" inputmode="numeric" placeholder="3500" />
-      </div>
-    </div>
-
-    <!-- ★追加：作成数プルダウン（ここだけUI追加） -->
-    <div class="row">
-      <div class="col">
-        <label>作成数</label>
-        <select id="createCount">
-          <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
-          <option>6</option><option>7</option><option>8</option><option>9</option><option>10</option>
-        </select>
-        <div class="muted">同じ内容で複数のドキュメントを一括作成します。</div>
-      </div>
+      <div id="prods"></div>
+      <!-- 進捗は単体と共用 -->
     </div>
     <!-- ★追加ここまで -->
 
@@ -216,7 +231,13 @@
     const cancelBtn = document.getElementById('cancelBtn');
     const lastRes   = document.getElementById('lastResult');
     const listEl    = document.getElementById('list');
-    const createCountEl = document.getElementById('createCount'); // ★追加：参照1行だけ
+
+    // ★追加：複数モード関連
+    const multiToggle   = document.getElementById('multiToggle');
+    const singleWrap    = document.getElementById('singleWrap');
+    const multiWrap     = document.getElementById('multiWrap');
+    const prodsEl       = document.getElementById('prods');
+    const addProdBtn    = document.getElementById('addProdBtn');
 
     // ====== パネル開閉 ======
     const openPanel  = ()=>{ panel.classList.add('show'); panel.setAttribute('aria-hidden','false'); };
@@ -225,7 +246,7 @@
     fab.addEventListener('click', openPanel);
     cancelBtn.addEventListener('click', (e)=>{ e.preventDefault(); closePanel(); });
 
-    // プレビュー
+    // プレビュー（単体フォーム）
     imagesEl.addEventListener('change', ()=>{
       thumbsEl.innerHTML = '';
       const files = [...(imagesEl.files || [])].slice(0, 2);
@@ -237,93 +258,187 @@
       });
     });
 
-    // ====== 保存ロジック（選んだ作成数ぶん連続作成 / 画像も各IDごとに保存） ======
+    // ★追加：複数モード切り替え
+    multiToggle.addEventListener('change', ()=>{
+      const on = multiToggle.checked;
+      singleWrap.style.display = on ? 'none' : '';
+      multiWrap.style.display  = on ? '' : 'none';
+      if (on && prodsEl.children.length === 0) addProdBlock();
+    });
+
+    // ★追加：商品ブロックを1つ追加
+    addProdBtn?.addEventListener('click', (e)=>{ e.preventDefault(); addProdBlock(); });
+
+    function addProdBlock(){
+      const idx = prodsEl.children.length + 1;
+      const el = document.createElement('div');
+      el.className = 'prod';
+      el.innerHTML = `
+        <div class="header">
+          <div class="idx">商品フォーム #${idx}</div>
+          <button type="button" class="btn danger removeBtn">削除</button>
+        </div>
+        <div class="row">
+          <div class="col">
+            <label>商品画像（0〜2枚）</label>
+            <input class="m_images" type="file" accept="image/*" multiple />
+            <div class="muted">2枚まで（順番＝表示順）</div>
+            <div class="thumbs m_thumbs"></div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col">
+            <label>カテゴリーネーム</label>
+            <input class="m_category" type="text" placeholder="Alocasia" />
+          </div>
+          <div class="col">
+            <label>バラエティーネーム</label>
+            <input class="m_variety" type="text" placeholder="Silver Dragon Variegata" />
+          </div>
+          <div class="col">
+            <label>金額</label>
+            <input class="m_price" type="number" inputmode="numeric" placeholder="3500" />
+          </div>
+        </div>
+      `;
+      prodsEl.appendChild(el);
+
+      const rm = el.querySelector('.removeBtn');
+      rm.addEventListener('click', ()=>{ el.remove(); renumber(); });
+
+      const imgInput = el.querySelector('.m_images');
+      const tbox     = el.querySelector('.m_thumbs');
+      imgInput.addEventListener('change', ()=>{
+        tbox.innerHTML = '';
+        const files = [...(imgInput.files || [])].slice(0,2);
+        files.forEach(f=>{
+          const url = URL.createObjectURL(f);
+          const img = document.createElement('img');
+          img.src = url;
+          tbox.appendChild(img);
+        });
+      });
+
+      function renumber(){
+        [...prodsEl.children].forEach((c,i)=>{
+          const title = c.querySelector('.idx');
+          if (title) title.textContent = `商品フォーム #${i+1}`;
+        });
+      }
+    }
+
+    // ====== 保存ロジック（単体 or 複数を自動判定） ======
     async function saveProduct(){
       try{
-        const categoryName = (categoryEl.value || '').trim();
-        const varietyName  = (varietyEl.value  || '').trim();
-        const priceNum     = Number((priceEl.value || '').trim());
-        const makeCount    = Math.max(1, Number(createCountEl?.value || 1)); // ★追加：作成数
+        // 複数モード？
+        const multiMode = multiToggle.checked;
 
-        if (!categoryName){ alert('カテゴリーネームを入力してください'); return; }
-        if (!varietyName){ alert('バラエティーネームを入力してください'); return; }
-        if (!Number.isFinite(priceNum) || priceNum < 0){ alert('金額は0以上の数字で入力してください'); return; }
+        // 単体モードの入力値
+        const singleData = {
+          categoryName: (categoryEl.value || '').trim(),
+          varietyName : (varietyEl.value  || '').trim(),
+          priceNum    : Number((priceEl.value || '').trim()),
+          files       : [...(imagesEl.files || [])].slice(0,2)
+        };
 
-        // 選択された画像（0〜2枚）
-        const pickedFiles = [...(imagesEl.files || [])].slice(0, 2);
+        // 入力バリデーション関数
+        const mustBeValid = (cat, var_, price)=>{
+          if (!cat){ alert('カテゴリーネームを入力してください'); return false; }
+          if (!var_){ alert('バラエティーネームを入力してください'); return false; }
+          if (!Number.isFinite(price) || price < 0){ alert('金額は0以上の数字で入力してください'); return false; }
+          return true;
+        };
+
+        // 作成キュー（どの商品を作るか）
+        const queue = [];
+
+        if (!multiMode){
+          if (!mustBeValid(singleData.categoryName, singleData.varietyName, singleData.priceNum)) return;
+          queue.push(singleData);
+        }else{
+          // 複数フォームから収集
+          const blocks = [...prodsEl.querySelectorAll('.prod')];
+          if (!blocks.length){ alert('商品フォームを追加してください'); return; }
+          for (const b of blocks){
+            const cat = b.querySelector('.m_category')?.value.trim() || '';
+            const va  = b.querySelector('.m_variety')?.value.trim()  || '';
+            const pr  = Number((b.querySelector('.m_price')?.value || '').trim());
+            const fs  = [...(b.querySelector('.m_images')?.files || [])].slice(0,2);
+
+            if (!mustBeValid(cat, va, pr)) return;
+            queue.push({ categoryName:cat, varietyName:va, priceNum:pr, files:fs });
+          }
+        }
 
         // 進捗UI
-        progWrap.style.display = pickedFiles.length ? 'block' : 'none';
+        const totalFiles = queue.reduce((sum,q)=> sum + q.files.length, 0) || 1;
+        let fileIndex = 0;
+        progWrap.style.display = totalFiles ? 'block' : 'none';
         prog.value = 0;
 
         const createdIds = [];
 
-        // ===== N 回作成 =====
-        for (let n = 0; n < makeCount; n++){
-          // doc id 先取り（Storageフォルダにも使う）
+        // ===== 実処理：キューを順に作成 =====
+        for (const item of queue){
           const newRef = doc(collection(db, 'products'));
           const newId  = newRef.id;
 
-          // 画像アップロード（このID専用フォルダへ）※削除機能と整合
+          // 画像アップロード（圧縮 1200px / 0.78）
           const urls = [];
-          for (let i = 0; i < pickedFiles.length; i++){
-            const f = pickedFiles[i];
-
-            // 圧縮（最長辺1200px / 品質0.78）
+          for (let i=0;i<item.files.length;i++){
+            const f = item.files[i];
             const { blob, mime, name } = await compressImage(f, 1200, 0.78);
-
             const path = `products/${newId}/${Date.now()}_${i}_${sanitizeName(name)}`;
             const storageRef = ref(st, path);
-            const metadata = { contentType: mime };
-            const task = uploadBytesResumable(storageRef, blob, metadata);
-
-            // 進捗：全体（ファイル数×作成数）でざっくり
-            const totalFiles = Math.max(1, pickedFiles.length * makeCount);
-            const baseIndex  = n * pickedFiles.length + i;
+            const task = uploadBytesResumable(storageRef, blob, { contentType: mime });
 
             const url = await new Promise((resolve, reject)=>{
               task.on('state_changed', s=>{
                 const pct = Math.round((s.bytesTransferred / s.totalBytes) * 100);
-                const perFile = 100 / totalFiles;
-                prog.value = Math.min(100, Math.round(perFile * baseIndex + (pct * perFile / 100)));
+                // 全体進捗：アップロード済みファイルの数＋現在の％
+                const base = (fileIndex / totalFiles) * 100;
+                const add  = pct / totalFiles;
+                prog.value = Math.min(100, Math.round(base + add));
               }, reject, async ()=>{
                 const u = await getDownloadURL(task.snapshot.ref);
+                fileIndex++;
                 resolve(u);
               });
             });
             urls.push(url);
           }
 
-          // Firestore に保存
+          // Firestore 保存
           const data = {
-            categoryName,
-            varietyName,
-            price: priceNum,
-            images: urls,             // 配列（0〜2 個）
-            createdAt: serverTimestamp()
+            categoryName: item.categoryName,
+            varietyName : item.varietyName,
+            price       : item.priceNum,
+            images      : urls,
+            createdAt   : serverTimestamp()
           };
           await setDoc(newRef, data);
           createdIds.push(newId);
         }
 
-        // 完了表示（作成したID一覧）
+        // 完了表示
         lastRes.innerHTML = `
-          <div class="ok"><b>保存に成功しました（${makeCount}件）。</b></div>
-          <div class="muted">ドキュメントID：</div>
-          <div class="muted" style="max-height:140px;overflow:auto">
-            ${createdIds.map(id=>`<div><code>${id}</code></div>`).join('')}
+          <div class="ok"><b>保存に成功しました（${createdIds.length}件）。</b></div>
+          <div class="muted" style="max-height:160px;overflow:auto">
+            ${createdIds.map(id=>`<div>ID: <code>${id}</code></div>`).join('')}
           </div>
-          <div class="muted">画像：${(imagesEl.files && imagesEl.files.length) ? imagesEl.files.length + '枚/各商品' : '（なし）'}</div>
           <div style="margin-top:8px"><a href="/" target="_blank">サイトで確認（index）</a></div>
         `;
 
         // フォームリセット
-        categoryEl.value = '';
-        varietyEl.value  = '';
-        priceEl.value    = '';
-        if (createCountEl) createCountEl.value = '1';
-        imagesEl.value   = '';
-        thumbsEl.innerHTML = '';
+        if (!multiMode){
+          categoryEl.value = '';
+          varietyEl.value  = '';
+          priceEl.value    = '';
+          imagesEl.value   = '';
+          thumbsEl.innerHTML = '';
+        }else{
+          prodsEl.innerHTML = '';
+        }
         progWrap.style.display = 'none';
         prog.value = 0;
 
@@ -343,7 +458,6 @@
 
     // ===== 画像を圧縮&リサイズ（最長辺 maxSize, JPEG品質 quality） =====
     async function compressImage(file, maxSize = 1200, quality = 0.78) {
-      // createImageBitmap 優先（速い）。ダメなら <img> でフォールバック
       const bitmap = await createImageBitmap(file).catch(async () => {
         const url = URL.createObjectURL(file);
         const img = await new Promise((res, rej) => {
@@ -359,13 +473,8 @@
       const w = bitmap.width, h = bitmap.height;
       let targetW = w, targetH = h;
       if (Math.max(w, h) > maxSize) {
-        if (w >= h) {
-          targetW = maxSize;
-          targetH = Math.round(h * (maxSize / w));
-        } else {
-          targetH = maxSize;
-          targetW = Math.round(w * (maxSize / h));
-        }
+        if (w >= h) { targetW = maxSize; targetH = Math.round(h * (maxSize / w)); }
+        else        { targetH = maxSize; targetW = Math.round(w * (maxSize / h)); }
       }
 
       const canvas = document.createElement('canvas');
@@ -374,12 +483,10 @@
       const ctx = canvas.getContext('2d');
       ctx.drawImage(bitmap, 0, 0, targetW, targetH);
 
-      // HEIC 等も JPEG へ統一（軽量化）
       const blob = await new Promise((resolve) => {
         canvas.toBlob((b) => resolve(b), 'image/jpeg', quality);
       });
 
-      // 元ファイル名を .jpg で返す
       const safeName = (file.name || 'image').replace(/\.[^.]+$/, '') + '.jpg';
       return { blob, mime: 'image/jpeg', name: safeName };
     }
@@ -390,7 +497,7 @@
 
     saveBtn.addEventListener('click', (e)=>{ e.preventDefault(); saveProduct(); });
 
-    // ====== 一覧の取得＆表示 ======
+    // ====== 一覧の取得＆表示（既存のまま） ======
     async function loadList(){
       listEl.innerHTML = '<div class="muted">読み込み中…</div>';
       try{
@@ -433,7 +540,6 @@
           listEl.appendChild(el);
         });
 
-        // 削除ボタンにイベント付与
         listEl.querySelectorAll('[data-del]').forEach(btn=>{
           btn.addEventListener('click', async ()=>{
             const id = btn.getAttribute('data-del');
@@ -449,30 +555,20 @@
       }
     }
 
-    // ====== 商品削除（画像も） ======
+    // ====== 商品削除（既存のまま） ======
     async function deleteProduct(id){
       try{
-        // 1) Storage: products/{id}/ 以下を列挙して全部 delete
         const folderRef = ref(st, `products/${id}`);
         try{
           const res = await listAll(folderRef);
-          // ファイル
-          for (const itemRef of res.items){
-            await deleteObject(itemRef);
-          }
-          // サブフォルダ（通常ない想定だけど念のため）
+          for (const itemRef of res.items){ await deleteObject(itemRef); }
           for (const dirRef of res.prefixes){
             const sub = await listAll(dirRef);
-            for (const itemRef of sub.items){
-              await deleteObject(itemRef);
-            }
+            for (const itemRef of sub.items){ await deleteObject(itemRef); }
           }
         }catch(storageErr){
-          // 画像が無いなどは無視してOK
           console.warn('storage delete warn:', storageErr?.message || storageErr);
         }
-
-        // 2) Firestore ドキュメントを削除
         await deleteDoc(doc(collection(db,'products'), id));
         lastRes.innerHTML = `<div class="ok"><b>削除しました：</b> ${id}</div>`;
       }catch(err){
@@ -482,7 +578,6 @@
       }
     }
 
-    // HTMLエスケープ
     function escapeHtml(s){
       return String(s).replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
     }
