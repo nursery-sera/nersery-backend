@@ -1056,5 +1056,18 @@ text-align:center;
 
   renderProducts().catch(console.error);
 </script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const likeOnlyBtn = document.querySelector('.like-only');
+    if (likeOnlyBtn) {
+      likeOnlyBtn.onclick = null; // 既存の onclick を無効化
+      likeOnlyBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        filterCategory('liked'); // ← これで likes の true だけ表示
+        history.replaceState(null, '', '/?page=index&liked=1');
+      });
+    }
+  });
+</script>
 </body>
 </html>
