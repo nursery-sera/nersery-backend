@@ -137,6 +137,19 @@
       </div>
     </div>
 
+    <!-- ★追加：作成数プルダウン（ここだけUI追加） -->
+    <div class="row">
+      <div class="col">
+        <label>作成数</label>
+        <select id="createCount">
+          <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+          <option>6</option><option>7</option><option>8</option><option>9</option><option>10</option>
+        </select>
+        <div class="muted">同じ内容で複数のドキュメントを一括作成します。</div>
+      </div>
+    </div>
+    <!-- ★追加ここまで -->
+
     <div class="actions">
       <button id="cancelBtn" class="btn ghost">キャンセル</button>
       <button id="saveBtn" class="btn primary">保存</button>
@@ -203,6 +216,7 @@
     const cancelBtn = document.getElementById('cancelBtn');
     const lastRes   = document.getElementById('lastResult');
     const listEl    = document.getElementById('list');
+    const createCountEl = document.getElementById('createCount'); // ★追加：参照1行だけ
 
     // ====== パネル開閉 ======
     const openPanel  = ()=>{ panel.classList.add('show'); panel.setAttribute('aria-hidden','false'); };
@@ -223,33 +237,39 @@
       });
     });
 
-    // ====== 保存ロジック（最長辺1200px / 品質0.78で圧縮 → Storage → Firestore）=====
+    // ====== 保存ロジック（選んだ作成数ぶん連続作成 / 画像も各IDごとに保存） ======
     async function saveProduct(){
       try{
         const categoryName = (categoryEl.value || '').trim();
         const varietyName  = (varietyEl.value  || '').trim();
         const priceNum     = Number((priceEl.value || '').trim());
+        const makeCount    = Math.max(1, Number(createCountEl?.value || 1)); // ★追加：作成数
 
         if (!categoryName){ alert('カテゴリーネームを入力してください'); return; }
         if (!varietyName){ alert('バラエティーネームを入力してください'); return; }
         if (!Number.isFinite(priceNum) || priceNum < 0){ alert('金額は0以上の数字で入力してください'); return; }
 
-        // 先に doc id を確保（storage パスに使いたいので）
-        const newRef = doc(collection(db, 'products'));
-        const newId  = newRef.id;
+        // 選択された画像（0〜2枚）
+        const pickedFiles = [...(imagesEl.files || [])].slice(0, 2);
 
-        // 画像（0〜2 枚）アップロード（★圧縮してから送る）
-        const files = [...(imagesEl.files || [])].slice(0, 2);
-        const urls = [];
-        if (files.length){
-          progWrap.style.display = 'block';
-          prog.value = 0;
+        // 進捗UI
+        progWrap.style.display = pickedFiles.length ? 'block' : 'none';
+        prog.value = 0;
 
-          // 逐次アップロード（順序保持）
-          for (let i=0;i<files.length;i++){
-            const f = files[i];
+        const createdIds = [];
 
-            // ★ 圧縮（最長辺1200px / 品質0.78）
+        // ===== N 回作成 =====
+        for (let n = 0; n < makeCount; n++){
+          // doc id 先取り（Storageフォルダにも使う）
+          const newRef = doc(collection(db, 'products'));
+          const newId  = newRef.id;
+
+          // 画像アップロード（このID専用フォルダへ）※削除機能と整合
+          const urls = [];
+          for (let i = 0; i < pickedFiles.length; i++){
+            const f = pickedFiles[i];
+
+            // 圧縮（最長辺1200px / 品質0.78）
             const { blob, mime, name } = await compressImage(f, 1200, 0.78);
 
             const path = `products/${newId}/${Date.now()}_${i}_${sanitizeName(name)}`;
@@ -257,12 +277,15 @@
             const metadata = { contentType: mime };
             const task = uploadBytesResumable(storageRef, blob, metadata);
 
+            // 進捗：全体（ファイル数×作成数）でざっくり
+            const totalFiles = Math.max(1, pickedFiles.length * makeCount);
+            const baseIndex  = n * pickedFiles.length + i;
+
             const url = await new Promise((resolve, reject)=>{
               task.on('state_changed', s=>{
-                // 画像数に応じたざっくり進捗（2枚なら1枚=50%）
-                const pct = Math.round( (s.bytesTransferred / s.totalBytes) * 100 );
-                const perFile = 100 / files.length;
-                prog.value = Math.min(100, Math.round(perFile * i + (pct * perFile / 100)));
+                const pct = Math.round((s.bytesTransferred / s.totalBytes) * 100);
+                const perFile = 100 / totalFiles;
+                prog.value = Math.min(100, Math.round(perFile * baseIndex + (pct * perFile / 100)));
               }, reject, async ()=>{
                 const u = await getDownloadURL(task.snapshot.ref);
                 resolve(u);
@@ -270,23 +293,27 @@
             });
             urls.push(url);
           }
+
+          // Firestore に保存
+          const data = {
+            categoryName,
+            varietyName,
+            price: priceNum,
+            images: urls,             // 配列（0〜2 個）
+            createdAt: serverTimestamp()
+          };
+          await setDoc(newRef, data);
+          createdIds.push(newId);
         }
 
-        // Firestore に保存（index.html が読むキー）
-        const data = {
-          categoryName,
-          varietyName,
-          price: priceNum,
-          images: urls,             // 配列（0〜2 個）
-          createdAt: serverTimestamp()
-        };
-        await setDoc(newRef, data);
-
-        // 完了表示
+        // 完了表示（作成したID一覧）
         lastRes.innerHTML = `
-          <div class="ok"><b>保存に成功しました。</b></div>
-          <div class="muted">ドキュメントID：<code>${newId}</code></div>
-          <div class="muted">画像：${urls.length ? urls.map(u=>`<div><a href="${u}" target="_blank">${u}</a></div>`).join('') : '（なし）'}</div>
+          <div class="ok"><b>保存に成功しました（${makeCount}件）。</b></div>
+          <div class="muted">ドキュメントID：</div>
+          <div class="muted" style="max-height:140px;overflow:auto">
+            ${createdIds.map(id=>`<div><code>${id}</code></div>`).join('')}
+          </div>
+          <div class="muted">画像：${(imagesEl.files && imagesEl.files.length) ? imagesEl.files.length + '枚/各商品' : '（なし）'}</div>
           <div style="margin-top:8px"><a href="/" target="_blank">サイトで確認（index）</a></div>
         `;
 
@@ -294,6 +321,7 @@
         categoryEl.value = '';
         varietyEl.value  = '';
         priceEl.value    = '';
+        if (createCountEl) createCountEl.value = '1';
         imagesEl.value   = '';
         thumbsEl.innerHTML = '';
         progWrap.style.display = 'none';
