@@ -835,7 +835,7 @@ text-align:center;
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import { getFirestore, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-  // あなたのFirebase設定（提供値）
+  // あなたのFirebase設定
   const firebaseConfig = {
     apiKey: "AIzaSyCVOfVGTlfTGRfpNggT55l3raCqjo7OcBo",
     authDomain: "nursery-9bd14.firebaseapp.com",
@@ -849,15 +849,23 @@ text-align:center;
 
   const { useEffect, useRef } = React;
 
-  // React: 1商品カード（クラス名・HTML構造は元と完全一致）
+  // varietyName をIDに（英数・日本語対応の簡易スラッグ化）
+  const toId = (str, fallback) => {
+    const s = (str || '').toString().trim().toLowerCase()
+      .replace(/[^\p{L}\p{N}]+/gu, '-')   // 文字以外→ハイフン
+      .replace(/^-+|-+$/g, '');           // 先頭末尾のハイフン除去
+    return s || (fallback || '');
+  };
+
+  // ==== 1商品カード（既存の関数をそのまま呼ぶ）====
   function ProductCard({ d, id }) {
-    const imgs  = Array.isArray(d.images) ? d.images.slice(0,2) : []; // 0〜2枚
+    const imgs  = Array.isArray(d.images) ? d.images.slice(0, 2) : [];
     const price = Number(d.price || 0);
 
     const trackRef = useRef(null);
     const pagerRef = useRef(null);
 
-    // Reactで差し込む分のページドット生成
+    // ページドット（React生成分）
     useEffect(() => {
       const track = trackRef.current;
       const pager = pagerRef.current;
@@ -868,141 +876,177 @@ text-align:center;
       if (pics.length > 0) {
         pics.forEach((_, i) => {
           const dot = document.createElement('span');
-          dot.className = 'dot' + (i===0 ? ' active' : '');
+          dot.className = 'dot' + (i === 0 ? ' active' : '');
           dot.addEventListener('click', () => {
             const w = pics[0].getBoundingClientRect().width || 0;
-            track.scrollTo({ left: w*i, behavior: 'smooth' });
+            track.scrollTo({ left: w * i, behavior: 'smooth' });
           });
           pager.appendChild(dot);
         });
         const updateActive = () => {
           const w = pics[0].getBoundingClientRect().width || 1;
           const idx = Math.round(track.scrollLeft / w);
-          [...pager.children].forEach((d,j)=>d.classList.toggle('active', j===idx));
+          [...pager.children].forEach((d, j) => d.classList.toggle('active', j === idx));
         };
-        track.addEventListener('scroll', () => requestAnimationFrame(updateActive), { passive:true });
+        track.addEventListener('scroll', () => requestAnimationFrame(updateActive), { passive: true });
         window.addEventListener('resize', updateActive);
         updateActive();
         return () => window.removeEventListener('resize', updateActive);
       }
     }, [id]);
 
-    // 数量UI（Reactで追加した要素はDOMContentLoaded後なのでここで初期化）
+    // いいね＆数量の復元（localStorage）――React生成分にも反映
     useEffect(() => {
+      // いいね見た目
+      const likes = JSON.parse(localStorage.getItem('likes') || '{}');
+      const btnLike = document.getElementById('like-' + id);
+      const liked = !!likes[id];
+      if (btnLike) {
+        btnLike.classList.toggle('liked', liked);
+        btnLike.textContent = liked ? '♥' : '♡';
+      }
+
+      // 数量（カートに入れてあるものは復元）
       const sel  = document.getElementById(`qty-${id}`);
       const dsp  = document.querySelector(`.qty-display[data-for="qty-${id}"]`);
       const menu = document.querySelector(`.qty-menu[data-for="qty-${id}"]`);
 
-      if (sel && !sel.options.length){
-        for(let i=1;i<=100;i++){
-          const op=document.createElement('option'); op.value=i; op.textContent=i; sel.appendChild(op);
+      // option用意
+      if (sel && !sel.options.length) {
+        for (let i = 1; i <= 100; i++) {
+          const op = document.createElement('option'); op.value = i; op.textContent = i;
+          sel.appendChild(op);
         }
-        sel.value='1';
       }
-      if (dsp) dsp.textContent = sel?.value || '1';
-      if (menu && !menu.children.length){
-        for(let i=1;i<=100;i++){
-          const it=document.createElement('div');
-          it.className='qty-item'; it.textContent=i;
-          it.addEventListener('click', ()=>{
-            if (sel) sel.value=String(i);
-            if (dsp) dsp.textContent=String(i);
+      // cartから復元（なければ1）
+      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      const ci   = cart.find(i => i.id === id);
+      const val  = String(ci ? (ci.quantity || 1) : 1);
+      if (sel) sel.value = val;
+      if (dsp) dsp.textContent = val;
+
+      // 数量メニューのクリック挙動
+      if (menu && !menu.children.length) {
+        for (let i = 1; i <= 100; i++) {
+          const it = document.createElement('div');
+          it.className = 'qty-item'; it.textContent = i;
+          it.addEventListener('click', () => {
+            if (sel) sel.value = String(i);
+            if (dsp) dsp.textContent = String(i);
             menu.classList.remove('show');
           });
           menu.appendChild(it);
         }
       }
-      const toggleMenu = (e)=>{
-        e.stopPropagation();
-        menu?.classList.toggle('show');
-      };
+      const toggleQtyMenu = (e) => { e.stopPropagation(); menu?.classList.toggle('show'); };
       const dspBtn = dsp?.closest('.qty-wrap')?.querySelector('.qty-display');
-      dspBtn?.addEventListener('click', toggleMenu);
-      const closeAll = ()=> menu?.classList.remove('show');
+      dspBtn?.addEventListener('click', toggleQtyMenu);
+      const closeAll = () => menu?.classList.remove('show');
       document.addEventListener('click', closeAll);
-      return ()=>{
-        dspBtn?.removeEventListener('click', toggleMenu);
+      return () => {
+        dspBtn?.removeEventListener('click', toggleQtyMenu);
         document.removeEventListener('click', closeAll);
       };
     }, [id]);
 
-    // 既存の関数（window.toggleLike / addToCart / enlargeImage）をそのまま呼ぶ
-    return React.createElement('article',
-      { className:'product-item', 'data-category': (d.categoryName||'').toLowerCase(), 'data-id': id },
+    // infoボタン（既存と同じ挙動をReact側で付与）
+    const onInfoClick = (e) => {
+      const card  = e.currentTarget.closest('.product-right');
+      const panel = card?.querySelector('.info-panel');
+      const subTxt = card?.querySelector('.subtext');
+      if (!panel) return;
+      document.querySelectorAll('.info-panel.show').forEach(p => { if (p !== panel) p.classList.remove('show'); });
+      if (subTxt) {
+        panel.style.top = subTxt.offsetTop + 'px';
+      } else {
+        const mid = card?.querySelector('.mid');
+        if (mid) panel.style.top = mid.offsetTop + 'px';
+      }
+      panel.classList.toggle('show');
+      e.currentTarget.setAttribute('aria-expanded', panel.classList.contains('show'));
+    };
 
-      React.createElement('div', { className:'img-wrapper' },
-        React.createElement('div', { className:'img-track', ref:trackRef },
-          (imgs.length ? imgs : ['']).map((src,i)=>
+    return React.createElement('article',
+      { className: 'product-item', 'data-category': (d.categoryName || '').toLowerCase(), 'data-id': id },
+
+      React.createElement('div', { className: 'img-wrapper' },
+        React.createElement('div', { className: 'img-track', ref: trackRef },
+          (imgs.length ? imgs : ['']).map((src, i) =>
             React.createElement('img', {
-              key:i, className:'product-img',
+              key: i, className: 'product-img',
               src: src || 'data:image/gif;base64,R0lGODlhAQABAAAAACw=',
-              alt:`${d.categoryName||''} ${d.varietyName||''} #${i+1}`,
-              onClick:(e)=> window.enlargeImage?.(e.target)
+              alt: `${d.categoryName || ''} ${d.varietyName || ''} #${i + 1}`,
+              onClick: (ev) => window.enlargeImage?.(ev.target)
             })
           )
         ),
-        React.createElement('div', { className:'img-pager', ref:pagerRef })
+        React.createElement('div', { className: 'img-pager', ref: pagerRef })
       ),
 
-      React.createElement('div', { className:'product-right' },
-        React.createElement('div', { className:'title-row' },
-          React.createElement('div', { className:'product-name' },
-            React.createElement('div', { className:'name-spacer' }),
-            React.createElement('div', { className:'category-name' }, d.categoryName || ''),
-            React.createElement('div', { className:'variety-name'  }, d.varietyName  || '')
+      React.createElement('div', { className: 'product-right' },
+        React.createElement('div', { className: 'title-row' },
+          React.createElement('div', { className: 'product-name' },
+            React.createElement('div', { className: 'name-spacer' }),
+            React.createElement('div', { className: 'category-name' }, d.categoryName || ''),
+            React.createElement('div', { className: 'variety-name'  }, d.varietyName  || '')
           )
         ),
-        React.createElement('div', { className:'mid' },
-          React.createElement('p', { className:'price' }, `¥ ${Number(d.price||0).toLocaleString()}`),
-          React.createElement('button', { className:'info-btn', 'aria-label':'info' }, 'i')
+        React.createElement('div', { className: 'mid' },
+          React.createElement('p', { className: 'price' }, `¥ ${Number(price).toLocaleString()}`),
+          React.createElement('button', { className: 'info-btn', 'aria-label': 'info', onClick: onInfoClick }, 'i')
         ),
-        React.createElement('div', { className:'info-panel' },
-          React.createElement('ul', { className:'info-list' }, [
-            React.createElement('li', { key:1 }, '一枚目参考親株'),
-            React.createElement('li', { key:2 }, '二枚目参考TC株'),
-            React.createElement('li', { key:3 }, '画像タップで拡大できます')
+        React.createElement('div', { className: 'info-panel' },
+          React.createElement('ul', { className: 'info-list' }, [
+            React.createElement('li', { key: 1 }, '一枚目参考親株'),
+            React.createElement('li', { key: 2 }, '二枚目参考TC株'),
+            React.createElement('li', { key: 3 }, '画像タップで拡大できます')
           ])
         ),
-        React.createElement('div', { className:'bottom-row' },
+        React.createElement('div', { className: 'bottom-row' },
           React.createElement('button', {
-            className:'like-btn',
-            id:`like-${id}`,
-            onClick:()=> window.toggleLike?.(id),
-            'aria-label':'like'
+            className: 'like-btn',
+            id: `like-${id}`,
+            onClick: () => window.toggleLike?.(id),
+            'aria-label': 'like'
           }, '♡'),
-          React.createElement('div', { className:'qty-wrap' },
-            React.createElement('select', { id:`qty-${id}`, className:'qty-select' }),
-            React.createElement('div', { className:'qty-display', 'data-for':`qty-${id}` }, '1'),
-            React.createElement('div', { className:'qty-menu', 'data-for':`qty-${id}` })
+          React.createElement('div', { className: 'qty-wrap' },
+            React.createElement('select', { id: `qty-${id}`, className: 'qty-select' }),
+            React.createElement('div', { className: 'qty-display', 'data-for': `qty-${id}` }, '1'),
+            React.createElement('div', { className: 'qty-menu', 'data-for': `qty-${id}` })
           ),
           React.createElement('button', {
-            className:'add-btn',
-            onClick:()=> window.addToCart?.(id, `${d.categoryName||''} ${d.varietyName||''}`, Number(d.price||0))
+            className: 'add-btn',
+            onClick: () => window.addToCart?.(id, `${d.categoryName || ''} ${d.varietyName || ''}`, price)
           }, 'Add to Cart')
         )
       )
     );
   }
 
-  function ProductList({ items }){
+  function ProductList({ items }) {
     return React.createElement(React.Fragment, null,
-      items.map(({id, data}) => React.createElement(ProductCard, { key:id, id, d:data }))
+      items.map(({ id, data }) => React.createElement(ProductCard, { key: id, id, d: data }))
     );
   }
 
-  async function renderProducts(){
+  async function renderProducts() {
     const mount = document.getElementById('product-root');
     if (!mount) return;
 
     let docs = [];
     try {
-      const q = query(collection(db,'products'), orderBy('createdAt','desc'));
+      const q = query(collection(db, 'products'), orderBy('createdAt', 'desc'));
       const snap = await getDocs(q);
-      docs = snap.docs.map(d => ({ id:d.id, data:d.data() }));
-    } catch(e) {
-      // createdAtがない等でorderByできない場合のフォールバック
-      const snap = await getDocs(collection(db,'products'));
-      docs = snap.docs.map(d => ({ id:d.id, data:d.data() }));
+      docs = snap.docs.map(d => {
+        const data = d.data();
+        return { id: toId(data.varietyName, d.id), data };
+      });
+    } catch (e) {
+      const snap = await getDocs(collection(db, 'products'));
+      docs = snap.docs.map(d => {
+        const data = d.data();
+        return { id: toId(data.varietyName, d.id), data };
+      });
     }
 
     ReactDOM.createRoot(mount).render(
