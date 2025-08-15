@@ -223,7 +223,7 @@
       });
     });
 
-    // ====== 保存ロジック ======
+    // ====== 保存ロジック（最長辺1200px / 品質0.78で圧縮 → Storage → Firestore）=====
     async function saveProduct(){
       try{
         const categoryName = (categoryEl.value || '').trim();
@@ -238,7 +238,7 @@
         const newRef = doc(collection(db, 'products'));
         const newId  = newRef.id;
 
-        // 画像（0〜2 枚）アップロード
+        // 画像（0〜2 枚）アップロード（★圧縮してから送る）
         const files = [...(imagesEl.files || [])].slice(0, 2);
         const urls = [];
         if (files.length){
@@ -248,14 +248,21 @@
           // 逐次アップロード（順序保持）
           for (let i=0;i<files.length;i++){
             const f = files[i];
-            const path = `products/${newId}/${Date.now()}_${i}_${sanitizeName(f.name)}`;
+
+            // ★ 圧縮（最長辺1200px / 品質0.78）
+            const { blob, mime, name } = await compressImage(f, 1200, 0.78);
+
+            const path = `products/${newId}/${Date.now()}_${i}_${sanitizeName(name)}`;
             const storageRef = ref(st, path);
-            const task = uploadBytesResumable(storageRef, f, { contentType: f.type });
+            const metadata = { contentType: mime };
+            const task = uploadBytesResumable(storageRef, blob, metadata);
 
             const url = await new Promise((resolve, reject)=>{
               task.on('state_changed', s=>{
+                // 画像数に応じたざっくり進捗（2枚なら1枚=50%）
                 const pct = Math.round( (s.bytesTransferred / s.totalBytes) * 100 );
-                prog.value = pct;
+                const perFile = 100 / files.length;
+                prog.value = Math.min(100, Math.round(perFile * i + (pct * perFile / 100)));
               }, reject, async ()=>{
                 const u = await getDownloadURL(task.snapshot.ref);
                 resolve(u);
@@ -304,6 +311,49 @@
         lastRes.innerHTML = `<div class="err"><b>エラー：</b> ${String((err && err.message) || err)}</div>`;
         progWrap.style.display = 'none';
       }
+    }
+
+    // ===== 画像を圧縮&リサイズ（最長辺 maxSize, JPEG品質 quality） =====
+    async function compressImage(file, maxSize = 1200, quality = 0.78) {
+      // createImageBitmap 優先（速い）。ダメなら <img> でフォールバック
+      const bitmap = await createImageBitmap(file).catch(async () => {
+        const url = URL.createObjectURL(file);
+        const img = await new Promise((res, rej) => {
+          const im = new Image();
+          im.onload = () => res(im);
+          im.onerror = rej;
+          im.src = url;
+        });
+        URL.revokeObjectURL(url);
+        return img;
+      });
+
+      const w = bitmap.width, h = bitmap.height;
+      let targetW = w, targetH = h;
+      if (Math.max(w, h) > maxSize) {
+        if (w >= h) {
+          targetW = maxSize;
+          targetH = Math.round(h * (maxSize / w));
+        } else {
+          targetH = maxSize;
+          targetW = Math.round(w * (maxSize / h));
+        }
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = targetW;
+      canvas.height = targetH;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(bitmap, 0, 0, targetW, targetH);
+
+      // HEIC 等も JPEG へ統一（軽量化）
+      const blob = await new Promise((resolve) => {
+        canvas.toBlob((b) => resolve(b), 'image/jpeg', quality);
+      });
+
+      // 元ファイル名を .jpg で返す
+      const safeName = (file.name || 'image').replace(/\.[^.]+$/, '') + '.jpg';
+      return { blob, mime: 'image/jpeg', name: safeName };
     }
 
     function sanitizeName(name){
