@@ -222,7 +222,7 @@
       });
     });
 
-    // ====== 保存ロジック ======
+  // ===== 保存ロジック（最長辺1200px / 品質0.78で圧縮 → Storage → Firestore）=====
     async function saveProduct(){
       try{
         const categoryName = (categoryEl.value || '').trim();
@@ -233,28 +233,31 @@
         if (!varietyName){ alert('バラエティーネームを入力してください'); return; }
         if (!Number.isFinite(priceNum) || priceNum < 0){ alert('金額は0以上の数字で入力してください'); return; }
 
-        // 先に doc id を確保（storage パスに使いたいので）
         const newRef = doc(collection(db, 'products'));
         const newId  = newRef.id;
 
-        // 画像（0〜2 枚）アップロード
         const files = [...(imagesEl.files || [])].slice(0, 2);
         const urls = [];
         if (files.length){
           progWrap.style.display = 'block';
           prog.value = 0;
 
-          // 逐次アップロード（順序保持）
-          for (let i=0;i<files.length;i++){
+          for (let i = 0; i < files.length; i++){
             const f = files[i];
-            const path = `products/${newId}/${Date.now()}_${i}_${sanitizeName(f.name)}`;
+
+            // ★ 圧縮（最長辺1200px / 品質0.78）
+            const { blob, mime, name } = await compressImage(f, 1200, 0.78);
+
+            const path = `products/${newId}/${Date.now()}_${i}_${sanitizeName(name)}`;
+            const metadata = { contentType: mime };
             const storageRef = ref(st, path);
-            const task = uploadBytesResumable(storageRef, f, { contentType: f.type });
+            const task = uploadBytesResumable(storageRef, blob, metadata);
 
             const url = await new Promise((resolve, reject)=>{
               task.on('state_changed', s=>{
-                const pct = Math.round( (s.bytesTransferred / s.totalBytes) * 100 );
-                prog.value = pct;
+                const pct = Math.round((s.bytesTransferred / s.totalBytes) * 100);
+                const perFileWeight = 100 / files.length;
+                prog.value = Math.min(100, Math.round(perFileWeight * i + (pct * perFileWeight / 100)));
               }, reject, async ()=>{
                 const u = await getDownloadURL(task.snapshot.ref);
                 resolve(u);
@@ -264,25 +267,22 @@
           }
         }
 
-        // Firestore に保存（index.html が読むキー）
         const data = {
           categoryName,
           varietyName,
           price: priceNum,
-          images: urls,             // 配列（0〜2 個）
+          images: urls,
           createdAt: serverTimestamp()
         };
         await setDoc(newRef, data);
 
-        // 完了表示
         lastRes.innerHTML = `
           <div class="ok"><b>保存に成功しました。</b></div>
           <div class="muted">ドキュメントID：<code>${newId}</code></div>
-          <div class="muted">画像：${urls.length ? urls.map(u=>`<div><a href="${u}" target="_blank">${u}</a></div>`).join('') : '（なし）'}</div>
+          <div class="muted">画像：${urls.length ? urls.map(u=>\`<div><a href="${u}" target="_blank">${u}</a></div>\`).join('') : '（なし）'}</div>
           <div style="margin-top:8px"><a href="/" target="_blank">サイトで確認（index）</a></div>
         `;
 
-        // フォームリセット
         categoryEl.value = '';
         varietyEl.value  = '';
         priceEl.value    = '';
@@ -291,11 +291,8 @@
         progWrap.style.display = 'none';
         prog.value = 0;
 
-        // パネル閉じる
         closePanel();
-
-        // 一覧を更新
-        await loadList();
+        await loadList?.();
 
       }catch(err){
         console.error(err);
@@ -305,13 +302,53 @@
       }
     }
 
+    // ===== 画像を圧縮&リサイズ（最長辺 maxSize, JPEG品質 quality） =====
+    async function compressImage(file, maxSize = 1200, quality = 0.78) {
+      const bitmap = await createImageBitmap(file).catch(async () => {
+        const url = URL.createObjectURL(file);
+        const img = await new Promise((res, rej) => {
+          const im = new Image();
+          im.onload = () => res(im);
+          im.onerror = rej;
+          im.src = url;
+        });
+        URL.revokeObjectURL(url);
+        return img;
+      });
+
+      const w = bitmap.width;
+      const h = bitmap.height;
+      let targetW = w, targetH = h;
+      if (Math.max(w, h) > maxSize) {
+        if (w >= h) {
+          targetW = maxSize;
+          targetH = Math.round(h * (maxSize / w));
+        } else {
+          targetH = maxSize;
+          targetW = Math.round(w * (maxSize / h));
+        }
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = targetW;
+      canvas.height = targetH;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(bitmap, 0, 0, targetW, targetH);
+
+      const blob = await new Promise((resolve) => {
+        canvas.toBlob((b) => resolve(b), 'image/jpeg', quality);
+      });
+
+      const safeName = (file.name || 'image').replace(/\.[^.]+$/, '') + '.jpg';
+      return { blob, mime: 'image/jpeg', name: safeName };
+    }
+
     function sanitizeName(name){
-      return name.replace(/[^\w.\-]+/g,'_');
+      return String(name || '').replace(/[^\w.\-]+/g,'_');
     }
 
     saveBtn.addEventListener('click', (e)=>{ e.preventDefault(); saveProduct(); });
 
-    // ====== 一覧の取得＆表示 ======
     async function loadList(){
       listEl.innerHTML = '<div class="muted">読み込み中…</div>';
       try{
@@ -339,7 +376,7 @@
           el.className = 'item';
           el.innerHTML = `
             <div class="imgs">
-              ${imgs.length ? imgs.map(u=>`<img src="${u}" alt="">`).join('') : '<span class="muted">（画像なし）</span>'}
+              ${imgs.length ? imgs.map(u=>\`<img src="${u}" alt="">\`).join('') : '<span class="muted">（画像なし）</span>'}
             </div>
             <div class="body">
               <div class="title">${escapeHtml(data.categoryName || '')}</div>
@@ -354,7 +391,6 @@
           listEl.appendChild(el);
         });
 
-        // 削除ボタンにイベント付与
         listEl.querySelectorAll('[data-del]').forEach(btn=>{
           btn.addEventListener('click', async ()=>{
             const id = btn.getAttribute('data-del');
@@ -370,18 +406,14 @@
       }
     }
 
-    // ====== 商品削除（画像も） ======
     async function deleteProduct(id){
       try{
-        // 1) Storage: products/{id}/ 以下を列挙して全部 delete
         const folderRef = ref(st, `products/${id}`);
         try{
           const res = await listAll(folderRef);
-          // ファイル
           for (const itemRef of res.items){
             await deleteObject(itemRef);
           }
-          // サブフォルダ（通常ない想定だけど念のため）
           for (const dirRef of res.prefixes){
             const sub = await listAll(dirRef);
             for (const itemRef of sub.items){
@@ -389,11 +421,9 @@
             }
           }
         }catch(storageErr){
-          // 画像が無いなどは無視してOK
           console.warn('storage delete warn:', storageErr?.message || storageErr);
         }
 
-        // 2) Firestore ドキュメントを削除
         await deleteDoc(doc(collection(db,'products'), id));
         lastRes.innerHTML = `<div class="ok"><b>削除しました：</b> ${id}</div>`;
       }catch(err){
@@ -403,12 +433,10 @@
       }
     }
 
-    // HTMLエスケープ
     function escapeHtml(s){
       return String(s).replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
     }
 
-    // 初回ロード
     loadList();
   </script>
 
