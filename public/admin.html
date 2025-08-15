@@ -222,85 +222,104 @@
       });
     });
 
-  // ===== 保存ロジック（最長辺1200px / 品質0.78で圧縮 → Storage → Firestore）=====
-    async function saveProduct(){
-      try{
-        const categoryName = (categoryEl.value || '').trim();
-        const varietyName  = (varietyEl.value  || '').trim();
-        const priceNum     = Number((priceEl.value || '').trim());
+// ===== 保存ロジック（最長辺1200px / 品質0.78で圧縮 → Storage → Firestore）=====
+async function saveProduct(){
+  try{
+    const categoryName = (categoryEl.value || '').trim();
+    const varietyName  = (varietyEl.value  || '').trim();
+    const priceNum     = Number((priceEl.value || '').trim());
 
-        if (!categoryName){ alert('カテゴリーネームを入力してください'); return; }
-        if (!varietyName){ alert('バラエティーネームを入力してください'); return; }
-        if (!Number.isFinite(priceNum) || priceNum < 0){ alert('金額は0以上の数字で入力してください'); return; }
+    if (!categoryName){ alert('カテゴリーネームを入力してください'); return; }
+    if (!varietyName){ alert('バラエティーネームを入力してください'); return; }
+    if (!Number.isFinite(priceNum) || priceNum < 0){ alert('金額は0以上の数字で入力してください'); return; }
 
-        const newRef = doc(collection(db, 'products'));
-        const newId  = newRef.id;
+    // 先に doc id を確保（storage パスに使う）
+    const newRef = doc(collection(db, 'products'));
+    const newId  = newRef.id;
 
-        const files = [...(imagesEl.files || [])].slice(0, 2);
-        const urls = [];
-        if (files.length){
-          progWrap.style.display = 'block';
-          prog.value = 0;
+    // 画像（0〜2 枚）アップロード（圧縮してから送る）
+    const files = [...(imagesEl.files || [])].slice(0, 2);
+    const urls = [];
+    if (files.length){
+      progWrap.style.display = 'block';
+      prog.value = 0;
 
-          for (let i = 0; i < files.length; i++){
-            const f = files[i];
+      for (let i = 0; i < files.length; i++){
+        const f = files[i];
 
-            // ★ 圧縮（最長辺1200px / 品質0.78）
-            const { blob, mime, name } = await compressImage(f, 1200, 0.78);
+        // ★ 圧縮（最長辺1200px / 品質0.78）
+        const { blob, mime, name } = await compressImage(f, 1200, 0.78);
 
-            const path = `products/${newId}/${Date.now()}_${i}_${sanitizeName(name)}`;
-            const metadata = { contentType: mime };
-            const storageRef = ref(st, path);
-            const task = uploadBytesResumable(storageRef, blob, metadata);
+        const path = `products/${newId}/${Date.now()}_${i}_${sanitizeName(name)}`;
+        const metadata = { contentType: mime };
+        const storageRef = ref(st, path);
+        const task = uploadBytesResumable(storageRef, blob, metadata);
 
-            const url = await new Promise((resolve, reject)=>{
-              task.on('state_changed', s=>{
-                const pct = Math.round((s.bytesTransferred / s.totalBytes) * 100);
-                const perFileWeight = 100 / files.length;
-                prog.value = Math.min(100, Math.round(perFileWeight * i + (pct * perFileWeight / 100)));
-              }, reject, async ()=>{
-                const u = await getDownloadURL(task.snapshot.ref);
-                resolve(u);
-              });
-            });
-            urls.push(url);
-          }
-        }
-
-        const data = {
-          categoryName,
-          varietyName,
-          price: priceNum,
-          images: urls,
-          createdAt: serverTimestamp()
-        };
-        await setDoc(newRef, data);
-
-        lastRes.innerHTML = `
-          <div class="ok"><b>保存に成功しました。</b></div>
-          <div class="muted">ドキュメントID：<code>${newId}</code></div>
-          <div class="muted">画像：${urls.length ? urls.map(u=>\`<div><a href="${u}" target="_blank">${u}</a></div>\`).join('') : '（なし）'}</div>
-          <div style="margin-top:8px"><a href="/" target="_blank">サイトで確認（index）</a></div>
-        `;
-
-        categoryEl.value = '';
-        varietyEl.value  = '';
-        priceEl.value    = '';
-        imagesEl.value   = '';
-        thumbsEl.innerHTML = '';
-        progWrap.style.display = 'none';
-        prog.value = 0;
-
-        closePanel();
-        await loadList?.();
-
-      }catch(err){
-        console.error(err);
-        alert('保存中にエラーが発生しました');
-        lastRes.innerHTML = `<div class="err"><b>エラー：</b> ${String((err && err.message) || err)}</div>`;
-        progWrap.style.display = 'none';
+        const url = await new Promise((resolve, reject)=>{
+          task.on('state_changed', s=>{
+            // 画像数に応じて大まかに進捗表示
+            const pct = Math.round((s.bytesTransferred / s.totalBytes) * 100);
+            const perFileWeight = 100 / files.length;   // 2枚なら1枚=50%
+            prog.value = Math.min(100, Math.round(perFileWeight * i + (pct * perFileWeight / 100)));
+          }, reject, async ()=>{
+            const u = await getDownloadURL(task.snapshot.ref);
+            resolve(u);
+          });
+        });
+        urls.push(url);
       }
     }
+
+    // Firestore に保存
+    const data = {
+      categoryName,
+      varietyName,
+      price: priceNum,
+      images: urls,             // 配列（0〜2 個）
+      createdAt: serverTimestamp()
+    };
+    await setDoc(newRef, data);
+
+    // 完了表示（リンクは target="_blank" + rel="noopener noreferrer"）
+    lastRes.innerHTML = `
+      <div class="ok"><b>保存に成功しました。</b></div>
+      <div class="muted">ドキュメントID：<code>${newId}</code></div>
+      <div class="muted">
+        画像：
+        ${
+          urls.length
+            ? urls.map(u => `<div><a href="${u}" target="_blank" rel="noopener noreferrer">${u}</a></div>`).join('')
+            : '（なし）'
+        }
+      </div>
+      <div style="margin-top:8px">
+        <a href="/" target="_blank" rel="noopener noreferrer">サイトで確認（index）</a>
+      </div>
+    `;
+
+    // フォームリセット
+    categoryEl.value = '';
+    varietyEl.value  = '';
+    priceEl.value    = '';
+    imagesEl.value   = '';
+    thumbsEl.innerHTML = '';
+    progWrap.style.display = 'none';
+    prog.value = 0;
+
+    // パネル閉じる
+    closePanel();
+
+    // 一覧を更新
+    await loadList?.();
+
+  }catch(err){
+    console.error(err);
+    alert('保存中にエラーが発生しました');
+    lastRes.innerHTML = `<div class="err"><b>エラー：</b> ${String((err && err.message) || err)}</div>`;
+    progWrap.style.display = 'none';
+  }
+}
+
 
     // ===== 画像を圧縮&リサイズ（最長辺 maxSize, JPEG品質 quality） =====
     async function compressImage(file, maxSize = 1200, quality = 0.78) {
