@@ -2,206 +2,317 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Admin - nursery sera</title>
   <style>
-    body{font-family:system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial;
-         margin:16px;color:#333}
-    h1{font-size:20px;margin:0 0 16px}
-    .card{border:1px solid #ddd;border-radius:12px;padding:16px;max-width:720px}
-    .row{display:flex;gap:12px;align-items:center;margin:8px 0;flex-wrap:wrap}
-    .row label{width:160px}
-    input[type="text"], input[type="number"]{width:300px;max-width:90%;padding:8px;border:1px solid #ccc;border-radius:8px}
-    input[type="file"]{max-width:300px}
-    button{padding:10px 16px;border:0;border-radius:8px;background:#222;color:#fff;cursor:pointer}
-    button:disabled{opacity:.6;cursor:not-allowed}
-    #pw-gate{display:flex;gap:10px;align-items:center;margin:12px 0}
-    #admin-app{display:none}
-    #auth-bar{display:none;margin:12px 0}
-    .hint{color:#777;font-size:12px}
-    .ok{color:#2e7d32}
-    .err{color:#c62828}
+    :root{
+      --pink:#f8c6dc;
+      --gray:#666;
+      --shadow:0 10px 24px rgba(0,0,0,.12);
+    }
+    html,body{margin:0;padding:0;font-family:Arial, sans-serif;background:#fff;color:#333}
+    .wrap{max-width:960px;margin:0 auto;padding:24px 16px}
+    h1{font-size:28px;margin:0 0 12px}
+    p.help{margin:0 0 18px;color:#666}
+
+    /* FAB */
+    .fab{
+      position:fixed;right:20px;bottom:20px;z-index:10;
+      width:64px;height:64px;border-radius:50%;
+      border:0;background:var(--pink);box-shadow:var(--shadow);
+      font-size:40px;line-height:64px;text-align:center;cursor:pointer;
+    }
+
+    /* パネル */
+    .panel{
+      position:fixed;left:0;right:0;bottom:0;transform:translateY(105%);
+      background:#fff;border-radius:24px 24px 0 0;box-shadow:var(--shadow);
+      padding:18px 16px 24px;transition:transform .3s ease;z-index:20;
+      max-width:960px;margin:0 auto;
+    }
+    .panel.show{ transform:translateY(0); }
+    .panel h2{margin:4px 0 12px;font-size:22px}
+    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:10px 0}
+    .row label{display:block;font-size:14px;color:#555;margin-bottom:6px}
+    .col{flex:1 1 260px;min-width:240px}
+    input[type="text"],input[type="number"]{
+      width:100%;height:44px;border:1px solid #ddd;border-radius:10px;padding:0 12px;font-size:16px;
+    }
+    input[type="file"]{width:100%;}
+
+    .actions{display:flex;gap:12px;justify-content:flex-end;margin-top:12px}
+    .btn{
+      min-width:130px;height:44px;border-radius:10px;border:0;cursor:pointer;
+      padding:0 16px;font-size:16px;
+    }
+    .btn.primary{background:var(--pink)}
+    .btn.ghost{background:#fff;border:1px solid #ddd}
+
+    .card{
+      border:1px solid #eee;border-radius:14px;padding:14px;margin:14px 0;
+    }
+    .muted{color:#777;font-size:14px}
+    .ok{color:#0b8f00}
+    .err{color:#c2185b}
+
+    progress{width:100%;height:10px;margin-top:6px}
+    .thumbs{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+    .thumbs img{width:90px;height:90px;object-fit:cover;border-radius:8px;border:1px solid #eee}
+
+    .topbar{
+      position:sticky;top:0;background:#fff;padding:12px 16px;border-bottom:1px solid #eee;z-index:5
+    }
+    .topbar a{color:#333;text-decoration:none}
+    .foot{padding:24px 16px 60px;color:#777;text-align:center}
   </style>
 </head>
 <body>
-  <h1>管理ログイン</h1>
-
-  <!-- パスワードだけでログイン（メールは画面に出さない） -->
-  <div id="pw-gate" class="card">
-    <div class="row">
-      <label for="admin-pass">パスワード</label>
-      <input id="admin-pass" type="password" placeholder="管理者パスワード" autocomplete="current-password" />
-      <button id="pw-login-btn">ログイン</button>
+  <div class="topbar">
+    <div class="wrap">
+      <a href="/">← サイトへ戻る</a>
     </div>
-    <div id="pw-msg" class="hint"></div>
   </div>
 
-  <!-- ログイン後のバー -->
-  <div id="auth-bar">
-    <span id="who" class="hint"></span>
-    <button id="logout">ログアウト</button>
+  <div class="wrap">
+    <h1>Admin（商品追加）</h1>
+    <p class="help">右下の「＋」ボタン → 入力して「保存」で、<code>products</code> に追加されます。<br>公開ページ（index.html）は Firestore から自動描画するので、同じデザインで表示されます。</p>
+
+    <div id="lastResult" class="card muted">まだ作成していません。</div>
+
+    <div class="card">
+      <div><b>現在の設定</b></div>
+      <div class="muted" id="cfgView"></div>
+    </div>
   </div>
 
-  <!-- 管理UI（ログイン後に表示） -->
-  <div id="admin-app" class="card">
-    <h2 style="margin-top:0">商品追加</h2>
+  <!-- 入力パネル -->
+  <div id="panel" class="panel" aria-hidden="true">
+    <h2>商品を追加</h2>
 
     <div class="row">
-      <label>カテゴリーネーム</label>
-      <input id="categoryName" type="text" placeholder="例: Alocasia" />
+      <div class="col">
+        <label>商品画像（0〜2枚 / スマホOK）</label>
+        <input id="images" type="file" accept="image/*" multiple capture="environment" />
+        <div class="muted">2枚まで。順番＝スワイプ順。</div>
+        <div id="thumbs" class="thumbs"></div>
+        <div id="progWrap" style="display:none">
+          <div class="muted">アップロード中…</div>
+          <progress id="prog" max="100" value="0"></progress>
+        </div>
+      </div>
     </div>
 
     <div class="row">
-      <label>バリエティーネーム</label>
-      <input id="varietyName" type="text" placeholder="例: Silver Dragon Variegata" />
+      <div class="col">
+        <label>カテゴリーネーム（例: Alocasia）</label>
+        <input id="categoryName" type="text" placeholder="Alocasia" />
+      </div>
+      <div class="col">
+        <label>バラエティーネーム（例: Silver Dragon Variegata）</label>
+        <input id="varietyName" type="text" placeholder="Silver Dragon Variegata" />
+      </div>
+      <div class="col">
+        <label>金額（半角数字）</label>
+        <input id="price" type="number" inputmode="numeric" placeholder="3500" />
+      </div>
     </div>
 
-    <div class="row">
-      <label>金額（円）</label>
-      <input id="price" type="number" inputmode="numeric" min="0" step="1" placeholder="例: 3500" />
+    <div class="actions">
+      <button id="cancelBtn" class="btn ghost">キャンセル</button>
+      <button id="saveBtn" class="btn primary">保存</button>
     </div>
-
-    <div class="row">
-      <label>商品画像（0〜2枚）</label>
-      <input id="img1" type="file" accept="image/*" />
-      <input id="img2" type="file" accept="image/*" />
-    </div>
-
-    <div class="row">
-      <button id="submitBtn">追加する</button>
-      <span id="state" class="hint"></span>
-    </div>
-
-    <p class="hint">
-      画像はアップしなくてもOK（0〜2枚）。iPhoneのカメラロールから選べます。<br>
-      追加すると Firestore <code>products</code> コレクションに保存、Storage に画像アップされ、トップページで自動表示されます。
-    </p>
   </div>
+
+  <!-- 右下の＋ -->
+  <button id="fab" class="fab" aria-label="add">＋</button>
+
+  <div class="foot">※簡易パスワード保護です。本番は Firebase Authentication での保護推奨。</div>
 
   <!-- Firebase SDK（モジュール） -->
   <script type="module">
-    // ===== ここをあなたの値に置き換え（5項目＋メール1件） =====
-    const firebaseConfig = {
-      apiKey:       "YOUR_API_KEY",                   // 1
-      authDomain:   "YOUR_PROJECT_ID.firebaseapp.com",// 2
-      projectId:    "YOUR_PROJECT_ID",                // 3
-      storageBucket:"YOUR_PROJECT_ID.appspot.com",    // 4
-      appId:        "YOUR_APP_ID"                     // 5
-    };
-    const ADMIN_EMAIL = "admin@example.com"; // 6 ← Authentication で作った固定の管理者メール
-
-    // ===== Firebase 初期化 & Auth（パスワードだけログイン） =====
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, setPersistence, browserLocalPersistence,
-             onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
-
-    const app  = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db   = getFirestore(app);
-    const st   = getStorage(app);
-
-    // UI要素参照
-    const gate    = document.getElementById('pw-gate');
-    const inputPw = document.getElementById('admin-pass');
-    const btnLogin= document.getElementById('pw-login-btn');
-    const msg     = document.getElementById('pw-msg');
-    const bar     = document.getElementById('auth-bar');
-    const who     = document.getElementById('who');
-    const btnOut  = document.getElementById('logout');
-    const appRoot = document.getElementById('admin-app');
-
-    const elCategory = document.getElementById('categoryName');
-    const elVariety  = document.getElementById('varietyName');
-    const elPrice    = document.getElementById('price');
-    const elImg1     = document.getElementById('img1');
-    const elImg2     = document.getElementById('img2');
-    const elSubmit   = document.getElementById('submitBtn');
-    const elState    = document.getElementById('state');
-
-    // 永続（ブラウザ閉じてもログイン維持）
-    await setPersistence(auth, browserLocalPersistence);
-
-    onAuthStateChanged(auth, (user)=>{
-      const loggedIn = !!user;
-      gate.style.display    = loggedIn ? 'none' : 'flex';
-      bar.style.display     = loggedIn ? ''     : 'none';
-      appRoot.style.display = loggedIn ? ''     : 'none';
-      who.textContent       = loggedIn ? `ログイン中：${user.email}` : '';
-      msg.textContent       = '';
-      if (!loggedIn) inputPw.value = '';
-    });
-
-    btnLogin.addEventListener('click', async ()=>{
-      const pw = (inputPw.value || '').trim();
-      if (!pw){ msg.textContent = 'パスワードを入力'; return; }
-      msg.textContent = 'サインイン中…';
-      try {
-        await signInWithEmailAndPassword(auth, ADMIN_EMAIL, pw);
-      } catch (e) {
-        console.error(e);
-        msg.textContent = 'ログイン失敗（パスワードを確認）';
+    // ====== 超かんたんパスワードガード ======
+    (function(){
+      const pass = sessionStorage.getItem('admin-pass') || prompt('パスワードを入力してください');
+      if (pass !== 'kusakuri') {
+        alert('パスワードが違います');
+        location.href = '/';
+      } else {
+        sessionStorage.setItem('admin-pass', pass);
       }
+    })();
+
+    // ====== Firebase 初期化 ======
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import {
+      getFirestore, doc, setDoc, serverTimestamp,
+      collection
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import {
+      getStorage, ref, uploadBytesResumable, getDownloadURL
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCVOfVGTlfTGRfpNggT55l3raCqjo7OcBo",
+      authDomain: "nursery-9bd14.firebaseapp.com",
+      projectId: "nursery-9bd14",
+      storageBucket: "nursery-9bd14.firebasestorage.app",
+      messagingSenderId: "123851517861",
+      appId: "1:123851517861:web:42afa474c5b6d62669024c",
+      measurementId: "G-J2S4HRGG45"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db  = getFirestore(app);
+    const st  = getStorage(app);
+
+    // 画面に設定を軽く表示
+    document.getElementById('cfgView').textContent =
+      `projectId=${firebaseConfig.projectId}, storageBucket=${firebaseConfig.storageBucket}`;
+
+    // ====== UI 参照 ======
+    const fab       = document.getElementById('fab');
+    const panel     = document.getElementById('panel');
+    const imagesEl  = document.getElementById('images');
+    const thumbsEl  = document.getElementById('thumbs');
+    const progWrap  = document.getElementById('progWrap');
+    const prog      = document.getElementById('prog');
+    const categoryEl= document.getElementById('categoryName');
+    const varietyEl = document.getElementById('varietyName');
+    const priceEl   = document.getElementById('price');
+    const saveBtn   = document.getElementById('saveBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const lastRes   = document.getElementById('lastResult');
+
+    // ====== パネル開閉 ======
+    const openPanel  = ()=>{ panel.classList.add('show'); panel.setAttribute('aria-hidden','false'); };
+    const closePanel = ()=>{ panel.classList.remove('show'); panel.setAttribute('aria-hidden','true'); };
+
+    fab.addEventListener('click', openPanel);
+    cancelBtn.addEventListener('click', (e)=>{ e.preventDefault(); closePanel(); });
+
+    // プレビュー
+    imagesEl.addEventListener('change', ()=>{
+      thumbsEl.innerHTML = '';
+      const files = [...(imagesEl.files || [])].slice(0, 2);
+      files.forEach(f=>{
+        const url = URL.createObjectURL(f);
+        const img = document.createElement('img');
+        img.src = url;
+        thumbsEl.appendChild(img);
+      });
     });
-    inputPw.addEventListener('keydown', (e)=>{ if(e.key==='Enter') btnLogin.click(); });
-    btnOut.addEventListener('click', ()=> signOut(auth));
 
-    // 画像を Storage にアップして URL を返す（file が無ければ null）
-    async function uploadIfAny(file, folder, name){
-      if (!file) return null;
-      const path = `products/${folder}/${name}`;
-      const r = ref(st, path);
-      await uploadBytes(r, file);
-      return await getDownloadURL(r);
-    }
-
-    // 商品追加
-    elSubmit.addEventListener('click', async ()=>{
-      const categoryName = (elCategory.value || '').trim();
-      const varietyName  = (elVariety.value  || '').trim();
-      const price        = Number(elPrice.value || 0);
-      const f1 = elImg1.files?.[0] || null;
-      const f2 = elImg2.files?.[0] || null;
-
-      if (!categoryName){ elState.textContent='カテゴリーネームを入力'; return; }
-      if (!varietyName){  elState.textContent='バリエティーネームを入力'; return; }
-      if (!(price >= 0)){ elState.textContent='金額を入力'; return; }
-
+    // ====== 保存ロジック ======
+    async function saveProduct(){
       try{
-        elSubmit.disabled = true;
-        elState.textContent = '作成中…';
+        const categoryName = (categoryEl.value || '').trim();
+        const varietyName  = (varietyEl.value  || '').trim();
+        const priceNum     = Number((priceEl.value || '').trim());
 
-        // まず Firestore にドキュメント作成（ID を得る）
-        const docRef = await addDoc(collection(db,'products'), {
-          categoryName, varietyName, price,
-          images: [],      // 後でURLを入れる
-          createdAt: serverTimestamp()
-        });
+        if (!categoryName){ alert('カテゴリーネームを入力してください'); return; }
+        if (!varietyName){ alert('バラエティーネームを入力してください'); return; }
+        if (!Number.isFinite(priceNum) || priceNum < 0){ alert('金額は0以上の数字で入力してください'); return; }
 
-        // 画像0〜2枚を順にアップ
+        // 先に doc id を確保（storage パスに使いたいので）
+        const newRef = doc(collection(db, 'products'));
+        const newId  = newRef.id;
+
+        // 画像（0〜2 枚）アップロード
+        const files = [...(imagesEl.files || [])].slice(0, 2);
         const urls = [];
-        const u1 = await uploadIfAny(f1, docRef.id, '1.jpg'); if (u1) urls.push(u1);
-        const u2 = await uploadIfAny(f2, docRef.id, '2.jpg'); if (u2) urls.push(u2);
+        if (files.length){
+          progWrap.style.display = 'block';
+          prog.value = 0;
 
-        // images 配列を上書き（必要ならここで setDoc / updateDoc してもOK）
-        if (urls.length){
-          // 画像URLを書き込み
-          const { doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
-          await updateDoc(doc(db,'products',docRef.id), { images: urls });
+          // 逐次アップロード（順序保持）
+          for (let i=0;i<files.length;i++){
+            const f = files[i];
+            const path = `products/${newId}/${Date.now()}_${i}_${sanitizeName(f.name)}`;
+            const storageRef = ref(st, path);
+            const task = uploadBytesResumable(storageRef, f, { contentType: f.type });
+
+            const url = await new Promise((resolve, reject)=>{
+              task.on('state_changed', s=>{
+                const pct = Math.round( (s.bytesTransferred / s.totalBytes) * 100 );
+                prog.value = pct;
+              }, reject, async ()=>{
+                const u = await getDownloadURL(task.snapshot.ref);
+                resolve(u);
+              });
+            });
+            urls.push(url);
+          }
         }
 
-        elState.textContent = '追加完了！';
-        elCategory.value = ''; elVariety.value = ''; elPrice.value = '';
-        elImg1.value = ''; elImg2.value = '';
-      }catch(e){
-        console.error(e);
-        elState.textContent = '失敗しました';
-      }finally{
-        elSubmit.disabled = false;
-        setTimeout(()=>{ elState.textContent=''; }, 3000);
+        // Firestore に保存（あなたが index.html で読むキーだけ）
+        const data = {
+          categoryName,
+          varietyName,
+          price: priceNum,
+          images: urls,             // 配列（0〜2 個）
+          createdAt: serverTimestamp()
+        };
+        await setDoc(newRef, data);
+
+        // 完了表示
+        lastRes.innerHTML = `
+          <div class="ok"><b>保存に成功しました。</b></div>
+          <div class="muted">ドキュメントID：<code>${newId}</code></div>
+          <div class="muted">画像：${urls.length ? urls.map(u=>`<div><a href="${u}" target="_blank">${u}</a></div>`).join('') : '（なし）'}</div>
+          <div style="margin-top:8px">
+            <a href="/" target="_blank">サイトで確認（index）</a>
+          </div>
+        `;
+
+        // フォームリセット
+        categoryEl.value = '';
+        varietyEl.value  = '';
+        priceEl.value    = '';
+        imagesEl.value   = '';
+        thumbsEl.innerHTML = '';
+        progWrap.style.display = 'none';
+        prog.value = 0;
+
+        // パネル閉じる
+        closePanel();
+
+      }catch(err){
+        console.error(err);
+        alert('保存中にエラーが発生しました');
+        lastRes.innerHTML = `<div class="err"><b>エラー：</b> ${String(err && err.message || err)}</div>`;
+        progWrap.style.display = 'none';
       }
-    });
+    }
+
+    function sanitizeName(name){
+      return name.replace(/[^\w.\-]+/g,'_');
+    }
+
+    saveBtn.addEventListener('click', (e)=>{ e.preventDefault(); saveProduct(); });
   </script>
+
+  <!-- 参考：Firestore/Storage ルール（コンソールで設定してください）
+    Firestore（例：誰でも読み取りOK、書き込みは認証/制限したい時はここを強化）
+    rules_version = '2';
+    service cloud.firestore {
+      match /databases/{database}/documents {
+        match /products/{id} {
+          allow read: if true;
+          allow write: if false; // 本番はadminのみ許可にすること（今回は簡易パスのためfalse推奨）
+        }
+      }
+    }
+
+    Storage（例：画像は公開読み取りOK、書き込みは禁止/本番はadminのみ）
+    rules_version = '2';
+    service firebase.storage {
+      match /b/{bucket}/o {
+        match /{allPaths=**} {
+          allow read: if true;
+          allow write: if false;
+        }
+      }
+    }
+  -->
 </body>
 </html>
