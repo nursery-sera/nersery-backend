@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin - nursery sera</title>
+  <style>
+    body{font-family:system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial;
+         margin:16px;color:#333}
+    h1{font-size:20px;margin:0 0 16px}
+    .card{border:1px solid #ddd;border-radius:12px;padding:16px;max-width:720px}
+    .row{display:flex;gap:12px;align-items:center;margin:8px 0;flex-wrap:wrap}
+    .row label{width:160px}
+    input[type="text"], input[type="number"]{width:300px;max-width:90%;padding:8px;border:1px solid #ccc;border-radius:8px}
+    input[type="file"]{max-width:300px}
+    button{padding:10px 16px;border:0;border-radius:8px;background:#222;color:#fff;cursor:pointer}
+    button:disabled{opacity:.6;cursor:not-allowed}
+    #pw-gate{display:flex;gap:10px;align-items:center;margin:12px 0}
+    #admin-app{display:none}
+    #auth-bar{display:none;margin:12px 0}
+    .hint{color:#777;font-size:12px}
+    .ok{color:#2e7d32}
+    .err{color:#c62828}
+  </style>
+</head>
+<body>
+  <h1>管理ログイン</h1>
+
+  <!-- パスワードだけでログイン（メールは画面に出さない） -->
+  <div id="pw-gate" class="card">
+    <div class="row">
+      <label for="admin-pass">パスワード</label>
+      <input id="admin-pass" type="password" placeholder="管理者パスワード" autocomplete="current-password" />
+      <button id="pw-login-btn">ログイン</button>
+    </div>
+    <div id="pw-msg" class="hint"></div>
+  </div>
+
+  <!-- ログイン後のバー -->
+  <div id="auth-bar">
+    <span id="who" class="hint"></span>
+    <button id="logout">ログアウト</button>
+  </div>
+
+  <!-- 管理UI（ログイン後に表示） -->
+  <div id="admin-app" class="card">
+    <h2 style="margin-top:0">商品追加</h2>
+
+    <div class="row">
+      <label>カテゴリーネーム</label>
+      <input id="categoryName" type="text" placeholder="例: Alocasia" />
+    </div>
+
+    <div class="row">
+      <label>バリエティーネーム</label>
+      <input id="varietyName" type="text" placeholder="例: Silver Dragon Variegata" />
+    </div>
+
+    <div class="row">
+      <label>金額（円）</label>
+      <input id="price" type="number" inputmode="numeric" min="0" step="1" placeholder="例: 3500" />
+    </div>
+
+    <div class="row">
+      <label>商品画像（0〜2枚）</label>
+      <input id="img1" type="file" accept="image/*" />
+      <input id="img2" type="file" accept="image/*" />
+    </div>
+
+    <div class="row">
+      <button id="submitBtn">追加する</button>
+      <span id="state" class="hint"></span>
+    </div>
+
+    <p class="hint">
+      画像はアップしなくてもOK（0〜2枚）。iPhoneのカメラロールから選べます。<br>
+      追加すると Firestore <code>products</code> コレクションに保存、Storage に画像アップされ、トップページで自動表示されます。
+    </p>
+  </div>
+
+  <!-- Firebase SDK（モジュール） -->
+  <script type="module">
+    // ===== ここをあなたの値に置き換え（5項目＋メール1件） =====
+    const firebaseConfig = {
+      apiKey:       "YOUR_API_KEY",                   // 1
+      authDomain:   "YOUR_PROJECT_ID.firebaseapp.com",// 2
+      projectId:    "YOUR_PROJECT_ID",                // 3
+      storageBucket:"YOUR_PROJECT_ID.appspot.com",    // 4
+      appId:        "YOUR_APP_ID"                     // 5
+    };
+    const ADMIN_EMAIL = "admin@example.com"; // 6 ← Authentication で作った固定の管理者メール
+
+    // ===== Firebase 初期化 & Auth（パスワードだけログイン） =====
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, setPersistence, browserLocalPersistence,
+             onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+
+    const app  = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db   = getFirestore(app);
+    const st   = getStorage(app);
+
+    // UI要素参照
+    const gate    = document.getElementById('pw-gate');
+    const inputPw = document.getElementById('admin-pass');
+    const btnLogin= document.getElementById('pw-login-btn');
+    const msg     = document.getElementById('pw-msg');
+    const bar     = document.getElementById('auth-bar');
+    const who     = document.getElementById('who');
+    const btnOut  = document.getElementById('logout');
+    const appRoot = document.getElementById('admin-app');
+
+    const elCategory = document.getElementById('categoryName');
+    const elVariety  = document.getElementById('varietyName');
+    const elPrice    = document.getElementById('price');
+    const elImg1     = document.getElementById('img1');
+    const elImg2     = document.getElementById('img2');
+    const elSubmit   = document.getElementById('submitBtn');
+    const elState    = document.getElementById('state');
+
+    // 永続（ブラウザ閉じてもログイン維持）
+    await setPersistence(auth, browserLocalPersistence);
+
+    onAuthStateChanged(auth, (user)=>{
+      const loggedIn = !!user;
+      gate.style.display    = loggedIn ? 'none' : 'flex';
+      bar.style.display     = loggedIn ? ''     : 'none';
+      appRoot.style.display = loggedIn ? ''     : 'none';
+      who.textContent       = loggedIn ? `ログイン中：${user.email}` : '';
+      msg.textContent       = '';
+      if (!loggedIn) inputPw.value = '';
+    });
+
+    btnLogin.addEventListener('click', async ()=>{
+      const pw = (inputPw.value || '').trim();
+      if (!pw){ msg.textContent = 'パスワードを入力'; return; }
+      msg.textContent = 'サインイン中…';
+      try {
+        await signInWithEmailAndPassword(auth, ADMIN_EMAIL, pw);
+      } catch (e) {
+        console.error(e);
+        msg.textContent = 'ログイン失敗（パスワードを確認）';
+      }
+    });
+    inputPw.addEventListener('keydown', (e)=>{ if(e.key==='Enter') btnLogin.click(); });
+    btnOut.addEventListener('click', ()=> signOut(auth));
+
+    // 画像を Storage にアップして URL を返す（file が無ければ null）
+    async function uploadIfAny(file, folder, name){
+      if (!file) return null;
+      const path = `products/${folder}/${name}`;
+      const r = ref(st, path);
+      await uploadBytes(r, file);
+      return await getDownloadURL(r);
+    }
+
+    // 商品追加
+    elSubmit.addEventListener('click', async ()=>{
+      const categoryName = (elCategory.value || '').trim();
+      const varietyName  = (elVariety.value  || '').trim();
+      const price        = Number(elPrice.value || 0);
+      const f1 = elImg1.files?.[0] || null;
+      const f2 = elImg2.files?.[0] || null;
+
+      if (!categoryName){ elState.textContent='カテゴリーネームを入力'; return; }
+      if (!varietyName){  elState.textContent='バリエティーネームを入力'; return; }
+      if (!(price >= 0)){ elState.textContent='金額を入力'; return; }
+
+      try{
+        elSubmit.disabled = true;
+        elState.textContent = '作成中…';
+
+        // まず Firestore にドキュメント作成（ID を得る）
+        const docRef = await addDoc(collection(db,'products'), {
+          categoryName, varietyName, price,
+          images: [],      // 後でURLを入れる
+          createdAt: serverTimestamp()
+        });
+
+        // 画像0〜2枚を順にアップ
+        const urls = [];
+        const u1 = await uploadIfAny(f1, docRef.id, '1.jpg'); if (u1) urls.push(u1);
+        const u2 = await uploadIfAny(f2, docRef.id, '2.jpg'); if (u2) urls.push(u2);
+
+        // images 配列を上書き（必要ならここで setDoc / updateDoc してもOK）
+        if (urls.length){
+          // 画像URLを書き込み
+          const { doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+          await updateDoc(doc(db,'products',docRef.id), { images: urls });
+        }
+
+        elState.textContent = '追加完了！';
+        elCategory.value = ''; elVariety.value = ''; elPrice.value = '';
+        elImg1.value = ''; elImg2.value = '';
+      }catch(e){
+        console.error(e);
+        elState.textContent = '失敗しました';
+      }finally{
+        elSubmit.disabled = false;
+        setTimeout(()=>{ elState.textContent=''; }, 3000);
+      }
+    });
+  </script>
+</body>
+</html>
