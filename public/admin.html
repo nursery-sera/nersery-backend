@@ -408,7 +408,9 @@ async function saveProduct(){
     const queue = [];
 
     if (!multiMode){
-      if (!mustBeValid(singleData.categoryName, singleData.varietyName, singleData.priceNum)) { setStatus('入力不備があります'); lockUI(false); return; }
+      if (!mustBeValid(singleData.categoryName, singleData.varietyName, singleData.priceNum)) {
+        setStatus('入力不備があります'); lockUI(false); return;
+      }
       queue.push(singleData);
     }else{
       const blocks = [...prodsEl.querySelectorAll('.prod')];
@@ -424,11 +426,15 @@ async function saveProduct(){
       }
     }
 
+    // ★ここを追加：複数モード時は保存開始前にパネルを閉じる（メッセージを見せるため）
+    if (multiMode) closePanel();
+
     setStatus(`${queue.length}件の保存を開始します…`);
 
     const totalFiles = queue.reduce((sum,q)=> sum + q.files.length, 0) || 1;
     let fileIndex = 0;
-    progWrap.style.display = 'block';
+    // プログレスは単体フォームの時だけ表示（複数は singleWrap が非表示なので出しても見えない）
+    progWrap.style.display = (!multiMode && totalFiles) ? 'block' : 'none';
     prog.value = 0;
 
     const createdIds = [];
@@ -453,7 +459,7 @@ async function saveProduct(){
             const pct = Math.round((s.bytesTransferred / s.totalBytes) * 100);
             const base = (fileIndex / totalFiles) * 100;
             const add  = pct / totalFiles;
-            prog.value = Math.min(100, Math.round(base + add));
+            if (!multiMode) prog.value = Math.min(100, Math.round(base + add));
             setStatus(`(${qi+1}/${queue.length}) 画像 ${i+1}/${item.files.length} をアップロード中… ${pct}%`);
           }, reject, async ()=>{
             const u = await getDownloadURL(task.snapshot.ref);
@@ -486,6 +492,8 @@ async function saveProduct(){
     `;
     setStatus('すべての保存が完了しました。');
 
+    if (!multiMode) closePanel();
+
     if (!multiMode){
       categoryEl.value = '';
       varietyEl.value  = '';
@@ -498,7 +506,6 @@ async function saveProduct(){
     progWrap.style.display = 'none';
     prog.value = 0;
 
-    closePanel();
     await loadList();
 
   }catch(err){
