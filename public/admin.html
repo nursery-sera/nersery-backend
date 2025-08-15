@@ -47,6 +47,7 @@
     }
     .btn.primary{background:var(--pink)}
     .btn.ghost{background:#fff;border:1px solid #ddd}
+    .btn.danger{background:#c2185b;color:#fff}
 
     .card{
       border:1px solid #eee;border-radius:14px;padding:14px;margin:14px 0;
@@ -64,6 +65,18 @@
     }
     .topbar a{color:#333;text-decoration:none}
     .foot{padding:24px 16px 60px;color:#777;text-align:center}
+
+    /* 一覧 */
+    #list{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+    .item{
+      border:1px solid #eee;border-radius:12px;overflow:hidden;display:flex;flex-direction:column
+    }
+    .item .imgs{display:flex;gap:6px;padding:10px;flex-wrap:wrap;background:#fafafa}
+    .item .imgs img{width:70px;height:70px;object-fit:cover;border-radius:6px;border:1px solid #eee}
+    .item .body{padding:12px}
+    .item .title{font-weight:bold}
+    .item .sub{color:#777;font-size:14px;margin-top:3px}
+    .item .ops{display:flex;gap:8px;margin-top:12px}
   </style>
 </head>
 <body>
@@ -74,8 +87,11 @@
   </div>
 
   <div class="wrap">
-    <h1>Admin（商品追加）</h1>
-    <p class="help">右下の「＋」ボタン → 入力して「保存」で、<code>products</code> に追加されます。<br>公開ページ（index.html）は Firestore から自動描画するので、同じデザインで表示されます。</p>
+    <h1>Admin（商品追加 / 削除）</h1>
+    <p class="help">
+      右下の「＋」ボタン → 入力して「保存」で <code>products</code> に追加。<br>
+      下の一覧から「削除」もできます（画像も一緒に削除）。
+    </p>
 
     <div id="lastResult" class="card muted">まだ作成していません。</div>
 
@@ -83,6 +99,9 @@
       <div><b>現在の設定</b></div>
       <div class="muted" id="cfgView"></div>
     </div>
+
+    <h2 style="margin-top:24px">現在の商品一覧</h2>
+    <div id="list"></div>
   </div>
 
   <!-- 入力パネル -->
@@ -92,8 +111,9 @@
     <div class="row">
       <div class="col">
         <label>商品画像（0〜2枚 / スマホOK）</label>
-        <input id="images" type="file" accept="image/*" multiple capture="environment" />
-        <div class="muted">2枚まで。順番＝スワイプ順。</div>
+        <!-- captureを付けない＝カメラロールから選べる -->
+        <input id="images" type="file" accept="image/*" multiple />
+        <div class="muted">2枚まで。順番＝スワイプ順。カメラロールから選べます。</div>
         <div id="thumbs" class="thumbs"></div>
         <div id="progWrap" style="display:none">
           <div class="muted">アップロード中…</div>
@@ -126,15 +146,15 @@
   <!-- 右下の＋ -->
   <button id="fab" class="fab" aria-label="add">＋</button>
 
-  <div class="foot">※簡易パスワード保護です。本番は Firebase Authentication での保護推奨。</div>
+  <div class="foot">※コンニチワ！バブルスデス！。</div>
 
   <!-- Firebase SDK（モジュール） -->
   <script type="module">
     // ====== 超かんたんパスワードガード ======
     (function(){
-      const pass = sessionStorage.getItem('admin-pass') || prompt('パスワードを入力してください');
+      const pass = sessionStorage.getItem('admin-pass') || prompt('パスワードを入力してくり〜');
       if (pass !== 'kusakuri') {
-        alert('パスワードが違います');
+        alert('ばか');
         location.href = '/';
       } else {
         sessionStorage.setItem('admin-pass', pass);
@@ -145,10 +165,10 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import {
       getFirestore, doc, setDoc, serverTimestamp,
-      collection
+      collection, getDocs, query, orderBy, deleteDoc
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
     import {
-      getStorage, ref, uploadBytesResumable, getDownloadURL
+      getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject, listAll
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
     const firebaseConfig = {
@@ -182,6 +202,7 @@
     const saveBtn   = document.getElementById('saveBtn');
     const cancelBtn = document.getElementById('cancelBtn');
     const lastRes   = document.getElementById('lastResult');
+    const listEl    = document.getElementById('list');
 
     // ====== パネル開閉 ======
     const openPanel  = ()=>{ panel.classList.add('show'); panel.setAttribute('aria-hidden','false'); };
@@ -244,7 +265,7 @@
           }
         }
 
-        // Firestore に保存（あなたが index.html で読むキーだけ）
+        // Firestore に保存（index.html が読むキー）
         const data = {
           categoryName,
           varietyName,
@@ -259,9 +280,7 @@
           <div class="ok"><b>保存に成功しました。</b></div>
           <div class="muted">ドキュメントID：<code>${newId}</code></div>
           <div class="muted">画像：${urls.length ? urls.map(u=>`<div><a href="${u}" target="_blank">${u}</a></div>`).join('') : '（なし）'}</div>
-          <div style="margin-top:8px">
-            <a href="/" target="_blank">サイトで確認（index）</a>
-          </div>
+          <div style="margin-top:8px"><a href="/" target="_blank">サイトで確認（index）</a></div>
         `;
 
         // フォームリセット
@@ -276,10 +295,13 @@
         // パネル閉じる
         closePanel();
 
+        // 一覧を更新
+        await loadList();
+
       }catch(err){
         console.error(err);
         alert('保存中にエラーが発生しました');
-        lastRes.innerHTML = `<div class="err"><b>エラー：</b> ${String(err && err.message || err)}</div>`;
+        lastRes.innerHTML = `<div class="err"><b>エラー：</b> ${String((err && err.message) || err)}</div>`;
         progWrap.style.display = 'none';
       }
     }
@@ -289,6 +311,106 @@
     }
 
     saveBtn.addEventListener('click', (e)=>{ e.preventDefault(); saveProduct(); });
+
+    // ====== 一覧の取得＆表示 ======
+    async function loadList(){
+      listEl.innerHTML = '<div class="muted">読み込み中…</div>';
+      try{
+        let docs = [];
+        try{
+          const q = query(collection(db,'products'), orderBy('createdAt','desc'));
+          const snap = await getDocs(q);
+          docs = snap.docs;
+        }catch{
+          const snap = await getDocs(collection(db,'products'));
+          docs = snap.docs;
+        }
+
+        if (!docs.length){
+          listEl.innerHTML = '<div class="muted">商品はまだありません。</div>';
+          return;
+        }
+
+        listEl.innerHTML = '';
+        docs.forEach(d=>{
+          const data = d.data();
+          const id   = d.id;
+          const imgs = Array.isArray(data.images) ? data.images : [];
+          const el = document.createElement('div');
+          el.className = 'item';
+          el.innerHTML = `
+            <div class="imgs">
+              ${imgs.length ? imgs.map(u=>`<img src="${u}" alt="">`).join('') : '<span class="muted">（画像なし）</span>'}
+            </div>
+            <div class="body">
+              <div class="title">${escapeHtml(data.categoryName || '')}</div>
+              <div class="sub">${escapeHtml(data.varietyName || '')}</div>
+              <div class="sub">¥ ${Number(data.price||0).toLocaleString()}</div>
+              <div class="sub muted">ID: <code>${id}</code></div>
+              <div class="ops">
+                <button class="btn danger" data-del="${id}">削除</button>
+              </div>
+            </div>
+          `;
+          listEl.appendChild(el);
+        });
+
+        // 削除ボタンにイベント付与
+        listEl.querySelectorAll('[data-del]').forEach(btn=>{
+          btn.addEventListener('click', async ()=>{
+            const id = btn.getAttribute('data-del');
+            if (!confirm('この商品を削除しますか？（画像も削除）')) return;
+            await deleteProduct(id);
+            await loadList();
+          });
+        });
+
+      }catch(err){
+        console.error(err);
+        listEl.innerHTML = `<div class="err">読み込みエラー：${String(err && err.message || err)}</div>`;
+      }
+    }
+
+    // ====== 商品削除（画像も） ======
+    async function deleteProduct(id){
+      try{
+        // 1) Storage: products/{id}/ 以下を列挙して全部 delete
+        const folderRef = ref(st, `products/${id}`);
+        try{
+          const res = await listAll(folderRef);
+          // ファイル
+          for (const itemRef of res.items){
+            await deleteObject(itemRef);
+          }
+          // サブフォルダ（通常ない想定だけど念のため）
+          for (const dirRef of res.prefixes){
+            const sub = await listAll(dirRef);
+            for (const itemRef of sub.items){
+              await deleteObject(itemRef);
+            }
+          }
+        }catch(storageErr){
+          // 画像が無いなどは無視してOK
+          console.warn('storage delete warn:', storageErr?.message || storageErr);
+        }
+
+        // 2) Firestore ドキュメントを削除
+        await deleteDoc(doc(collection(db,'products'), id));
+        lastRes.innerHTML = `<div class="ok"><b>削除しました：</b> ${id}</div>`;
+      }catch(err){
+        console.error(err);
+        alert('削除に失敗しました');
+        lastRes.innerHTML = `<div class="err"><b>削除エラー：</b> ${String(err && err.message || err)}</div>`;
+      }
+    }
+
+    // HTMLエスケープ
+    function escapeHtml(s){
+      return String(s).replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+    }
+
+    // 初回ロード
+    loadList();
   </script>
 
   <!-- 参考：Firestore/Storage ルール（コンソールで設定してください）
