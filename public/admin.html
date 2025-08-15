@@ -174,10 +174,10 @@
       <!-- プルダウン（クリック時に表示切替） -->
       <select id="bulkSelect" style="display:none;height:44px;border:1px solid #ddd;border-radius:10px;padding:0 8px">
         <option value="">選択してください</option>
-        <option>アロカシア</option>
-        <option>モンステラ</option>
-        <option>フィロデンドロン</option>
-        <option>アンスリウム</option>
+        <option>Alocasia</option>
+        <option>Monstera</option>
+        <option>Philodendron</option>
+        <option>Anthurium</option>
       </select>
 
       <button id="cancelBtn" class="btn ghost">キャンセル</button>
@@ -188,15 +188,15 @@
   <!-- 右下の＋ -->
   <button id="fab" class="fab" aria-label="add">＋</button>
 
-  <div class="foot">※コンニチワ！バブルスデス！。</div>
+  <div class="foot">※コンニチワ。バブルスデス！</div>
 
   <!-- Firebase SDK（モジュール） -->
   <script type="module">
     // ====== 超かんたんパスワードガード ======
     (function(){
-      const pass = sessionStorage.getItem('admin-pass') || prompt('パスワードを入力してくり〜');
+      const pass = sessionStorage.getItem('admin-pass') || prompt('あなたの自己紹介をしてください');
       if (pass !== 'kusakuri') {
-        alert('ばか');
+        alert('不審者追放システム発動');
         location.href = '/';
       } else {
         sessionStorage.setItem('admin-pass', pass);
@@ -374,119 +374,128 @@
       }
     }
 
-    // ====== 保存ロジック（単体 or 複数を自動判定） ======
-    async function saveProduct(){
-      try{
-        const multiMode = multiToggle.checked;
+function setStatus(msg){
+  lastRes.innerHTML = `<div class="muted">${msg}</div>`;
+}
+function lockUI(lock){
+  saveBtn.disabled = lock;
+  cancelBtn.disabled = lock;
+  fab.disabled = lock;
+}
 
-        const singleData = {
-          categoryName: (categoryEl.value || '').trim(),
-          varietyName : (varietyEl.value  || '').trim(),
-          priceNum    : Number((priceEl.value || '').trim()),
-          files       : [...(imagesEl.files || [])].slice(0,2)
-        };
+// ====== 保存ロジック（単体 or 複数を自動判定） ======
+async function saveProduct(){
+  try{
+    const multiMode = multiToggle.checked;
 
-        const mustBeValid = (cat, var_, price)=>{
-          if (!cat){ alert('カテゴリーネームを入力してください'); return false; }
-          if (!var_){ alert('バラエティーネームを入力してください'); return false; }
-          if (!Number.isFinite(price) || price < 0){ alert('金額は0以上の数字で入力してください'); return false; }
-          return true;
-        };
+    const singleData = {
+      categoryName: (categoryEl.value || '').trim(),
+      varietyName : (varietyEl.value  || '').trim(),
+      priceNum    : Number((priceEl.value || '').trim()),
+      files       : [...(imagesEl.files || [])].slice(0,2)
+    };
 
-        const queue = [];
+    const mustBeValid = (cat, var_, price)=>{
+      if (!cat){ alert('カテゴリーネームを入力してください'); return false; }
+      if (!var_){ alert('バラエティーネームを入力してください'); return false; }
+      if (!Number.isFinite(price) || price < 0){ alert('金額は0以上の数字で入力してください'); return false; }
+      return true;
+    };
 
-        if (!multiMode){
-          if (!mustBeValid(singleData.categoryName, singleData.varietyName, singleData.priceNum)) return;
-          queue.push(singleData);
-        }else{
-          const blocks = [...prodsEl.querySelectorAll('.prod')];
-          if (!blocks.length){ alert('商品フォームを追加してください'); return; }
-          for (const b of blocks){
-            const cat = b.querySelector('.m_category')?.value.trim() || '';
-            const va  = b.querySelector('.m_variety')?.value.trim()  || '';
-            const pr  = Number((b.querySelector('.m_price')?.value || '').trim());
-            const fs  = [...(b.querySelector('.m_images')?.files || [])].slice(0,2);
+    const queue = [];
 
-            if (!mustBeValid(cat, va, pr)) return;
-            queue.push({ categoryName:cat, varietyName:va, priceNum:pr, files:fs });
-          }
-        }
+    if (!multiMode){
+      if (!mustBeValid(singleData.categoryName, singleData.varietyName, singleData.priceNum)) return;
+      queue.push(singleData);
+    }else{
+      const blocks = [...prodsEl.querySelectorAll('.prod')];
+      if (!blocks.length){ alert('商品フォームを追加してください'); return; }
+      for (const b of blocks){
+        const cat = b.querySelector('.m_category')?.value.trim() || '';
+        const va  = b.querySelector('.m_variety')?.value.trim()  || '';
+        const pr  = Number((b.querySelector('.m_price')?.value || '').trim());
+        const fs  = [...(b.querySelector('.m_images')?.files || [])].slice(0,2);
 
-        const totalFiles = queue.reduce((sum,q)=> sum + q.files.length, 0) || 1;
-        let fileIndex = 0;
-        progWrap.style.display = totalFiles ? 'block' : 'none';
-        prog.value = 0;
-
-        const createdIds = [];
-
-        for (const item of queue){
-          const newRef = doc(collection(db, 'products'));
-          const newId  = newRef.id;
-
-          const urls = [];
-          for (let i=0;i<item.files.length;i++){
-            const f = item.files[i];
-            const { blob, mime, name } = await compressImage(f, 1200, 0.78);
-            const path = `products/${newId}/${Date.now()}_${i}_${sanitizeName(name)}`;
-            const storageRef = ref(st, path);
-            const task = uploadBytesResumable(storageRef, blob, { contentType: mime });
-
-            const url = await new Promise((resolve, reject)=>{
-              task.on('state_changed', s=>{
-                const pct = Math.round((s.bytesTransferred / s.totalBytes) * 100);
-                const base = (fileIndex / totalFiles) * 100;
-                const add  = pct / totalFiles;
-                prog.value = Math.min(100, Math.round(base + add));
-              }, reject, async ()=>{
-                const u = await getDownloadURL(task.snapshot.ref);
-                fileIndex++;
-                resolve(u);
-              });
-            });
-            urls.push(url);
-          }
-
-          const data = {
-            categoryName: item.categoryName,
-            varietyName : item.varietyName,
-            price       : item.priceNum,
-            images      : urls,
-            createdAt   : serverTimestamp()
-          };
-          await setDoc(newRef, data);
-          createdIds.push(newId);
-        }
-
-        lastRes.innerHTML = `
-          <div class="ok"><b>保存に成功しました（${createdIds.length}件）。</b></div>
-          <div class="muted" style="max-height:160px;overflow:auto">
-            ${createdIds.map(id=>`<div>ID: <code>${id}</code></div>`).join('')}
-          </div>
-          <div style="margin-top:8px"><a href="/" target="_blank">サイトで確認（index）</a></div>
-        `;
-
-        if (!multiMode){
-          categoryEl.value = '';
-          varietyEl.value  = '';
-          priceEl.value    = '';
-          imagesEl.value   = '';
-          thumbsEl.innerHTML = '';
-        }else{
-          prodsEl.innerHTML = '';
-        }
-        progWrap.style.display = 'none';
-        prog.value = 0;
-
-        closePanel();
-        await loadList();
-
-      }catch(err){
-        console.error(err);
-        alert('保存中にエラーが発生しました');
-        lastRes.innerHTML = `<div class="err"><b>エラー：</b> ${String((err && err.message) || err)}</div>`;
-        progWrap.style.display = 'none';
+        if (!mustBeValid(cat, va, pr)) return;
+        queue.push({ categoryName:cat, varietyName:va, priceNum:pr, files:fs });
       }
     }
+
+    const totalFiles = queue.reduce((sum,q)=> sum + q.files.length, 0) || 1;
+    let fileIndex = 0;
+    progWrap.style.display = totalFiles ? 'block' : 'none';
+    prog.value = 0;
+
+    const createdIds = [];
+
+    for (const item of queue){
+      const newRef = doc(collection(db, 'products'));
+      const newId  = newRef.id;
+
+      const urls = [];
+      for (let i=0;i<item.files.length;i++){
+        const f = item.files[i];
+        const { blob, mime, name } = await compressImage(f, 1200, 0.78);
+        const path = `products/${newId}/${Date.now()}_${i}_${sanitizeName(name)}`;
+        const storageRef = ref(st, path);
+        const task = uploadBytesResumable(storageRef, blob, { contentType: mime });
+
+        const url = await new Promise((resolve, reject)=>{
+          task.on('state_changed', s=>{
+            const pct = Math.round((s.bytesTransferred / s.totalBytes) * 100);
+            const base = (fileIndex / totalFiles) * 100;
+            const add  = pct / totalFiles;
+            prog.value = Math.min(100, Math.round(base + add));
+          }, reject, async ()=>{
+            const u = await getDownloadURL(task.snapshot.ref);
+            fileIndex++;
+            resolve(u);
+          });
+        });
+        urls.push(url);
+      }
+
+      const data = {
+        categoryName: item.categoryName,
+        varietyName : item.varietyName,
+        price       : item.priceNum,
+        images      : urls,
+        createdAt   : serverTimestamp()
+      };
+      await setDoc(newRef, data);
+      createdIds.push(newId);
+    }
+
+    lastRes.innerHTML = `
+      <div class="ok"><b>保存に成功しました（${createdIds.length}件）。</b></div>
+      <div class="muted" style="max-height:160px;overflow:auto">
+        ${createdIds.map(id=>`<div>ID: <code>${id}</code></div>`).join('')}
+      </div>
+      <div style="margin-top:8px"><a href="/" target="_blank">サイトで確認（index）</a></div>
+    `;
+
+    if (!multiMode){
+      categoryEl.value = '';
+      varietyEl.value  = '';
+      priceEl.value    = '';
+      imagesEl.value   = '';
+      thumbsEl.innerHTML = '';
+    }else{
+      prodsEl.innerHTML = '';
+    }
+    progWrap.style.display = 'none';
+    prog.value = 0;
+
+    closePanel();
+    await loadList();
+
+  }catch(err){
+    console.error(err);
+    alert('保存中にエラーが発生しました');
+    lastRes.innerHTML = `<div class="err"><b>エラー：</b> ${String((err && err.message) || err)}</div>`;
+    progWrap.style.display = 'none';
+  }
+}
 
     // ===== 画像を圧縮&リサイズ（最長辺 1200, 品質 0.78） =====
     async function compressImage(file, maxSize = 1200, quality = 0.78) {
