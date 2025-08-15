@@ -82,15 +82,14 @@
 <body>
   <div class="topbar">
     <div class="wrap">
-      <a href="/">← サイトへ戻る</a>
+      <a href="/">← 商品ページ</a>
     </div>
   </div>
 
   <div class="wrap">
     <h1>Admin（商品追加 / 削除）</h1>
     <p class="help">
-      右下の「＋」ボタン → 入力して「保存」で <code>products</code> に追加。<br>
-      下の一覧から「削除」もできます（画像も一緒に削除）。
+      右下の「＋」ボタン押して必要な項目を追加で保存<br>
     </p>
 
     <div id="lastResult" class="card muted">まだ作成していません。</div>
@@ -146,13 +145,13 @@
   <!-- 右下の＋ -->
   <button id="fab" class="fab" aria-label="add">＋</button>
 
-  <div class="foot">※コンニチワ！バブルスデス！。</div>
+  <div class="foot">※コンニチワ。バブルスデス！</div>
 
   <!-- Firebase SDK（モジュール） -->
   <script type="module">
     // ====== 超かんたんパスワードガード ======
     (function(){
-      const pass = sessionStorage.getItem('admin-pass') || prompt('パスワードを入力してくり〜');
+      const pass = sessionStorage.getItem('admin-pass') || prompt('あなたの自己紹介をしてください。');
       if (pass !== 'kusakuri') {
         alert('ばか');
         location.href = '/';
