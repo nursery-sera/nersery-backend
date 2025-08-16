@@ -1005,7 +1005,7 @@ async function renderProducts() {
     React.createElement(ProductList, { items: docs })
   );
 
-  // 追加：描画完了を通知（フィルタ適用の合図）
+  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
   document.dispatchEvent(new Event('products-rendered'));
 }
   
