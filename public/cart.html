@@ -409,6 +409,9 @@ text-align:center;
   </div>
 
   <script>
+  const BASE = window.location.origin;
+  function go(path){ window.top.location.href = new URL(path, BASE).toString(); }
+
     function toggleMenu(event) {
       const menu = document.getElementById("categoryMenu");
       const overlay = document.getElementById("overlay");
