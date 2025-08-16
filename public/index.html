@@ -23,10 +23,10 @@
     
     /* ===== ヘッダー ===== */
     .header-bar{
-      position:sticky; top:-50px; z-index:1000;
+      position:sticky; margin-top:-50px; z-index:1000;
       background:transparent;
       display:flex; align-items:center; justify-content:space-between;
-      padding:20px; transition:top .5s ease;;
+      padding:20px; transition:top .5s ease;
     }
     .menu-icon{
       display:flex; flex-direction:column; justify-content:space-between;
@@ -129,7 +129,7 @@ font-family: 'Noto Serif JP', serif;
       flex:0 0 auto;
       font-size:38px;
       padding:15px 80px;
-      background:#f8c6dc;
+      background:#F564A9;
       border:px solid #999;
       border-radius:60px;
       font-weight:500;
@@ -148,7 +148,7 @@ opacity:;
 
 .product-name{
  font-family: 'Lustria', serif;
-  font-size: 42px;
+  font-size: 48px;
   font-weight: 400;
   color: #333;
 
@@ -156,7 +156,7 @@ opacity:;
   flex-direction:column;
   width:100%;
   position: relative;
-  top: 30px;   /* 下に10px */
+  top: 44px;   /* 下に10px */
   }
 
    /* カテゴリーネーム（属名など） */
@@ -178,13 +178,13 @@ margin-top:-10px;
     .mid{margin:10px 0 12px;display:flex;align-items:center;justify-content:space-between;gap:12px}
 
     .price{font-size:38px;font-weight:400;margin-top:20px; position: relative;
-  top: 30px;  }
+  top: 30px;  font-family: 'DM Serif Text', serif;}
 
     .info-btn{margin-top:-100px;width:48px;height:48px;border-radius:50%;border:2px solid #cfcfcf;background:#fff0f5;color:#7a7a7a;font-size:22px;font-weight:bold;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
 
     .bottom-row{margin-top:30px;display:flex;align-items:center;gap:40px;flex-wrap:nowrap}
  .like-btn{width:66px;height:66px;border-radius:50%;border:2px solid #e91e63;background:none;color:#e91e63none;font-size:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:0 0 auto}
-    .like-btn.liked{background:#FF0000;color:#fff}
+    .like-btn.liked{background:#F564A9;color:#fff}
 
     /* --- 数量（ネイティブselectは保持するが非表示） --- */
     .qty-wrap{flex:0 0 auto; position:relative;}
@@ -218,10 +218,10 @@ margin-top:-10px;
       padding:0 50px !important;
       border:px solid #999;
       border-radius:28px;
-      background:#f8c6dc;
+      background:#F564A9;
       color:#fff;
 opacity:;
-      font-weight:400;
+      font-weight:500;
       font-size:30px !important;
       line-height:65px;
       white-space:nowrap;
@@ -256,18 +256,16 @@ opacity:;
       position:absolute; right:0; top:0; width:60%; left: 180px;
       display:none; z-index:10;
       background:transparent; border:none; box-shadow:none; padding:0; margin:0;
-      color:#333; font-size:18px; line-height:1.5;
-      max-height:160px;min-width:300px; overflow:auto;margin-top: 
+      color:#333; font-size:18px; line-height:1.5;bottom: 50px;
+      max-height:none;min-width:300px; overflow:auto;margin-top: 
     }
     .info-panel.show{ display:block; }
-    .info-list{margin:0 ; padding:0; list-style:none;  position: relative;top:10px;left:40px;}
+    .info-list{margin:0 ; padding:0; list-style:none;  position: relative;top:20px;left:40px;}
     .info-list li{ margin:9px 0; padding-left:2em; text-indent:-1em; }
     .info-list li::before{ content:"・"; }
 
     .info-btn { background:#fff !important; margin-top:30px; }
-    /* いいねボタン：枠だけ常にグレー */
-/* いいねボタン：枠だけ常にグレー */
-.like-btn { border-color:#999 !important; }
+  
 
 /* いいね未選択（♡）の文字色だけグレーに */
 .like-btn:not(.liked) { color:#999 !important; }
@@ -275,7 +273,7 @@ opacity:;
 .category-subtitle {
   font-size: 48px;
   font-family: 'Playfair Display SC', serif;
-  margin: 123px 0 10px;
+  margin: 66px 0 10px;
   color: #000000;
   font-weight: 400;
   border-bottom: 1px solid rgba(0,0,0,0.1);
@@ -326,7 +324,6 @@ text-align:center;
 }
 
   </style>
-
 
 
 
