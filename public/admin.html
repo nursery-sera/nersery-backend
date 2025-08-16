@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+	<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
@@ -87,6 +87,12 @@
     .actions{display:flex;justify-content:flex-end;align-items:center;gap:8px}
     .actions .btn{min-width:100px;height:40px;font-size:14px;padding:0}
     #bulkBtn,#cancelBtn,#saveBtn{flex:0 0 auto}
+
+    /* ▼ 追加：iPhoneではこの行だけ折り返し可＆自動計算ボタンを少し小さめに */
+    @media (max-width: 480px){
+      #panel .actions{flex-wrap:wrap;}
+      #autoCalcBtn{min-width:88px;height:36px;font-size:12px;}
+    }
   </style>
 </head>
 <body>
@@ -113,17 +119,31 @@
   <!-- 入力パネル（モード統合：最初から複数フォームのみ） -->
   <div id="panel" class="panel" aria-hidden="true">
     <h2>商品を追加</h2>
-
+<!-- ▼ テキスト一括取込（カテゴリ名 + 品種 + 価格 の連結文字列を解析） -->
+<div class="card" style="margin-top:8px">
+  <div class="muted" style="margin-bottom:6px">
+    例）PhilodendronCamelMarble18 <br>
+MonsteraMint13AlocasiaJacqueline38AnthuriumRedCrystallinum25 のように文字列を連結して自動入力
+  </div>
+  <textarea id="bulkText" rows="3" style="width:100%;border:1px solid #ddd;border-radius:10px;padding:8px;font-size:16px"></textarea>
+  <div class="actions" style="justify-content:flex-start;margin-top:8px">
+    <button id="parseBtn" class="btn ghost">テキスト取込</button>
+  </div>
+</div>
     <!-- ▼複数商品フォーム（常に表示） -->
     <div id="multiWrap">
       <div id="prods"></div>
       <div class="actions" style="justify-content:flex-start">
-        <button id="addProdBtn" class="btn ghost">＋ 商品フォームを追加</button>
+        <button id="addProdBtn" class="btn ghost">＋ 商品フォームを追加
+<button id="saveBtn" class="btn primary">保存</button></button>
       </div>
     </div>
 
-    <!-- ▼アクション：左から 一括入力 / キャンセル / 保存 -->
+    <!-- ▼アクション：自動計算 / 一括入力 / キャンセル / 保存 -->
     <div class="actions">
+      <!-- ▼ 追加：自動計算ボタン（ここだけ追加） -->
+      <button id="autoCalcBtn" class="btn ghost">自動計算</button>
+
       <button id="bulkBtn" class="btn ghost">一括入力</button>
       <select id="bulkSelect" style="display:none;height:44px;border:1px solid #ddd;border-radius:10px;padding:0 8px">
         <option value="">選択してください</option>
@@ -133,7 +153,7 @@
         <option>Anthurium</option>
       </select>
       <button id="cancelBtn" class="btn ghost">キャンセル</button>
-      <button id="saveBtn" class="btn primary">保存</button>
+    
     </div>
   </div>
 
@@ -147,7 +167,7 @@
     // ====== 超かんたんパスワードガード ======
     (function(){
       const pass = sessionStorage.getItem('admin-pass') || prompt('あなたの自己紹介をしてください');
-      if (pass !== 'kusakuri') {
+      if (pass !== 'こはくりら') {
         alert('不審者追放システム発動');
         location.href = '/';
       } else {
@@ -194,6 +214,7 @@
     const cancelBtn = document.getElementById('cancelBtn');
     const lastRes   = document.getElementById('lastResult');
     const listEl    = document.getElementById('list');
+    const autoCalcBtn = document.getElementById('autoCalcBtn'); // ← 追加
 
     // ====== パネル開閉 ======
     const openPanel  = ()=>{ panel.classList.add('show'); panel.setAttribute('aria-hidden','false'); };
@@ -243,7 +264,7 @@
             <input class="m_category" type="text" placeholder="Alocasia" />
           </div>
           <div class="col">
-            <label>バラエティネーム</label>
+            <label>バラエティーネーム</label>
             <input class="m_variety" type="text" placeholder="Silver Dragon Variegata" />
           </div>
           <div class="col">
@@ -289,6 +310,22 @@
       cancelBtn.disabled = lock;
       fab.disabled = lock;
     }
+
+    // ▼ 追加：自動計算（全フォームの「金額」を1.5倍）
+    autoCalcBtn?.addEventListener('click', (e)=>{
+      e.preventDefault();
+      const prices = prodsEl.querySelectorAll('.m_price');
+      let changed = 0;
+      prices.forEach(inp=>{
+        const v = Number((inp.value || '').trim());
+        if (Number.isFinite(v)){
+          const nv = Math.round(v * 150 * 1.5);  // ← 1.5倍（四捨五入）
+          inp.value = String(nv);
+          changed++;
+        }
+      });
+      setStatus(changed ? `金額を自動計算しました（${changed}件）` : '金額の入力がありませんでした');
+    });
 
     // ====== 保存（常に複数フォームをまとめて処理） ======
     async function saveProduct(){
@@ -513,6 +550,93 @@
 
     // 初回ロード
     loadList();
+// ====== 文字列 → フォーム自動生成（カテゴリ/品種/金額の振り分け） ======
+const KNOWN_CATEGORIES = ["Monstera", "Alocasia", "Philodendron", "Anthurium"];
+
+// 品種の見た目を少し整える（"SummerGlory" → "Summer Glory"）
+function prettifyVariety(s){
+  if (!s) return "";
+  // キャメルケースを分割
+  let t = s.replace(/([a-z])([A-Z])/g, '$1 $2');
+  // 連続大文字語も適度に分割
+  t = t.replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2');
+  return t.trim();
+}
+
+// テキスト全体を解析して [{category, variety, price}, ...] で返す
+function parseProductsFromText(text){
+  const trimmed = String(text || '').replace(/\s+/g, ''); // 改行や空白は除去（連結想定）
+  if (!trimmed) return [];
+
+  // カテゴリを大文字小文字無視で OR 化
+  const catAlt = KNOWN_CATEGORIES.join('|');
+  // パターン: (カテゴリ)(数字以外1文字以上)(数字1～6桁)
+  // 例: Philodendron SummerGlory 25
+  const re = new RegExp(`(${catAlt})([^0-9]+?)(\\d{1,6})`, 'gi');
+
+  const out = [];
+  let m;
+  while ((m = re.exec(trimmed)) !== null){
+    const category = m[1];             // キャプチャ①: カテゴリ
+    const varietyRaw = m[2] || '';     // キャプチャ②: 品種生文字
+    const priceStr = m[3] || '';       // キャプチャ③: 数字
+    const priceNum = Number(priceStr);
+
+    if (!category || !Number.isFinite(priceNum)) continue;
+
+    // 品種から余計な記号は軽く削除
+    const variety = prettifyVariety(varietyRaw.replace(/[_\-]+/g,' ').trim());
+
+    out.push({ categoryName: category, varietyName: variety, priceNum: priceNum });
+  }
+  return out;
+}
+
+// フォームに1件反映
+// 既存の appendProdToForm をこの実装に置き換え
+function appendProdToForm({ categoryName, varietyName, priceNum }){
+  // 1) まず“空のフォーム”(#1が空ならそれ)を探す
+  const blocks = [...prodsEl.querySelectorAll('.prod')];
+  const isEmpty = (b)=>{
+    const cat = b.querySelector('.m_category')?.value.trim() || '';
+    const va  = b.querySelector('.m_variety')?.value.trim()  || '';
+    const pr  = b.querySelector('.m_price')?.value.trim()    || '';
+    const fs  = (b.querySelector('.m_images')?.files || []).length;
+    return !cat && !va && !pr && fs === 0;
+  };
+  let target = blocks.find(isEmpty);
+
+  // 2) 空きが無ければ新規フォームを1つ追加
+  if (!target){
+    addProdBlock();
+    target = prodsEl.lastElementChild;
+  }
+  if (!target) return;
+
+  // 3) 値を反映
+  const cat = target.querySelector('.m_category');
+  const va  = target.querySelector('.m_variety');
+  const pr  = target.querySelector('.m_price');
+
+  if (cat) cat.value = categoryName || '';
+  if (va)  va.value  = varietyName  || '';
+  if (pr)  pr.value  = Number.isFinite(priceNum) ? String(priceNum) : '';
+}
+
+// 取込ボタン
+document.getElementById('parseBtn')?.addEventListener('click', (e)=>{
+  e.preventDefault();
+  const src = document.getElementById('bulkText')?.value || '';
+  const items = parseProductsFromText(src);
+
+  if (!items.length){
+    setStatus('解析できる商品が見つかりませんでした（カテゴリ名+品種+数字の連結で入力してください）');
+    return;
+  }
+
+  items.forEach(appendProdToForm);
+  setStatus(`${items.length}件をフォームに追加しました`);
+});
   </script>
 </body>
 </html>
