@@ -1005,6 +1005,21 @@ text-align:center;
       React.createElement(ProductList, { items: docs })
     );
   }
+  
+// ▼▼▼ 追記：描画完了後に URL の cat/liked を反映
+const params = new URLSearchParams(location.search);
+const want = (params.get('liked') === '1')
+  ? 'liked'
+  : (params.get('cat') || 'all').toLowerCase();
+
+if (typeof window.filterCategory === 'function') {
+  // 次フレームで実行（DOM に .product-item が出揃ってから）
+  requestAnimationFrame(() => {
+    window.filterCategory(want);
+    // 見出しまで軽くスクロール（任意）
+    document.getElementById('topCategories')?.scrollIntoView({behavior:'instant', block:'nearest'});
+  });
+}
 
   renderProducts().catch(console.error);
 </script>
