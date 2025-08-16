@@ -981,46 +981,48 @@ text-align:center;
     );
   }
 
-  async function renderProducts() {
-    const mount = document.getElementById('product-root');
-    if (!mount) return;
+async function renderProducts() {
+  const mount = document.getElementById('product-root');
+  if (!mount) return;
 
-    let docs = [];
-    try {
-      const q = query(collection(db, 'products'), orderBy('createdAt', 'desc'));
-      const snap = await getDocs(q);
-      docs = snap.docs.map(d => {
-        const data = d.data();
-        return { id: toId(data.varietyName, d.id), data };
-      });
-    } catch (e) {
-      const snap = await getDocs(collection(db, 'products'));
-      docs = snap.docs.map(d => {
-        const data = d.data();
-        return { id: toId(data.varietyName, d.id), data };
-      });
-    }
+  let docs = [];
+  try {
+    const q = query(collection(db, 'products'), orderBy('createdAt', 'desc'));
+    const snap = await getDocs(q);
+    docs = snap.docs.map(d => {
+      const data = d.data();
+      return { id: toId(data.varietyName, d.id), data };
+    });
+  } catch (e) {
+    const snap = await getDocs(collection(db, 'products'));
+    docs = snap.docs.map(d => {
+      const data = d.data();
+      return { id: toId(data.varietyName, d.id), data };
+    });
+  }
 
-    ReactDOM.createRoot(mount).render(
-      React.createElement(ProductList, { items: docs })
-    );
+  ReactDOM.createRoot(mount).render(
+    React.createElement(ProductList, { items: docs })
+  );
+
+  // 追加：描画完了を通知（フィルタ適用の合図）
+  document.dispatchEvent(new Event('products-rendered'));
 }
   
 // ▼▼▼ 追記：描画完了後に URL の cat/liked を反映
+// ▼▼▼ React描画完了後に URL の cat/liked を反映（イベントで同期）
 const params = new URLSearchParams(location.search);
 const want = (params.get('liked') === '1')
   ? 'liked'
   : (params.get('cat') || 'all').toLowerCase();
 
-if (typeof window.filterCategory === 'function') {
-  // 次フレームで実行（DOM に .product-item が出揃ってから）
-  requestAnimationFrame(() => {
-    window.filterCategory(want);
-    // 見出しまで軽くスクロール（任意）
-    document.getElementById('topCategories')?.scrollIntoView({behavior:'instant', block:'nearest'});
+document.addEventListener('products-rendered', () => {
+  window.filterCategory?.(want);
+  document.getElementById('topCategories')?.scrollIntoView({
+    behavior: 'instant',
+    block: 'nearest'
   });
-}
-
+});
   renderProducts().catch(console.error);
 </script>
 <script>
