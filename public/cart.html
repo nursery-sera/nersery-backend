@@ -88,62 +88,56 @@
   }
   .overlay.show { display: block; }
 
-  .category-menu {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 66vw;
-    height: 55vh;
-    background-color: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(8px);
-    z-index: 3000;
-    border: 2px solid rgba(0, 0, 0, 0.1);
-    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.2);
-    transform: translateX(-100%);
-    opacity: 0;
-    transition: transform 0.4s ease, opacity 0.4s ease;
-    pointer-events: none;
-    padding: 30px;
-  }
-  .category-menu.show {
-    transform: translateX(0);
-    opacity: 1;
-    pointer-events: auto;
-  }
 
-  .category-header {
-    font-family: 'Cinzel', serif;
-    font-size: 60px;
-    margin-bottom: 40px;
-    letter-spacing: 3px;
-    color: #000;
-    align-items: center;
-    text-align: center;
-  }
+    .category-menu{
+      position:fixed; top:0; left:0;
+      width:55vw; height:100vh;
+      background-color:rgba(255,255,255,.7);
+      backdrop-filter:blur(8px);
+      z-index:3000;
+      border:2px solid rgba(0,0,0,.1);
+      box-shadow:4px 0 20px rgba(0,0,0,.2);
+      transform:translateX(-100%); opacity:0; pointer-events:none;
+      transition:transform .4s ease, opacity .4s ease;
+      padding:30px;
+    }
+    .category-menu.show{
+      transform:translateX(0); opacity:1; pointer-events:auto;
+    }
 
-  .category-menu ul { list-style: none; padding: 0; margin: 0; }
-  .category-menu li {
-    font-size: 26px;
-    margin: 20px 0;
-    border-bottom: 1px solid rgba(0,0,0,0.1);
-    padding-bottom: 10px;
-    transition: transform 0.2s ease, color 0.2s ease;
-    cursor: pointer;
-    font-weight: bold;
-    color: #000;
-    position: relative;
-    text-align: left;
-    padding-right: 20px;
-  }
-  .category-menu li:hover { color: #c2185b; transform: scale(1.05); }
-  .category-menu li::after {
-    content: "＞";
-    position: absolute;
-    right: 0;
-    color: #bbb;
-    font-size: 20px;
-    top: 2px;
-  }
+    .category-header{
+      font-family:'Cinzel', serif;
+      font-size:80px; margin-bottom:40px; letter-spacing:3px; color:#000;
+      text-align:center;
+    }
+    .category-menu ul{ list-style:none; padding:0; margin:0; }
+    .category-menu li{opacity: 0.8;
+font-family: 'Noto Serif JP', serif;
+      font-size:36px; margin:20px 0; padding-bottom:10px; position:relative;
+      border-bottom:1px solid rgba(0,0,0,.1);
+      transition:transform .2s ease, color .2s ease;
+      cursor:pointer; font-weight:400; color:#000; text-align:left; padding-right:20px;
+    }
+    .category-menu li:hover{ color:#c2185b; transform:scale(1.05); }
+    .category-menu li::after{
+      content:"＞"; position:absolute; right:0; top:2px; color:#bbb; font-size:20px;
+    }
+
+.category-subtitle {
+  font-size: 48px;
+  font-family: 'Playfair Display SC', serif;
+  margin: 66px 0 10px;
+  color: #000000;
+  font-weight: 400;
+  border-bottom: 1px solid rgba(0,0,0,0.1);
+  padding-bottom: 4px;
+text-align:center;
+}
+.contact-links a {
+  color: #000;     
+  text-decoration: none; /* 下線消し */
+}
+
 
   .subtitle1 {
       font-family: 'Tangerine', cursive;
@@ -352,13 +346,22 @@
 
   <div class="category-menu" id="categoryMenu">
     <h1 class="category-header">MENU</h1>
+<h2 class="category-subtitle">Category</h2>
     <ul>
-       <li onclick="window.top.location.href='<?= url ?>?page=index'">商品ページ</li>
-      <li onclick="window.top.location.href='<?= url ?>?page=cart'">カート</li>
-      <li onclick="window.top.location.href='<?= url ?>?page=order'">注文フォーム</li>
-      <li onclick="window.top.location.href='<?= url ?>?page=policy'">ポリシー</li>
-      <li onclick="window.top.location.href='<?= url ?>?page=form'">お問い合わせ</li>
-    </ul>
+      <li onclick="go('/?page=index')">All</li>
+      <li onclick="go('/?page=index&liked=1')">like♡</li>
+      <li onclick="go('/?page=index&cat=monstera')">Monstera</li>
+      <li onclick="go('/?page=index&cat=alocasia')">Alocasia</li>
+      <li onclick="go('/?page=index&cat=anthurium')">Anthurium</li>
+      <li onclick="go('/?page=index&cat=philodendron')">Philodendron</li>
+</ul>
+<h2 class="category-subtitle">Contact</h2>
+<ul class="contact-links">
+  <li><a href="https://www.instagram.com/nursery_sera?igsh=cWx2cTZ3cWNicGlz&utm_source=" target="_blank">Instagram</a></li>
+  <li><a href="https://lin.ee/mFSu5FS" target="_blank">LINE</a></li>
+  <li><a href="https://www.threads.net/@nursery_sera?igshid=NTc4MTIwNjQ2YQ==" target="_blank">Threads</a></li>
+  <li><a href="/?page=form">お問い合わせ</a></li>
+</ul>
   </div>
   <div class="overlay" id="overlay" onclick="closeMenu()"></div>
 
@@ -381,21 +384,23 @@
 
   <footer>
     <div class="footer-icons">
-      <a href="https://www.instagram.com/" target="_blank">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png" alt="Instagram">
-      </a>
-      <a href="https://line.me/ja/" target="_blank">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/4/41/LINE_logo.svg" alt="LINE">
-      </a>
-      <a href="https://www.threads.net/" target="_blank">
-        <img src="https://cdn.simpleicons.org/threads/000000" alt="Threads">
-      </a>
+       <a href="https://www.instagram.com/nursery_sera?igsh=cWx2cTZ3cWNicGlz&utm_source=" target="_blank">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png" alt="Instagram">
+  </a>
+
+  <a href="https://lin.ee/mFSu5FS" target="_blank">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/4/41/LINE_logo.svg" alt="LINE">
+  </a>
+
+  <a href="https://www.threads.net/@nursery_sera?igshid=NTc4MTIwNjQ2YQ==" target="_blank">
+    <img src="https://cdn.simpleicons.org/threads/000000" alt="Threads">
+  </a>
     </div>
     <div class="footer-links">
-      <a href="<?= url ?>?page=policy">ポリシー</a>
-      <a href="<?= url ?>?page=terms">利用規約</a>
-      <a href="<?= url ?>?page=law">特定商取引法に基づく表記</a>
-      <a href="<?= url ?>?page=form">お問い合わせ</a>
+      <a href="<?= url ?>?page=policy">各種ポリシー</a>
+      <a href="<?= url ?>?page=policy">利用規約</a>
+      <a href="<?= url ?>?page=policy">特定商取引法に基づく表記</a>
+      <a href="<?= url ?>?page=policy">お問い合わせ</a>
     </div>
   </footer>
 
