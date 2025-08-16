@@ -1004,9 +1004,7 @@ text-align:center;
     ReactDOM.createRoot(mount).render(
       React.createElement(ProductList, { items: docs })
     );
-  }
-  
-  document.dispatchEvent(new Event('products-rendered'));
+}
   
 // ▼▼▼ 追記：描画完了後に URL の cat/liked を反映
 const params = new URLSearchParams(location.search);
