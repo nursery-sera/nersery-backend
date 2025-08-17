@@ -381,30 +381,69 @@ function openEdit(id, data){
   // パネルを開く
   openPanel();
 }
-    // ====== 保存（常に複数フォームをまとめて処理） ======
+// ====== 保存（編集/追加 両対応の完成版） ======
 async function saveProduct(){
   lockUI(true);
   try{
     setStatus('保存の準備中…');
 
     const blocks = [...prodsEl.querySelectorAll('.prod')];
-    if (!blocks.length){ alert('商品フォームを追加してください'); setStatus('商品フォームがありません'); lockUI(false); return; }
+    if (!blocks.length){
+      alert('商品フォームを追加してください');
+      setStatus('商品フォームがありません');
+      lockUI(false);
+      return;
+    }
 
-    // ★ ここで退避
+    // ★ いま編集しているIDを退避（処理の途中でリセットされても安全にするため）
     const targetId = editTargetId;
 
-    // 編集時は1フォームのみ扱う
+    // 編集中は1フォームのみ扱う
     const targets = targetId ? blocks.slice(0,1) : blocks;
 
-    ...
-    if (targetId){
-      // ====== 更新（1件） ======
-      const b = targets[0];
-      ...
-      // パネルは閉じるけど editTargetId は残っている（退避済なのでOK）
-      closePanel();
+    const mustBeValid = (cat, var_, price)=>{
+      if (!cat){ alert('カテゴリーネームを入力してください'); return false; }
+      if (!var_){ alert('バラエティーネームを入力してください'); return false; }
+      if (!Number.isFinite(price) || price < 0){ alert('金額は0以上の数字で入力してください'); return false; }
+      return true;
+    };
 
-      // 画像アップロード …（略）
+    // ====== 編集（1件更新） ======
+    if (targetId){
+      const b  = targets[0];
+      const cat= b.querySelector('.m_category')?.value.trim() || '';
+      const va = b.querySelector('.m_variety')?.value.trim()  || '';
+      const pr = Number((b.querySelector('.m_price')?.value || '').trim());
+      const fs = [...(b.querySelector('.m_images')?.files || [])].slice(0,2);
+
+      if (!mustBeValid(cat, va, pr)) { setStatus('入力不備があります'); lockUI(false); return; }
+
+      // 入力パネルは閉じる（※ targetId は変数に退避済み）
+      closePanel();
+      setStatus('画像処理中…');
+
+      // 画像：選択されていれば置き換え、なければ既存を維持
+      let urls = editExistingImages.slice();
+      if (fs.length){
+        urls = [];
+        for (let i=0; i<fs.length; i++){
+          const f = fs[i];
+          const { blob, mime, name } = await compressImage(f, 1200, 0.78);
+          const path = `products/${targetId}/${Date.now()}_${i}_${sanitizeName(name)}`;
+          const storageRef = ref(st, path);
+          const task = uploadBytesResumable(storageRef, blob, { contentType: mime });
+          const url = await new Promise((resolve, reject)=>{
+            task.on('state_changed', s=>{
+              const pct = Math.round((s.bytesTransferred / s.totalBytes) * 100);
+              setStatus(`画像 ${i+1}/${fs.length} をアップロード中… ${pct}%`);
+            }, reject, async ()=>{
+              const u = await getDownloadURL(task.snapshot.ref);
+              resolve(u);
+            });
+          });
+          urls.push(url);
+        }
+      }
 
       setStatus('Firestore を更新中…');
       await updateDoc(doc(collection(db,'products'), targetId), {
@@ -418,7 +457,7 @@ async function saveProduct(){
       lastRes.innerHTML = `<div class="ok"><b>更新しました：</b> ${targetId}</div>`;
       await loadList();
 
-      // ★ 保存成功後にだけ編集状態をリセット & フォームを空に戻す
+      // ★ 成功したら編集状態をクリアしてフォームを初期化
       editTargetId = null;
       editExistingImages = [];
       prodsEl.innerHTML = '';
@@ -429,13 +468,13 @@ async function saveProduct(){
       return;
     }
 
-    // ====== 追加（既存の複数作成ロジック） ======
+    // ====== 新規追加（複数対応） ======
     const queue = [];
     for (const b of targets){
-      const cat = b.querySelector('.m_category')?.value.trim() || '';
-      const va  = b.querySelector('.m_variety')?.value.trim()  || '';
-      const pr  = Number((b.querySelector('.m_price')?.value || '').trim());
-      const fs  = [...(b.querySelector('.m_images')?.files || [])].slice(0,2);
+      const cat= b.querySelector('.m_category')?.value.trim() || '';
+      const va = b.querySelector('.m_variety')?.value.trim()  || '';
+      const pr = Number((b.querySelector('.m_price')?.value || '').trim());
+      const fs = [...(b.querySelector('.m_images')?.files || [])].slice(0,2);
       if (!mustBeValid(cat, va, pr)) { setStatus('入力不備があります'); lockUI(false); return; }
       queue.push({ categoryName:cat, varietyName:va, priceNum:pr, files:fs });
     }
