@@ -231,17 +231,24 @@ const openPanel  = ()=>{
   panel.classList.add('show');
   panel.setAttribute('aria-hidden','false');
 };
+// いまの closePanel をこれに置き換え
 const closePanel = ()=>{
   panel.classList.remove('show');
   panel.setAttribute('aria-hidden','true');
-  // 編集モードを抜けるときはリセット
-  editTargetId = null;
-  editExistingImages = [];
+  // ★ここでは editTargetId をリセットしない！
   setPanelTitle();
 };
     fab.addEventListener('click', openPanel);
-    cancelBtn.addEventListener('click', (e)=>{ e.preventDefault(); closePanel(); });
-
+cancelBtn.addEventListener('click', (e)=>{
+  e.preventDefault();
+  // ★ キャンセル時に編集状態を捨てる
+  editTargetId = null;
+  editExistingImages = [];
+  prodsEl.innerHTML = '';
+  addProdBlock();
+  setPanelTitle();
+  closePanel();
+});
     // ▼一括入力：押すとプル表示、選ぶと全カテゴリへ反映
     bulkBtn.addEventListener('click', (e)=>{
       e.preventDefault();
@@ -383,54 +390,24 @@ async function saveProduct(){
     const blocks = [...prodsEl.querySelectorAll('.prod')];
     if (!blocks.length){ alert('商品フォームを追加してください'); setStatus('商品フォームがありません'); lockUI(false); return; }
 
-    // 編集時は1フォームのみ扱う（安全のため）
-    const targets = editTargetId ? blocks.slice(0,1) : blocks;
+    // ★ ここで退避
+    const targetId = editTargetId;
 
-    const mustBeValid = (cat, var_, price)=>{
-      if (!cat){ alert('カテゴリーネームを入力してください'); return false; }
-      if (!var_){ alert('バラエティーネームを入力してください'); return false; }
-      if (!Number.isFinite(price) || price < 0){ alert('金額は0以上の数字で入力してください'); return false; }
-      return true;
-    };
+    // 編集時は1フォームのみ扱う
+    const targets = targetId ? blocks.slice(0,1) : blocks;
 
-    if (editTargetId){
+    ...
+    if (targetId){
       // ====== 更新（1件） ======
       const b = targets[0];
-      const cat = b.querySelector('.m_category')?.value.trim() || '';
-      const va  = b.querySelector('.m_variety')?.value.trim()  || '';
-      const pr  = Number((b.querySelector('.m_price')?.value || '').trim());
-      const fs  = [...(b.querySelector('.m_images')?.files || [])].slice(0,2);
-
-      if (!mustBeValid(cat, va, pr)) { setStatus('入力不備があります'); lockUI(false); return; }
-
+      ...
+      // パネルは閉じるけど editTargetId は残っている（退避済なのでOK）
       closePanel();
-      setStatus('画像処理中…');
 
-      // 画像：選ばれていれば置き換え／選ばれていなければ既存維持
-      let urls = editExistingImages.slice();
-      if (fs.length){
-        urls = [];
-        for (let i=0;i<fs.length;i++){
-          const f = fs[i];
-          const { blob, mime, name } = await compressImage(f, 1200, 0.78);
-          const path = `products/${editTargetId}/${Date.now()}_${i}_${sanitizeName(name)}`;
-          const storageRef = ref(st, path);
-          const task = uploadBytesResumable(storageRef, blob, { contentType: mime });
-          const url = await new Promise((resolve, reject)=>{
-            task.on('state_changed', s=>{
-              const pct = Math.round((s.bytesTransferred / s.totalBytes) * 100);
-              setStatus(`画像 ${i+1}/${fs.length} をアップロード中… ${pct}%`);
-            }, reject, async ()=>{
-              const u = await getDownloadURL(task.snapshot.ref);
-              resolve(u);
-            });
-          });
-          urls.push(url);
-        }
-      }
+      // 画像アップロード …（略）
 
       setStatus('Firestore を更新中…');
-      await updateDoc(doc(collection(db,'products'), editTargetId), {
+      await updateDoc(doc(collection(db,'products'), targetId), {
         categoryName: cat,
         varietyName : va,
         price       : pr,
@@ -438,10 +415,16 @@ async function saveProduct(){
         updatedAt   : serverTimestamp()
       });
 
-      lastRes.innerHTML = `<div class="ok"><b>更新しました：</b> ${editTargetId}</div>`;
+      lastRes.innerHTML = `<div class="ok"><b>更新しました：</b> ${targetId}</div>`;
       await loadList();
+
+      // ★ 保存成功後にだけ編集状態をリセット & フォームを空に戻す
       editTargetId = null;
       editExistingImages = [];
+      prodsEl.innerHTML = '';
+      addProdBlock();
+      setPanelTitle();
+
       setStatus('更新が完了しました。');
       return;
     }
