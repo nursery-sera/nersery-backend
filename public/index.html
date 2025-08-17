@@ -518,17 +518,35 @@ text-align:center;
     btn.textContent = liked ? '♥' : '♡';
   }
 
-  function addToCart(id, name, price){
-    const sel=document.getElementById('qty-'+id);
-    const q=parseInt(sel.value||'1');
-    const cart=JSON.parse(localStorage.getItem('cart')||'[]');
-    const idx=cart.findIndex(i=>i.id===id);
-    const img=document.querySelector(`[id="qty-${id}"]`)?.closest('.product-item')?.querySelector('.product-img')?.getAttribute('src')||'';
-    const item={id,name,price,quantity:q,image:img};
-    if(idx>-1) cart[idx]=item; else cart.push(item);
-    localStorage.setItem('cart',JSON.stringify(cart));
-    alert(`${name} を ${q} 株カートに追加しました。`);
-  }
+function addToCart(id, name, price){
+  const sel = document.getElementById('qty-'+id);
+  const q = parseInt(sel?.value || '1') || 1;
+
+  // カードDOMから画像・カテゴリ・バリエティを拾う
+  const card     = document.querySelector(`[id="qty-${id}"]`)?.closest('.product-item');
+  const img      = card?.querySelector('.product-img')?.getAttribute('src') || '';
+  const category = (card?.querySelector('.category-name')?.textContent || '').trim();
+  const variety  = (card?.querySelector('.variety-name')?.textContent  || '').trim();
+
+  const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+  const idx  = cart.findIndex(i => i.id === id);
+
+  // 2つ目のカートが期待する形に合わせて保存
+  const item = {
+    id,
+    name    : variety || name || '',        // 後方互換で name も残す
+    price   : Number(price) || 0,
+    quantity: q,
+    image   : img,
+    category,
+    variety
+  };
+
+  if (idx > -1) cart[idx] = item; else cart.push(item);
+  localStorage.setItem('cart', JSON.stringify(cart));
+
+  alert(`${variety || name} を ${q} 株カートに追加しました。`);
+}
 
   // ===== infoボタン（i）でパネルの開閉 =====
   document.querySelectorAll('.info-btn').forEach(btn=>{
