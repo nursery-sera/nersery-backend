@@ -24,14 +24,55 @@
     .overlay { position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.3); z-index:2000; display:none; }
     .overlay.show { display:block; }
 
-    .category-menu { position:fixed; top:0; left:0; width:66vw; height:55vh; background-color:rgba(255,255,255,0.7); backdrop-filter: blur(8px); z-index:3000;
-      border:2px solid rgba(0,0,0,0.1); box-shadow:4px 0 20px rgba(0,0,0,0.2); transform: translateX(-100%); opacity:0; transition: transform .4s ease, opacity .4s ease; pointer-events:none; padding:30px; }
-    .category-menu.show { transform: translateX(0); opacity:1; pointer-events:auto; }
-    .category-header { font-family:'Cinzel', serif; font-size:60px; margin-bottom:40px; letter-spacing:3px; color:#000; text-align:center; }
-    .category-menu ul { list-style:none; padding:0; margin:0; }
-    .category-menu li { font-size:26px; margin:20px 0; border-bottom:1px solid rgba(0,0,0,0.1); padding-bottom:10px; transition:.2s ease; cursor:pointer; font-weight:bold; color:#000; position:relative; text-align:left; padding-right:20px; }
-    .category-menu li:hover { color:#c2185b; transform: scale(1.05); }
-    .category-menu li::after { content:"＞"; position:absolute; right:0; color:#bbb; font-size:20px; top:2px; }
+      .category-menu{
+      position:fixed; top:0; left:0;
+      width:55vw; height:100vh;
+      background-color:rgba(255,255,255,.7);
+      backdrop-filter:blur(8px);
+      z-index:3000;
+      border:2px solid rgba(0,0,0,.1);
+      box-shadow:4px 0 20px rgba(0,0,0,.2);
+      transform:translateX(-100%); opacity:0; pointer-events:none;
+      transition:transform .4s ease, opacity .4s ease;
+      padding:30px;
+    }
+    .category-menu.show{
+      transform:translateX(0); opacity:1; pointer-events:auto;
+    }
+
+    .category-header{
+      font-family:'Cinzel', serif;
+      font-size:80px; margin-bottom:40px; letter-spacing:3px; color:#000;
+      text-align:center;
+    }
+    .category-menu ul{ list-style:none; padding:0; margin:0; }
+    .category-menu li{opacity: 0.8;
+font-family: 'Noto Serif JP', serif;
+      font-size:36px; margin:20px 0; padding-bottom:10px; position:relative;
+      border-bottom:1px solid rgba(0,0,0,.1);
+      transition:transform .2s ease, color .2s ease;
+      cursor:pointer; font-weight:400; color:#000; text-align:left; padding-right:20px;
+    }
+    .category-menu li:hover{ color:#c2185b; transform:scale(1.05); }
+    .category-menu li::after{
+      content:"＞"; position:absolute; right:0; top:2px; color:#bbb; font-size:20px;
+    }
+
+.category-subtitle {
+  font-size: 48px;
+  font-family: 'Playfair Display SC', serif;
+  margin: 66px 0 10px;
+  color: #000000;
+  font-weight: 400;
+  border-bottom: 1px solid rgba(0,0,0,0.1);
+  padding-bottom: 4px;
+text-align:center;
+}
+.contact-links a {
+  color: #000;     
+  text-decoration: none; /* 下線消し */
+}
+
 
     /* ===== フッター（下のコード） ===== */
     footer { margin-top:200px; padding:30px 20px; background:#fff; text-align:center; }
@@ -42,7 +83,7 @@
 
     /* ===== 見出し ===== */
     .subtitle-x { font-family:'Tangerine', cursive; font-size:100px; opacity:.6; margin-top:-30px; text-align:center;color: #555555;}
-    .subtitle { font-family:'Tangerine', cursive; font-size:39px; opacity:.; margin:66px 0 -10px; text-align:center; color: #000000 !important;}
+    .subtitle {  font-family:'Tangerine', cursive;font-size:44px; opacity:1; margin:66px 0 -10px; text-align:center; color: #888 !important;font-weight: 300;}
 
     /* ===== 入力フォーム（上のコード準拠。背景色に馴染むよう label 背景は inherit） ===== */
     form{ width:100vw; padding:0 5vw; }
@@ -66,7 +107,7 @@
     .row{ display:flex; gap:16px; }
     .row .form-group{ flex:1; margin-top:48px; }
 
-    .zip-btn{ position:absolute; right:0; top:0; height:100%; font-size:36px; padding:0 20px; background:#000000; color:#fff; border:none; cursor:pointer; border-radius:0px; font-weight:300; }
+    .zip-btn{ opacity: 0.9;position:absolute; right:0; top:0; height:100%; font-size:36px; padding:0 20px; background:#fff; color:#888; border: 2px solid #888; cursor:pointer; border-radius:0px; font-weight:400; transform: translate(0px, -2px);}
 
     /* 都道府県：カスタムリスト */
     .pref-wrap{ position:relative; }
@@ -74,7 +115,26 @@
     .pref-list button{ display:block; width:100%; text-align:left; background:#fff; border:0; padding:12px; font-size:32px; cursor:pointer; border-bottom:1px solid #eee; }
     .pref-list button:hover{ background:#f7f7f7; }
 
-    .submit-button{ background:#000000; color:#fff; border:none; margin-top:48px; padding:20px; font-size:48px; width:100%; cursor:pointer; font-weight:300; }
+    .submit-button {
+   display: block;
+  width: fit-content;
+  margin: 50px auto 0; 
+  background: none;   /* 背景なし */
+  border: none;       /* 枠なし */
+  padding: 0;         /* 余白なし */
+  font-size: 52px;
+  font-weight: 200;
+color: #333;     /* グレー継承 */
+  cursor: pointer;
+opacity: 0.8;
+  text-decoration: none;
+  border-bottom: 1.4px solid currentColor;
+  padding-bottom: 6px;
+  margin-top: 100px;
+margin-left: 37%;
+
+}
+
 
     @media (min-width:1024px){
       html{ font-size:16px; }
@@ -88,9 +148,11 @@
       .form-group textarea:focus + label,
       .form-group textarea:not(:placeholder-shown) + label{ font-size:12px; top:-10px; }
       .zip-btn{ font-size:14px; padding:0 14px; }
-      .pref-list button{ font-size:14px; }
-      .submit-button{ font-size:18px; padding:14px; }
-    }
+      .pref-list button{ font-size:14px; }}
+
+
+
+   
   </style>
 
   <!-- ★ APIベースURL：RailwayのURLに差し替え（API：えーぴーあい＝アプリ同士の窓口） -->
@@ -108,14 +170,24 @@
     <div class="main-title" onclick="window.top.location.href='<?= url ?>?page=index'">nursery sera</div>
     <button class="cart-button" onclick="window.top.location.href='<?= url ?>?page=cart'"></button>
   </div>
-  <div class="category-menu" id="categoryMenu">
+   <div class="category-menu" id="categoryMenu">
     <h1 class="category-header">MENU</h1>
+<h2 class="category-subtitle">Category</h2>
     <ul>
-      <li onclick="window.top.location.href='<?= url ?>?page=index'">商品ページ</li>
-      <li onclick="window.top.location.href='<?= url ?>?page=cart'">カート</li>
-      <li onclick="window.top.location.href='<?= url ?>?page=policy'">各種ポリシー</li>
-      <li onclick="window.top.location.href='<?= url ?>?page=form'">お問い合わせ</li>
-    </ul>
+      <li onclick="go('/?page=index')">All</li>
+      <li onclick="go('/?page=index&liked=1')">like♡</li>
+      <li onclick="go('/?page=index&cat=monstera')">Monstera</li>
+      <li onclick="go('/?page=index&cat=alocasia')">Alocasia</li>
+      <li onclick="go('/?page=index&cat=anthurium')">Anthurium</li>
+      <li onclick="go('/?page=index&cat=philodendron')">Philodendron</li>
+</ul>
+<h2 class="category-subtitle">Contact</h2>
+<ul class="contact-links">
+  <li><a href="https://www.instagram.com/nursery_sera?igsh=cWx2cTZ3cWNicGlz&utm_source=" target="_blank">Instagram</a></li>
+  <li><a href="https://lin.ee/mFSu5FS" target="_blank">LINE</a></li>
+  <li><a href="https://www.threads.net/@nursery_sera?igshid=NTc4MTIwNjQ2YQ==" target="_blank">Threads</a></li>
+  <li><a href="/?page=form">お問い合わせ</a></li>
+</ul>
   </div>
   <div class="overlay" id="overlay" onclick="closeMenu()"></div>
 
@@ -197,23 +269,32 @@
     <div class="form-group">
       <textarea id="memo" name="memo" placeholder=" "></textarea>
       <label>備考【任意】</label>
-    </div>
+     <div style="text-align:left; font-size:20px; line-height:1.7; font-weight:200; margin-top:14px;">
+          <div>※発送方法：第四種郵便 速達 特定記録（追跡番号付き）</div>
+          <div>※お支払い方法：銀行振込（PayPay銀行）</div>
+         
+          <div>※局留め希望の方は備考欄に「〇〇郵便局 局留め」と記載してください。</div>
+        </div>
 
-    <button type="submit" class="submit-button">注文送信</button>
+    <button type="submit" class="submit-button">注文送信 ></button>
   </form>
+
+
 
   <!-- ===== フッター（下のコード） ===== -->
   <footer>
     <div class="footer-icons">
-      <a href="https://www.instagram.com/" target="_blank">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png" alt="Instagram">
-      </a>
-      <a href="https://line.me/ja/" target="_blank">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/4/41/LINE_logo.svg" alt="LINE">
-      </a>
-      <a href="https://www.threads.net/" target="_blank">
-        <img src="https://cdn.simpleicons.org/threads/000000" alt="Threads">
-      </a>
+      <a href="https://www.instagram.com/nursery_sera?igsh=cWx2cTZ3cWNicGlz&utm_source=" target="_blank">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png" alt="Instagram">
+  </a>
+
+  <a href="https://lin.ee/mFSu5FS" target="_blank">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/4/41/LINE_logo.svg" alt="LINE">
+  </a>
+
+  <a href="https://www.threads.net/@nursery_sera?igshid=NTc4MTIwNjQ2YQ==" target="_blank">
+    <img src="https://cdn.simpleicons.org/threads/000000" alt="Threads">
+  </a>
     </div>
     <div class="footer-links">
       <a href="<?= url ?>?page=policy">ポリシー</a>
@@ -423,6 +504,20 @@
         alert('エラー：' + err.message);
       }
     });
+
+// 入力をカタカナに自動変換する関数
+function toKatakana(str) {
+  return str.replace(/[\u3041-\u3096]/g, function(ch) {
+    return String.fromCharCode(ch.charCodeAt(0) + 0x60);
+  });
+}
+
+// フリガナ欄に入力されたら自動変換
+[lastKana, firstKana].forEach(el => {
+  el.addEventListener('input', () => {
+    el.value = toKatakana(el.value);
+  });
+});
   </script>
 </body>
 </html>
