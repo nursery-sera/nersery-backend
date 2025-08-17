@@ -475,31 +475,44 @@ opacity:0.8;
         return;
       }
 
-      cart.forEach((item, i) => {
-        const div = document.createElement("div");
-        div.className = "cart-item";
-        const quantity = item.quantity || 1;
-        subtotal += item.price * quantity;
+     cart.forEach((item, i) => {
+  const div = document.createElement("div");
+  div.className = "cart-item";
 
-        div.innerHTML = `
-          <img src="${item.image || ''}" onclick="openImageModal('${item.image || ''}')">
-          <div class="item-info">
-            <p class="item-name">
-  <span class="item-category">${item.category || ''}</span>
-  <span class="item-variety">${item.variety || item.name || ''}</span>
-</p>
-            <p class="item-price">価格　：　¥${(item.price * quantity).toLocaleString()}（税込）</p>
-            <div class="quantity-control">
-              <span class="quantity-label">数量　：</span>
-              <button onclick="changeQuantity(${i}, -1)">−</button>
-              <input type="number" min="1" value="${quantity}" onchange="updateQuantity(${i}, this.value)">
-              <button onclick="changeQuantity(${i}, 1)">＋</button>
-            </div>
-            <button class="remove-btn" onclick="removeItem(${i})">✖削除</button>
-          </div>
-        `;
-        container.appendChild(div);
-      });
+  // ここで安全な値に丸める（NaN / undefined 対策。見た目は変えない）
+  const imgSrc   = (item.image || "").trim();
+  const category = (item.category || "").trim();
+  const variety  = (item.variety  || item.name || "").trim();
+  const unit     = Number(item.price || 0);
+  const quantity = Number(item.quantity || 1);
+
+  // 小計に加算（NaNを避ける）
+  subtotal += (isFinite(unit) ? unit : 0) * (isFinite(quantity) ? quantity : 1);
+
+  // 画像が空なら <img> 自体を描画しない（レイアウト崩れ防止・見た目は既存と同じ幅感）
+  const imgHTML = imgSrc
+    ? `<img src="${imgSrc}" onclick="openImageModal('${imgSrc}')">`
+    : "";
+
+  div.innerHTML = `
+    ${imgHTML}
+    <div class="item-info">
+      <p class="item-name">
+        <span class="item-category">${category}</span>
+        <span class="item-variety">${variety}</span>
+      </p>
+      <p class="item-price">価格　：　¥${(unit * quantity).toLocaleString()}（税込）</p>
+      <div class="quantity-control">
+        <span class="quantity-label">数量　：</span>
+        <button onclick="changeQuantity(${i}, -1)">−</button>
+        <input type="number" min="1" value="${isFinite(quantity) ? quantity : 1}" onchange="updateQuantity(${i}, this.value)">
+        <button onclick="changeQuantity(${i}, 1)">＋</button>
+      </div>
+      <button class="remove-btn" onclick="removeItem(${i})">✖削除</button>
+    </div>
+  `;
+  container.appendChild(div);
+});
 
       // サマリー（プルダウン式オプション・送料行・案内文）
       totalEl.innerHTML = `
