@@ -408,18 +408,42 @@ margin-left: 37%;
       el.addEventListener('blur', function(){ setTimeout(resetKanaPHIfEmpty, 0); });
     });
 
-    // カタカナ自動変換
-    function toKatakana(str) {
-      return str.replace(/[\u3041-\u3096]/g, function(ch) {
-        return String.fromCharCode(ch.charCodeAt(0) + 0x60);
-      });
-    }
-    [lastKana, firstKana].forEach(function(el){
-      if (!el) return;
-      el.addEventListener('input', function(){ el.value = toKatakana(el.value); });
-    });
-  })();
+// カタカナ自動変換（IME重複対策つき）
+function toKatakana(str) {
+  return str.replace(/[\u3041-\u3096]/g, function(ch) {
+    return String.fromCharCode(ch.charCodeAt(0) + 0x60);
+  });
+}
 
+function attachKanaAutoKatakana(el){
+  if (!el) return;
+  let composing = false;
+
+  el.addEventListener('compositionstart', () => { composing = true; });
+  el.addEventListener('compositionend', (e) => {
+    composing = false;
+    e.target.value = toKatakana(e.target.value);
+  });
+
+  el.addEventListener('input', (e) => {
+    if (composing) return; // 変換中は触らない
+    const v = e.target.value;
+    const conv = toKatakana(v);
+    if (v !== conv){
+      const pos = e.target.selectionStart;
+      e.target.value = conv;
+      try { e.target.setSelectionRange(pos, pos); } catch(_) {}
+    }
+  });
+
+  el.addEventListener('blur', (e) => {
+    e.target.value = toKatakana(e.target.value.trim());
+  });
+}
+
+attachKanaAutoKatakana(document.getElementById('lastKana'));
+attachKanaAutoKatakana(document.getElementById('firstKana'));
+})();
   /* ====== 郵便番号 → 住所 ====== */
   (function(){
     var prefInput = document.getElementById('prefecture');
