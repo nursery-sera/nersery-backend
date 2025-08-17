@@ -532,29 +532,38 @@ attachKanaAutoKatakana(document.getElementById('firstKana'));
     const fd = new FormData(e.target);
     // 文字列を念のため安全化（不可視制御文字などを除去）
     const customer = {
-      lastName   : sanitize(fd.get('lastName')),
-      firstName  : sanitize(fd.get('firstName')),
-      lastKana   : sanitize(fd.get('lastKana')),
-      firstKana  : sanitize(fd.get('firstKana')),
-      zipcode    : sanitize(fd.get('zipcode')),
-      prefecture : sanitize(fd.get('prefecture')),
-      city       : sanitize(fd.get('city')),
-      address    : sanitize(fd.get('address')),
-      building   : sanitize(fd.get('building')),
-      email      : sanitize(fd.get('email')),
-      payment    : sanitize(fd.get('payment') || '銀行振込（PayPay銀行）'),
-    };
+  lastName   : sanitize(fd.get('lastName')),
+  firstName  : sanitize(fd.get('firstName')),
+  lastKana   : sanitize(fd.get('lastKana')),
+  firstKana  : sanitize(fd.get('firstKana')),
+  zipcode    : sanitize(fd.get('zipcode')),
+  prefecture : sanitize(fd.get('prefecture')),
+  city       : sanitize(fd.get('city')),
+  address    : sanitize(fd.get('address')),
+  building   : sanitize(fd.get('building')),
+  email      : sanitize(fd.get('email')),
+  payment    : sanitize(fd.get('payment') || '銀行振込（PayPay銀行）'),
+  // ★ サーバーが必要とする結合済みフィールドも明示で入れる
+  name    : (sanitize(fd.get('lastName')) + ' ' + sanitize(fd.get('firstName'))).trim(),
+  addressFull : (
+    sanitize(fd.get('prefecture')) +
+    sanitize(fd.get('city')) +
+    sanitize(fd.get('address')) +
+    sanitize(fd.get('building'))
+  ).trim()
+};
 
-    // 画像URLが巨大な場合に備え、先頭1件だけ・クエリを短縮
-    const items = cart.map(it => ({
-      id        : it.id || null,
-      name      : sanitize(it.name),
-      unitPrice : Number(it.price || 0),
-      quantity  : Number(it.quantity || 1),
-      image     : (it.image || '').split('?')[0].slice(0,512),
-      category  : sanitize(it.category || ''),
-      variety   : sanitize(it.variety || '')
-    }));
+const items = cart.map(it => ({
+  // ★ サーバーに合わせて productId/productName を送る（フォールバック完備）
+  productId   : it.productId ?? it.id ?? null,
+  productName : sanitize(it.productName ?? it.variety ?? it.name ?? ''),
+  unitPrice   : Number(it.price || 0),
+  quantity    : Number(it.quantity || 1),
+  // 追加情報（今後の拡張用：今はサーバーでは未使用）
+  image       : (it.image || '').split('?')[0].slice(0,512),
+  category    : sanitize(it.category || ''),
+  variety     : sanitize(it.variety || '')
+}));
 
     const checkout = JSON.parse(localStorage.getItem('checkout') || 'null');
     const subtotal = items.reduce((s, it) => s + it.unitPrice * it.quantity, 0);
