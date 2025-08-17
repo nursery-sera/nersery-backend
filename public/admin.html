@@ -176,11 +176,22 @@ AlocasiaJacqueline38AnthuriumRedCrystallinum25 のように記入して商品自
     })();
 
     // ====== Firebase 初期化 ======
+
+// 編集モード用の状態
+let editTargetId = null;                 // いま編集している商品の Firestore ID
+let editExistingImages = [];             // 既存画像のURL（画像を選ばなければこれを維持）
+
+// パネルの見出しを切り替え
+function setPanelTitle(){
+  const h2 = document.querySelector('#panel h2');
+  h2.textContent = editTargetId ? '商品を編集' : '商品を追加';
+}
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import {
-      getFirestore, doc, setDoc, serverTimestamp,
-      collection, getDocs, query, orderBy, deleteDoc
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {
+-  getFirestore, doc, setDoc, serverTimestamp,
++  getFirestore, doc, setDoc, updateDoc, serverTimestamp,
+  collection, getDocs, query, orderBy, deleteDoc
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
     import {
       getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject, listAll
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
@@ -217,9 +228,19 @@ AlocasiaJacqueline38AnthuriumRedCrystallinum25 のように記入して商品自
     const autoCalcBtn = document.getElementById('autoCalcBtn'); // ← 追加
 
     // ====== パネル開閉 ======
-    const openPanel  = ()=>{ panel.classList.add('show'); panel.setAttribute('aria-hidden','false'); };
-    const closePanel = ()=>{ panel.classList.remove('show'); panel.setAttribute('aria-hidden','true'); };
-
+const openPanel  = ()=>{
+  setPanelTitle();
+  panel.classList.add('show');
+  panel.setAttribute('aria-hidden','false');
+};
+const closePanel = ()=>{
+  panel.classList.remove('show');
+  panel.setAttribute('aria-hidden','true');
+  // 編集モードを抜けるときはリセット
+  editTargetId = null;
+  editExistingImages = [];
+  setPanelTitle();
+};
     fab.addEventListener('click', openPanel);
     cancelBtn.addEventListener('click', (e)=>{ e.preventDefault(); closePanel(); });
 
@@ -326,101 +347,181 @@ AlocasiaJacqueline38AnthuriumRedCrystallinum25 のように記入して商品自
       });
       setStatus(changed ? `金額を自動計算しました（${changed}件）` : '金額の入力がありませんでした');
     });
+function openEdit(id, data){
+  editTargetId = id;
+  editExistingImages = Array.isArray(data.images) ? data.images.slice(0,2) : [];
+  // 1フォームだけにして既存値を流し込む
+  prodsEl.innerHTML = '';
+  addProdBlock(); // 空フォームを1つ作る
+  const block = prodsEl.querySelector('.prod');
 
+  block.querySelector('.m_category').value = data.categoryName || '';
+  block.querySelector('.m_variety').value  = data.varietyName  || '';
+  block.querySelector('.m_price').value    = Number(data.price||0);
+
+  // 既存サムネを表示（ファイルは未選択のまま）
+  const tbox = block.querySelector('.m_thumbs');
+  tbox.innerHTML = '';
+  editExistingImages.forEach(u=>{
+    const im = document.createElement('img');
+    im.src = u; tbox.appendChild(im);
+  });
+
+  // ヒントを表示（画像を選ばなければ現状維持）
+  const hint = document.createElement('div');
+  hint.className = 'muted';
+  hint.textContent = '※画像を選択しなければ既存画像をそのまま使います（最大2枚）。';
+  block.querySelector('.mini').appendChild(hint);
+
+  // パネルを開く
+  openPanel();
+}
     // ====== 保存（常に複数フォームをまとめて処理） ======
-    async function saveProduct(){
-      lockUI(true);
-      try{
-        setStatus('保存の準備中…');
+async function saveProduct(){
+  lockUI(true);
+  try{
+    setStatus('保存の準備中…');
 
-        const blocks = [...prodsEl.querySelectorAll('.prod')];
-        if (!blocks.length){ alert('商品フォームを追加してください'); setStatus('商品フォームがありません'); lockUI(false); return; }
+    const blocks = [...prodsEl.querySelectorAll('.prod')];
+    if (!blocks.length){ alert('商品フォームを追加してください'); setStatus('商品フォームがありません'); lockUI(false); return; }
 
-        const mustBeValid = (cat, var_, price)=>{
-          if (!cat){ alert('カテゴリーネームを入力してください'); return false; }
-          if (!var_){ alert('バラエティーネームを入力してください'); return false; }
-          if (!Number.isFinite(price) || price < 0){ alert('金額は0以上の数字で入力してください'); return false; }
-          return true;
-        };
+    // 編集時は1フォームのみ扱う（安全のため）
+    const targets = editTargetId ? blocks.slice(0,1) : blocks;
 
-        const queue = [];
-        for (const b of blocks){
-          const cat = b.querySelector('.m_category')?.value.trim() || '';
-          const va  = b.querySelector('.m_variety')?.value.trim()  || '';
-          const pr  = Number((b.querySelector('.m_price')?.value || '').trim());
-          const fs  = [...(b.querySelector('.m_images')?.files || [])].slice(0,2);
-          if (!mustBeValid(cat, va, pr)) { setStatus('入力不備があります'); lockUI(false); return; }
-          queue.push({ categoryName:cat, varietyName:va, priceNum:pr, files:fs });
-        }
+    const mustBeValid = (cat, var_, price)=>{
+      if (!cat){ alert('カテゴリーネームを入力してください'); return false; }
+      if (!var_){ alert('バラエティーネームを入力してください'); return false; }
+      if (!Number.isFinite(price) || price < 0){ alert('金額は0以上の数字で入力してください'); return false; }
+      return true;
+    };
 
-        // メッセージ見せるため先に閉じる
-        closePanel();
-        setStatus(`${queue.length}件の保存を開始します…`);
+    if (editTargetId){
+      // ====== 更新（1件） ======
+      const b = targets[0];
+      const cat = b.querySelector('.m_category')?.value.trim() || '';
+      const va  = b.querySelector('.m_variety')?.value.trim()  || '';
+      const pr  = Number((b.querySelector('.m_price')?.value || '').trim());
+      const fs  = [...(b.querySelector('.m_images')?.files || [])].slice(0,2);
 
-        const createdIds = [];
+      if (!mustBeValid(cat, va, pr)) { setStatus('入力不備があります'); lockUI(false); return; }
 
-        for (let qi=0; qi<queue.length; qi++){
-          const item = queue[qi];
-          setStatus(`(${qi+1}/${queue.length}) 画像アップロードの準備中…`);
+      closePanel();
+      setStatus('画像処理中…');
 
-          const newRef = doc(collection(db, 'products'));
-          const newId  = newRef.id;
-
-          const urls = [];
-          for (let i=0;i<item.files.length;i++){
-            const f = item.files[i];
-            const { blob, mime, name } = await compressImage(f, 1200, 0.78);
-            const path = `products/${newId}/${Date.now()}_${i}_${sanitizeName(name)}`;
-            const storageRef = ref(st, path);
-            const task = uploadBytesResumable(storageRef, blob, { contentType: mime });
-
-            const url = await new Promise((resolve, reject)=>{
-              task.on('state_changed', s=>{
-                const pct = Math.round((s.bytesTransferred / s.totalBytes) * 100);
-                setStatus(`(${qi+1}/${queue.length}) 画像 ${i+1}/${item.files.length} をアップロード中… ${pct}%`);
-              }, reject, async ()=>{
-                const u = await getDownloadURL(task.snapshot.ref);
-                resolve(u);
-              });
+      // 画像：選ばれていれば置き換え／選ばれていなければ既存維持
+      let urls = editExistingImages.slice();
+      if (fs.length){
+        urls = [];
+        for (let i=0;i<fs.length;i++){
+          const f = fs[i];
+          const { blob, mime, name } = await compressImage(f, 1200, 0.78);
+          const path = `products/${editTargetId}/${Date.now()}_${i}_${sanitizeName(name)}`;
+          const storageRef = ref(st, path);
+          const task = uploadBytesResumable(storageRef, blob, { contentType: mime });
+          const url = await new Promise((resolve, reject)=>{
+            task.on('state_changed', s=>{
+              const pct = Math.round((s.bytesTransferred / s.totalBytes) * 100);
+              setStatus(`画像 ${i+1}/${fs.length} をアップロード中… ${pct}%`);
+            }, reject, async ()=>{
+              const u = await getDownloadURL(task.snapshot.ref);
+              resolve(u);
             });
-            urls.push(url);
-          }
-
-          setStatus(`(${qi+1}/${queue.length}) Firestore へ保存中…`);
-          const data = {
-            categoryName: item.categoryName,
-            varietyName : item.varietyName,
-            price       : item.priceNum,
-            images      : urls,
-            createdAt   : serverTimestamp()
-          };
-          await setDoc(newRef, data);
-          createdIds.push(newId);
-          setStatus(`(${qi+1}/${queue.length}) 保存完了。次を処理します…`);
+          });
+          urls.push(url);
         }
-
-        lastRes.innerHTML = `
-          <div class="ok"><b>保存に成功しました（${createdIds.length}件）。</b></div>
-          <div class="muted" style="max-height:160px;overflow:auto">
-            ${createdIds.map(id=>`<div>ID: <code>${id}</code></div>`).join('')}
-          </div>
-          <div style="margin-top:8px"><a href="/" target="_blank">サイトで確認（index）</a></div>
-        `;
-        setStatus('すべての保存が完了しました。');
-
-        prodsEl.innerHTML = '';
-        addProdBlock(); // 次の入力用に1つ補充
-        await loadList();
-
-      }catch(err){
-        console.error(err);
-        alert('保存中にエラーが発生しました');
-        lastRes.innerHTML = `<div class="err"><b>エラー：</b> ${String((err && err.message) || err)}</div>`;
-        setStatus('エラーが発生しました。');
-      }finally{
-        lockUI(false);
       }
+
+      setStatus('Firestore を更新中…');
+      await updateDoc(doc(collection(db,'products'), editTargetId), {
+        categoryName: cat,
+        varietyName : va,
+        price       : pr,
+        images      : urls,
+        updatedAt   : serverTimestamp()
+      });
+
+      lastRes.innerHTML = `<div class="ok"><b>更新しました：</b> ${editTargetId}</div>`;
+      await loadList();
+      editTargetId = null;
+      editExistingImages = [];
+      setStatus('更新が完了しました。');
+      return;
     }
+
+    // ====== 追加（既存の複数作成ロジック） ======
+    const queue = [];
+    for (const b of targets){
+      const cat = b.querySelector('.m_category')?.value.trim() || '';
+      const va  = b.querySelector('.m_variety')?.value.trim()  || '';
+      const pr  = Number((b.querySelector('.m_price')?.value || '').trim());
+      const fs  = [...(b.querySelector('.m_images')?.files || [])].slice(0,2);
+      if (!mustBeValid(cat, va, pr)) { setStatus('入力不備があります'); lockUI(false); return; }
+      queue.push({ categoryName:cat, varietyName:va, priceNum:pr, files:fs });
+    }
+
+    closePanel();
+    setStatus(`${queue.length}件の保存を開始します…`);
+
+    const createdIds = [];
+    for (let qi=0; qi<queue.length; qi++){
+      const item = queue[qi];
+      setStatus(`(${qi+1}/${queue.length}) 画像アップロードの準備中…`);
+
+      const newRef = doc(collection(db, 'products'));
+      const newId  = newRef.id;
+
+      const urls = [];
+      for (let i=0;i<item.files.length;i++){
+        const f = item.files[i];
+        const { blob, mime, name } = await compressImage(f, 1200, 0.78);
+        const path = `products/${newId}/${Date.now()}_${i}_${sanitizeName(name)}`;
+        const storageRef = ref(st, path);
+        const task = uploadBytesResumable(storageRef, blob, { contentType: mime });
+        const url = await new Promise((resolve, reject)=>{
+          task.on('state_changed', s=>{
+            const pct = Math.round((s.bytesTransferred / s.totalBytes) * 100);
+            setStatus(`(${qi+1}/${queue.length}) 画像 ${i+1}/${item.files.length} をアップロード中… ${pct}%`);
+          }, reject, async ()=>{
+            const u = await getDownloadURL(task.snapshot.ref);
+            resolve(u);
+          });
+        });
+        urls.push(url);
+      }
+
+      setStatus(`(${qi+1}/${queue.length}) Firestore へ保存中…`);
+      await setDoc(newRef, {
+        categoryName: item.categoryName,
+        varietyName : item.varietyName,
+        price       : item.priceNum,
+        images      : urls,
+        createdAt   : serverTimestamp()
+      });
+      createdIds.push(newId);
+      setStatus(`(${qi+1}/${queue.length}) 保存完了。次を処理します…`);
+    }
+
+    lastRes.innerHTML = `
+      <div class="ok"><b>保存に成功しました（${createdIds.length}件）。</b></div>
+      <div class="muted" style="max-height:160px;overflow:auto">
+        ${createdIds.map(id=>`<div>ID: <code>${id}</code></div>`).join('')}
+      </div>
+      <div style="margin-top:8px"><a href="/" target="_blank">サイトで確認（index）</a></div>
+    `;
+    prodsEl.innerHTML = '';
+    addProdBlock();
+    await loadList();
+    setStatus('すべての保存が完了しました。');
+
+  }catch(err){
+    console.error(err);
+    alert('保存中にエラーが発生しました');
+    lastRes.innerHTML = `<div class="err"><b>エラー：</b> ${String((err && err.message) || err)}</div>`;
+    setStatus('エラーが発生しました。');
+  }finally{
+    lockUI(false);
+  }
+}
 
     // ===== 画像を圧縮&リサイズ（最長辺 1200, 品質 0.78） =====
     async function compressImage(file, maxSize = 1200, quality = 0.78) {
@@ -499,22 +600,35 @@ AlocasiaJacqueline38AnthuriumRedCrystallinum25 のように記入して商品自
               <div class="sub">${escapeHtml(data.varietyName || '')}</div>
               <div class="sub">¥ ${Number(data.price||0).toLocaleString()}</div>
               <div class="sub muted">ID: <code>${id}</code></div>
-              <div class="ops">
-                <button class="btn danger" data-del="${id}">削除</button>
-              </div>
+             <div class="ops">
+-  <button class="btn danger" data-del="${id}">削除</button>
++  <button class="btn ghost"  data-edit='${id}'>編集</button>
++  <button class="btn danger" data-del='${id}'>削除</button>
+</div>
             </div>
           `;
           listEl.appendChild(el);
         });
 
-        listEl.querySelectorAll('[data-del]').forEach(btn=>{
-          btn.addEventListener('click', async ()=>{
-            const id = btn.getAttribute('data-del');
-            if (!confirm('この商品を削除しますか？（画像も削除）')) return;
-            await deleteProduct(id);
-            await loadList();
-          });
-        });
+        // 既存：削除
+listEl.querySelectorAll('[data-del]').forEach(btn=>{
+  btn.addEventListener('click', async ()=>{
+    const id = btn.getAttribute('data-del');
+    if (!confirm('この商品を削除しますか？（画像も削除）')) return;
+    await deleteProduct(id);
+    await loadList();
+  });
+});
+
+// ★ 追加：編集
+listEl.querySelectorAll('[data-edit]').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const id = btn.getAttribute('data-edit');
+    // 画面に描いた data を拾うのが手軽なので、直上で使った変数 data を閉じ込めるため
+    // el を作る forEach 内でハンドラを定義（＝このスコープで data が参照できる）
+    openEdit(id, data);
+  });
+});
 
       }catch(err){
         console.error(err);
