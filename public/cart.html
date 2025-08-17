@@ -639,6 +639,13 @@ function getCartSubtotal(){
         alert("カートが空です");
         return;
       }
+        const normalized = cart.map(it => ({
+    ...it,
+    productId: it.productId ?? it.id ?? null,
+    productName: it.productName ?? it.variety ?? it.name ?? ''  // 品種名優先→name→空文字
+  }));
+  localStorage.setItem('cart', JSON.stringify(normalized));
+ 
       // 小計を計算（画面表示と同じ計算）
       const subtotal = cart.reduce((s, it) => s + Number(it.price || 0) * Number(it.quantity || 1), 0);
       // 送料の基本（画面と同じロジック）
