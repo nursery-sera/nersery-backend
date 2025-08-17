@@ -13,7 +13,7 @@
       font-size: 20px;
       -webkit-text-size-adjust: 100%;
       font-family: Arial, sans-serif;
-      background: #fff0f5;
+      background: #fff;
       color: #333;
       box-sizing: border-box;
       scroll-behavior: smooth;
@@ -116,7 +116,7 @@ font-family: 'Noto Serif JP', serif;
       font-size:36px; margin:20px 0; padding-bottom:10px; position:relative;
       border-bottom:1px solid rgba(0,0,0,.1);
       transition:transform .2s ease, color .2s ease;
-      cursor:pointer; font-weight:400; color:#000; text-align:left; padding-right:20px;
+      cursor:pointer; font-weight:400; color:#000!important; text-align:left; padding-right:20px;
     }
     .category-menu li:hover{ color:#c2185b; transform:scale(1.05); }
     .category-menu li::after{
@@ -181,43 +181,42 @@ text-align:center;
 
   .item-info { flex: 1; }
 
-  .item-name {
-      font-family: 'Noto Serif JP', serif;
-      font-size: 38px;
-      margin: 0 0 0;
-  }
 
-  .item-price {
-    font-size: 25px;
-    margin: 90px 0 0;
+
+  .item-price {transform: translate(0px, px);
+    font-size: 28px;
+    margin: 0px 0 0;
+opacity:0.9;
   }
 
   .quantity-control {
-    font-size: 25px;
+    font-size: 28px;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 0px;
     margin: 10px 0 0;
+   opacity:0.9;
   }
   .quantity-control button {
-      font-size: 20px;
-      border: none;
+      font-size: 28px;
+      border: none;	
       background: none;
-      color: #000;
+      color: #888;
       cursor: pointer;
   }
   .quantity-control input[type="number"] {
-      width: 60px;
+      width: 50px;
       text-align: center;
-      font-size: 18px;
-      border: 2px solid #ccc;
+      font-size: 22px;
+      border: 1px solid #ccc;
       border-radius: 0px;
       background: none;
+color:#888;
   }
 
   .remove-btn {
-      font-size: 18px;
-      margin-top: 90px;
+      font-size: 25px;
+      margin-top: 30px;
       color: #000;
       background: none;
       border: none;
@@ -283,8 +282,8 @@ text-align:center;
       margin-bottom: 16px;
   }
   .footer-icons img {
-      width: 60px;
-      height: 60px;
+      width: 48px;
+      height: 48px;
   }
   .footer-links a {
       display: inline-block;
@@ -331,6 +330,39 @@ text-align:center;
 
   /* 選択中テキスト幅を測るための不可視要素 */
   .opt-measure{ position:absolute; visibility:hidden; white-space:nowrap; font-size:1em; }
+
+.item-name{
+  font-family: 'Noto Serif JP', serif;
+  font-size: 44px;
+
+  color: #333;
+
+  display:flex;
+  flex-direction:column;
+  width:100%;
+  position: relative;
+margin-top:-20px;
+
+  }
+
+   /* カテゴリーネーム（属名など） */
+.item-category {
+  color: #555;
+margin-bottom:px;
+opacity:0.9;
+}
+
+/* バリエティーネーム（品種名） */
+.item-variety {
+  
+   /* 左マージン自動で右端に寄せる */
+  text-align: right;       /* 内部テキストも右寄せ */
+  white-space: nowrap;     /* 折り返しなし */
+  direction: ltr;          /* 文字順は通常のまま（重要） */
+margin-top:-10px;
+opacity:0.8;
+}
+
   </style>
 </head>
 <body>
@@ -452,7 +484,10 @@ text-align:center;
         div.innerHTML = `
           <img src="${item.image || ''}" onclick="openImageModal('${item.image || ''}')">
           <div class="item-info">
-            <p class="item-name">${item.name}</p>
+            <p class="item-name">
+  <span class="item-category">${item.category || ''}</span>
+  <span class="item-variety">${item.variety || item.name || ''}</span>
+</p>
             <p class="item-price">価格　：　¥${(item.price * quantity).toLocaleString()}（税込）</p>
             <div class="quantity-control">
               <span class="quantity-label">数量　：</span>
@@ -475,7 +510,8 @@ text-align:center;
             <label>配送オプション</label>
             <span id="opt-measure" class="opt-measure"></span>
             <select id="opt-select" class="option-select">
-              <option value="0">なし</option>
+              <option value="0">選択</option>
+<option value="0">なし</option>
               <option value="300">ヤマト運輸 +300円</option>
               <option value="160">第四種郵便+特定記録(追跡番号付き) +160円</option>
             </select>
