@@ -45,7 +45,6 @@ app.use(cors({
 
 // ====== HTML 配信（public優先）。GASタグ置換もここで実施 ======
 function candidateFiles(page) {
-  // 探す順：1) public/page.html → 2) pages/page.html → 3) 直下/page.html
   return [
     path.join(PUBLIC_DIR, `${page}.html`),
     path.join(PAGES_DIR,  `${page}.html`),
@@ -58,11 +57,8 @@ function normalizePage(raw) {
 }
 function loadAndPatchHtml(filePath, baseUrl) {
   let html = fs.readFileSync(filePath, "utf8");
-  // 1) GAS 宣言削除：<? var url = getScriptUrl(); ?>
   html = html.replace(/\<\?\s*var\s+url\s*=\s*getScriptUrl\(\);\s*\?\>/g, "");
-  // 2) <?= url ?> → baseUrl に置換
   html = html.replace(/\<\?\=\s*url\s*\?\>/g, baseUrl);
-  // 3) window.API_BASE を head 終了直前に注入（未定義なら）
   if (!/window\.API_BASE/.test(html)) {
     html = html.replace(/<\/head>/i, `<script>window.API_BASE='${baseUrl}/api';</script></head>`);
   }
@@ -78,7 +74,6 @@ function renderPage(rawPage, req, res) {
       return res.send(html);
     }
   }
-  // 見つからない時は index.html にフォールバック（SPA的）
   for (const fp of candidateFiles("index")) {
     if (fs.existsSync(fp)) {
       const html = loadAndPatchHtml(fp, baseUrl);
@@ -89,37 +84,27 @@ function renderPage(rawPage, req, res) {
   return res.status(404).send("Not Found: no html found");
 }
 
-// .html 付きURL（/index.html など）
-app.get(/^\/([a-z0-9-]+)\.html$/i, (req, res) => {
-  return renderPage(req.params[0], req, res);
-});
-// /?page=index 形式
+app.get(/^\/([a-z0-9-]+)\.html$/i, (req, res) => renderPage(req.params[0], req, res));
 app.get("/", (req, res, next) => {
   if (req.path.startsWith("/api") || req.path.startsWith("/assets")) return next();
   const page = req.query.page || "index";
   return renderPage(page, req, res);
 });
-// /index /cart など（/api は除外）
 app.get(/^\/(?!api\/)([a-z0-9-]+)?$/i, (req, res) => {
   const page = req.params[0] || "index";
   return renderPage(page, req, res);
 });
+app.use("/assets", express.static(path.join(PUBLIC_DIR)));
 
-// 静的ファイル（画像/CSS/JS等）は public から直配信（/assets など任意パス）
-app.use("/assets", express.static(path.join(PUBLIC_DIR))); // 例: /assets/img/logo.png
-
-// ====== API（えーぴーあい）ここから ======
-// ヘルスチェック（へるす：生存確認）
+// ====== API ======
 app.get("/api/health", (_, res) => res.json({ ok: true }));
 
-// 商品一覧（DB未接続なら空配列）
 app.get("/api/products", async (_, res) => {
   if (!pool) return res.json([]);
   const { rows } = await pool.query("SELECT * FROM products ORDER BY id DESC");
   res.json(rows);
 });
 
-// 商品の簡易追加（管理用）※ADMIN_TOKEN が一致しないと 401
 app.post("/api/products/quick-add", async (req, res) => {
   if (req.body?.token !== ADMIN_TOKEN) return res.status(401).json({ error: "unauthorized" });
   if (!pool) return res.status(500).json({ error: "DATABASE_URL not set (DB not available)" });
@@ -131,76 +116,90 @@ app.post("/api/products/quick-add", async (req, res) => {
   res.json(rows[0]);
 });
 
-// 注文（ちゅうもん）作成
+// ====== 注文作成 ======
 app.post("/api/orders", async (req, res) => {
   if (!pool) return res.status(500).json({ error: "DB not available" });
 
-  const { customer, note, items } = req.body || {};
-  // お客さま登録
-  const c = await pool.query(
-    "INSERT INTO customers(name,email,address) VALUES ($1,$2,$3) RETURNING id",
-    [customer.name, customer.email, customer.address]
-  );
-  const customerId = c.rows[0].id;
+  try {
+    const { customer, note, items } = req.body || {};
 
-  // 合計（ごうけい）計算
-  const total = (items || []).reduce((s, it) => s + Number(it.unitPrice || 0) * Number(it.quantity || 1), 0);
-
-  // 注文作成
-  const o = await pool.query(
-    "INSERT INTO orders(customer_id, note, total_amount) VALUES ($1,$2,$3) RETURNING id",
-    [customerId, note || null, total]
-  );
-  const orderId = o.rows[0].id;
-
-  // 明細登録
-  for (const it of items || []) {
-    await pool.query(
-      "INSERT INTO order_items(order_id, product_id, product_name, unit_price, quantity) VALUES ($1,$2,$3,$4,$5)",
-      [orderId, it.productId || null, it.productName, it.unitPrice, it.quantity]
-    );
-  }
-
-  // 自動返信メール（Brevo：ぶれぼ）
-  if (process.env.BREVO_API_KEY) {
-    const body = {
-      sender: {
-        email: process.env.MAIL_FROM || "info@example.com",
-        name: process.env.MAIL_NAME || "nursery sera"
-      },
-      to: [{ email: customer.email, name: customer.name }],
-      subject: `ご注文ありがとうございます（#${orderId}）`,
-      htmlContent: `
-        <p>${customer.name} 様</p>
-        <p>ご注文（#${orderId}）を受け付けました。</p>
-        <p>合計：${total.toLocaleString()}円</p>
-        <p>お支払い方法：銀行振込</p>
-        <p>※ご入金確認後に発送いたします。</p>
-      `
-    };
-    try {
-      const resp = await fetch("https://api.brevo.com/v3/smtp/email", {
-        method: "POST",
-        headers: { "api-key": process.env.BREVO_API_KEY, "Content-Type": "application/json" },
-        body: JSON.stringify(body)
-      });
-      if (!resp.ok) console.error("Brevo error:", await resp.text());
-    } catch (e) {
-      console.error("Brevo error:", e);
+    // ★ ここで姓名を結合して name を作る
+    const name = [customer.lastName, customer.firstName].filter(Boolean).join(" ").trim();
+    if (!name) {
+      return res.status(400).json({ error: "customer name required" });
     }
-  }
 
-  res.json({ orderId, total });
+    // お客さま登録
+    const c = await pool.query(
+      "INSERT INTO customers(name,email,address) VALUES ($1,$2,$3) RETURNING id",
+      [name, customer.email, customer.address]
+    );
+    const customerId = c.rows[0].id;
+
+    // 合計計算
+    const total = (items || []).reduce(
+      (s, it) => s + Number(it.unitPrice || 0) * Number(it.quantity || 1),
+      0
+    );
+
+    // 注文作成
+    const o = await pool.query(
+      "INSERT INTO orders(customer_id, note, total_amount) VALUES ($1,$2,$3) RETURNING id",
+      [customerId, note || null, total]
+    );
+    const orderId = o.rows[0].id;
+
+    // 明細登録
+    for (const it of items || []) {
+      await pool.query(
+        "INSERT INTO order_items(order_id, product_id, product_name, unit_price, quantity) VALUES ($1,$2,$3,$4,$5)",
+        [orderId, it.productId || null, it.productName, it.unitPrice, it.quantity]
+      );
+    }
+
+    // 自動返信メール
+    if (process.env.BREVO_API_KEY) {
+      const body = {
+        sender: {
+          email: process.env.MAIL_FROM || "info@example.com",
+          name: process.env.MAIL_NAME || "nursery sera"
+        },
+        to: [{ email: customer.email, name }],
+        subject: `ご注文ありがとうございます（#${orderId}）`,
+        htmlContent: `
+          <p>${name} 様</p>
+          <p>ご注文（#${orderId}）を受け付けました。</p>
+          <p>合計：${total.toLocaleString()}円</p>
+          <p>お支払い方法：銀行振込</p>
+          <p>※ご入金確認後に発送いたします。</p>
+        `
+      };
+      try {
+        const resp = await fetch("https://api.brevo.com/v3/smtp/email", {
+          method: "POST",
+          headers: { "api-key": process.env.BREVO_API_KEY, "Content-Type": "application/json" },
+          body: JSON.stringify(body)
+        });
+        if (!resp.ok) console.error("Brevo error:", await resp.text());
+      } catch (e) {
+        console.error("Brevo error:", e);
+      }
+    }
+
+    res.json({ orderId, total });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "server error" });
+  }
 });
 
-// 入金反映（にゅうきん・はんえい）
+// 入金反映
 app.put("/api/orders/:id/paid", async (req, res) => {
   if (!pool) return res.status(500).json({ error: "DB not available" });
   await pool.query("UPDATE orders SET is_paid = TRUE WHERE id = $1", [req.params.id]);
   res.json({ ok: true });
 });
 
-// 集計（カテゴリ別・全体）
 app.get("/api/reports/category", async (_, res) => {
   if (!pool) return res.json([]);
   const { rows } = await pool.query("SELECT * FROM v_category_summary ORDER BY total_qty DESC");
