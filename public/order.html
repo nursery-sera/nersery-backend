@@ -303,252 +303,257 @@ margin-left: 37%;
     </div>
   </footer>
 
-  <script>
-+  // 画面遷移ヘルパー（へるぱー：小さな補助関数）
-+  const BASE = window.location.origin;
-+  function go(path){ window.top.location.href = new URL(path, BASE).toString(); }
-    /* ====== メニュー（下のコード） ====== */
+<script>
+  // 画面遷移ヘルパー（使っていれば）
+  (function(){
+    const BASE = window.location.origin;
+    window.go = function(path){ window.top.location.href = new URL(path, BASE).toString(); };
+  })();
+
+  /* ====== メニュー ====== */
+  (function(){
     function toggleMenu() {
-      const menu = document.getElementById("categoryMenu");
-      const overlay = document.getElementById("overlay");
-      const isVisible = menu.classList.contains("show");
+      var menu = document.getElementById("categoryMenu");
+      var overlay = document.getElementById("overlay");
+      if (!menu || !overlay) return;
+      var isVisible = menu.classList.contains("show");
       document.body.style.overflow = isVisible ? "" : "hidden";
       menu.classList.toggle("show", !isVisible);
       overlay.classList.toggle("show", !isVisible);
     }
     function closeMenu() {
-      document.getElementById("categoryMenu").classList.remove("show");
-      document.getElementById("overlay").classList.remove("show");
+      var menu = document.getElementById("categoryMenu");
+      var overlay = document.getElementById("overlay");
+      if (!menu || !overlay) return;
+      menu.classList.remove("show");
+      overlay.classList.remove("show");
       document.body.style.overflow = "";
     }
+    window.toggleMenu = toggleMenu;
+    window.closeMenu  = closeMenu;
+
     // スクロールでヘッダー表示/非表示
-    let lastScrollY = window.scrollY;
-    const titleBar = document.getElementById("titleBar");
-    const threshold = 10;
-    window.addEventListener("scroll", () => {
-      const currentScrollY = window.scrollY;
-      const diff = currentScrollY - lastScrollY;
+    var lastScrollY = window.scrollY || 0;
+    var titleBar = document.getElementById("titleBar");
+    var threshold = 10;
+    window.addEventListener("scroll", function() {
+      if (!titleBar) return;
+      var currentScrollY = window.scrollY || 0;
+      var diff = currentScrollY - lastScrollY;
       if (Math.abs(diff) >= threshold) {
         titleBar.style.top = diff < 0 ? "-50px" : "-200px";
         lastScrollY = currentScrollY;
       }
     });
+  })();
 
-  /* ====== プレースホルダー連動（自動カナは無し） ====== */
-  const lastName  = document.getElementById('lastName');
-  const firstName = document.getElementById('firstName');
-  const nameMasterLabel = document.getElementById('nameMasterLabel');
+  /* ====== プレースホルダー連動 ====== */
+  (function(){
+    var lastName  = document.getElementById('lastName');
+    var firstName = document.getElementById('firstName');
+    var nameMasterLabel = document.getElementById('nameMasterLabel');
 
-  // 初期表示に戻す（お名前）
-  function resetNamePHIfEmpty(){
-    // どちらにもフォーカスが無く、両方未入力のときだけ初期に戻す
-    const noFocus = document.activeElement !== lastName && document.activeElement !== firstName;
-    if (noFocus && !lastName.value.trim() && !firstName.value.trim()){
-      lastName.placeholder = 'お名前';
-      firstName.placeholder = '';
-      lastName.classList.remove('ph-on');
-      firstName.classList.remove('ph-on');
+    function resetNamePHIfEmpty(){
+      var noFocus = document.activeElement !== lastName && document.activeElement !== firstName;
+      if (noFocus && lastName && firstName && !lastName.value.trim() && !firstName.value.trim()){
+        lastName.placeholder = 'お名前';
+        firstName.placeholder = '';
+        lastName.classList.remove('ph-on');
+        firstName.classList.remove('ph-on');
+      }
     }
-  }
-  // 表示（お名前）
-  function activateNamePH(){
-    lastName.placeholder='姓';
-    firstName.placeholder='名';
-    lastName.classList.add('ph-on');
-    firstName.classList.add('ph-on');
-  }
-  lastName.addEventListener('focus', activateNamePH);
-  firstName.addEventListener('focus', activateNamePH);
-  nameMasterLabel?.addEventListener('click', ()=>{ lastName.focus(); activateNamePH(); });
-
-  // ブラー時に初期へ（お名前）
-  [lastName, firstName].forEach(el=>{
-    el.addEventListener('blur', ()=>{
-      // フィールド間のフォーカス移動で即時リセットされないよう少し遅らせる
-      setTimeout(resetNamePHIfEmpty, 0);
-    });
-  });
-
-  // --- フリガナ ---
-  const lastKana  = document.getElementById('lastKana');
-  const firstKana = document.getElementById('firstKana');
-  const kanaMasterLabel = document.getElementById('kanaMasterLabel');
-
-  // 初期表示に戻す（フリガナ）
-  function resetKanaPHIfEmpty(){
-    const noFocus = document.activeElement !== lastKana && document.activeElement !== firstKana;
-    if (noFocus && !lastKana.value.trim() && !firstKana.value.trim()){
-      lastKana.placeholder = 'フリガナ（セイ）';
-      firstKana.placeholder = 'フリガナ（メイ）';
-      lastKana.classList.remove('ph-on');
-      firstKana.classList.remove('ph-on');
+    function activateNamePH(){
+      if (!lastName || !firstName) return;
+      lastName.placeholder='姓';
+      firstName.placeholder='名';
+      lastName.classList.add('ph-on');
+      firstName.classList.add('ph-on');
     }
-  }
-  // 表示（フリガナ）
-  function activateKanaPH(){
-    lastKana.placeholder='セイ';
-    firstKana.placeholder='メイ';
-    lastKana.classList.add('ph-on');
-    firstKana.classList.add('ph-on');
-  }
-  lastKana.addEventListener('focus', activateKanaPH);
-  firstKana.addEventListener('focus', activateKanaPH);
-  kanaMasterLabel?.addEventListener('click', ()=>{ lastKana.focus(); activateKanaPH(); });
+    if (lastName)  lastName.addEventListener('focus', activateNamePH);
+    if (firstName) firstName.addEventListener('focus', activateNamePH);
+    if (nameMasterLabel) nameMasterLabel.addEventListener('click', function(){ if(lastName){ lastName.focus(); activateNamePH(); }});
 
-  // ブラー時に初期へ（フリガナ）
-  [lastKana, firstKana].forEach(el=>{
-    el.addEventListener('blur', ()=>{
-      setTimeout(resetKanaPHIfEmpty, 0);
-    });
-  });
-
-    /* ====== 郵便番号 → 住所（市=address2／番地=address3／建物は触らない） ====== */
-    document.getElementById('zipBtn')?.addEventListener('click', ()=>{
-      const zip = (document.getElementById('zipcode')?.value || '').trim();
-      if (!/^\d{7}$/.test(zip)) { alert('正しい7桁の郵便番号を入力してください'); return; }
-      fetch('https://zipcloud.ibsnet.co.jp/api/search?zipcode=' + zip)
-        .then(r => r.json())
-        .then(data => {
-          if (!data.results) { alert('住所が見つかりませんでした。'); return; }
-          const r = data.results[0];
-          setPrefecture(r.address1);
-          document.getElementById('city').value    = (r.address2 || ''); // 市/区のみ
-          document.getElementById('address').value = (r.address3 || ''); // 町名
-          // 建物名(#building)は触らない
-        })
-        .catch(()=> alert('検索エラー'));
+    [lastName, firstName].forEach(function(el){
+      if (!el) return;
+      el.addEventListener('blur', function(){ setTimeout(resetNamePHIfEmpty, 0); });
     });
 
-    /* ====== 都道府県（カスタムリスト） ====== */
-    const PREFS=["北海道","青森県","岩手県","宮城県","秋田県","山形県","福島県","茨城県","栃木県","群馬県","埼玉県","千葉県","東京都","神奈川県","新潟県","富山県","石川県","福井県","山梨県","長野県","岐阜県","静岡県","愛知県","三重県","滋賀県","京都府","大阪府","兵庫県","奈良県","和歌山県","鳥取県","島根県","岡山県","広島県","山口県","徳島県","香川県","愛媛県","高知県","福岡県","佐賀県","長崎県","熊本県","大分県","宮崎県","鹿児島県","沖縄県"];
-    const prefInput = document.getElementById('prefecture');
-    const prefList  = document.getElementById('prefList');
+    // --- フリガナ ---
+    var lastKana  = document.getElementById('lastKana');
+    var firstKana = document.getElementById('firstKana');
+    var kanaMasterLabel = document.getElementById('kanaMasterLabel');
+
+    function resetKanaPHIfEmpty(){
+      var noFocus = document.activeElement !== lastKana && document.activeElement !== firstKana;
+      if (noFocus && lastKana && firstKana && !lastKana.value.trim() && !firstKana.value.trim()){
+        lastKana.placeholder = 'フリガナ（セイ）';
+        firstKana.placeholder = 'フリガナ（メイ）';
+        lastKana.classList.remove('ph-on');
+        firstKana.classList.remove('ph-on');
+      }
+    }
+    function activateKanaPH(){
+      if (!lastKana || !firstKana) return;
+      lastKana.placeholder='セイ';
+      firstKana.placeholder='メイ';
+      lastKana.classList.add('ph-on');
+      firstKana.classList.add('ph-on');
+    }
+    if (lastKana)  lastKana.addEventListener('focus', activateKanaPH);
+    if (firstKana) firstKana.addEventListener('focus', activateKanaPH);
+    if (kanaMasterLabel) kanaMasterLabel.addEventListener('click', function(){ if(lastKana){ lastKana.focus(); activateKanaPH(); }});
+
+    [lastKana, firstKana].forEach(function(el){
+      if (!el) return;
+      el.addEventListener('blur', function(){ setTimeout(resetKanaPHIfEmpty, 0); });
+    });
+
+    // カタカナ自動変換
+    function toKatakana(str) {
+      return str.replace(/[\u3041-\u3096]/g, function(ch) {
+        return String.fromCharCode(ch.charCodeAt(0) + 0x60);
+      });
+    }
+    [lastKana, firstKana].forEach(function(el){
+      if (!el) return;
+      el.addEventListener('input', function(){ el.value = toKatakana(el.value); });
+    });
+  })();
+
+  /* ====== 郵便番号 → 住所 ====== */
+  (function(){
+    var prefInput = document.getElementById('prefecture');
+    var prefList  = document.getElementById('prefList');
+    var zipBtn    = document.getElementById('zipBtn');
+
+    function setPrefecture(p){ if (prefInput) prefInput.value = p; }
+    window.setPrefecture = setPrefecture;
+
+    if (zipBtn) {
+      zipBtn.addEventListener('click', function(){
+        var zipEl = document.getElementById('zipcode');
+        var zip = (zipEl && zipEl.value ? zipEl.value : '').trim();
+        if (!/^\d{7}$/.test(zip)) { alert('正しい7桁の郵便番号を入力してください'); return; }
+        fetch('https://zipcloud.ibsnet.co.jp/api/search?zipcode=' + zip)
+          .then(function(r){ return r.json(); })
+          .then(function(data){
+            if (!data.results) { alert('住所が見つかりませんでした。'); return; }
+            var r = data.results[0];
+            setPrefecture(r.address1);
+            var city = document.getElementById('city');
+            var addr = document.getElementById('address');
+            if (city) city.value = (r.address2 || '');
+            if (addr) addr.value = (r.address3 || '');
+          })
+          .catch(function(){ alert('検索エラー'); });
+      });
+    }
+
+    // 都道府県リスト
+    var PREFS=["北海道","青森県","岩手県","宮城県","秋田県","山形県","福島県","茨城県","栃木県","群馬県","埼玉県","千葉県","東京都","神奈川県","新潟県","富山県","石川県","福井県","山梨県","長野県","岐阜県","静岡県","愛知県","三重県","滋賀県","京都府","大阪府","兵庫県","奈良県","和歌山県","鳥取県","島根県","岡山県","広島県","山口県","徳島県","香川県","愛媛県","高知県","福岡県","佐賀県","長崎県","熊本県","大分県","宮崎県","鹿児島県","沖縄県"];
     if (prefInput && prefList){
-      PREFS.forEach(p=>{
-        const b=document.createElement('button');
+      PREFS.forEach(function(p){
+        var b=document.createElement('button');
         b.type='button'; b.textContent=p;
-        b.addEventListener('click',()=>{ setPrefecture(p); hidePrefList(); });
+        b.addEventListener('click', function(){ setPrefecture(p); hidePrefList(); });
         prefList.appendChild(b);
       });
-      function setPrefecture(p){ prefInput.value=p; }
       function showPrefList(){ prefList.style.display='block'; }
       function hidePrefList(){ prefList.style.display='none'; }
-      prefInput.addEventListener('click',(e)=>{ e.stopPropagation(); (prefList.style.display==='block'?hidePrefList():showPrefList()); });
+      prefInput.addEventListener('click', function(e){ e.stopPropagation(); (prefList.style.display==='block'?hidePrefList():showPrefList()); });
       document.addEventListener('click', hidePrefList);
-      window.setPrefecture = setPrefecture; // 郵便番号処理から呼ぶため外出し
-    } else {
-      window.setPrefecture = function(){};
     }
+  })();
 
-    /* ====== 送信（APIへPOST：DB保存＆Brevo自動返信はサーバー側） ====== */
-    document.getElementById('contact-form')?.addEventListener('submit', async (e)=>{
+  /* ====== 送信（APIへPOST） ====== */
+  (function(){
+    var form = document.getElementById('contact-form');
+    if (!form) return;
+    form.addEventListener('submit', async function(e){
       e.preventDefault();
 
-      // カート確認
-      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-      if (cart.length === 0) { alert('カートが空です。先に商品をお選びください。'); return; }
+      var cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      if (!cart.length) { alert('カートが空です。先に商品をお選びください。'); return; }
 
-      // 入力値を収集（customer：かすたまー＝お客様情報）
-      const fd = new FormData(e.target);
-      const customer = {
-        lastName   : (fd.get('lastName')   || '').toString().trim(),
-        firstName  : (fd.get('firstName')  || '').toString().trim(),
-        lastKana   : (fd.get('lastKana')   || '').toString().trim(),
-        firstKana  : (fd.get('firstKana')  || '').toString().trim(),
-        zipcode    : (fd.get('zipcode')    || '').toString().trim(),
-        prefecture : (fd.get('prefecture') || '').toString().trim(),
-        city       : (fd.get('city')       || '').toString().trim(),
-        address    : (fd.get('address')    || '').toString().trim(),
-        building   : (fd.get('building')   || '').toString().trim(),
-        email      : (fd.get('email')      || '').toString().trim(),
-        payment    : (fd.get('payment')    || '銀行振込（PayPay銀行）').toString()
+      var fd = new FormData(e.target);
+      var customer = {
+        lastName   : String(fd.get('lastName')   || '').trim(),
+        firstName  : String(fd.get('firstName')  || '').trim(),
+        lastKana   : String(fd.get('lastKana')   || '').trim(),
+        firstKana  : String(fd.get('firstKana')  || '').trim(),
+        zipcode    : String(fd.get('zipcode')    || '').trim(),
+        prefecture : String(fd.get('prefecture') || '').trim(),
+        city       : String(fd.get('city')       || '').trim(),
+        address    : String(fd.get('address')    || '').trim(),
+        building   : String(fd.get('building')   || '').trim(),
+        email      : String(fd.get('email')      || '').trim(),
+        payment    : String(fd.get('payment')    || '銀行振込（PayPay銀行）')
       };
 
-      // 明細（めいさい：1品ごとの情報）… index/cartで保持してる形に合わせる
-      const items = cart.map(it => ({
-        id         : it.id ?? null,
-        name       : it.name ?? '',
-        unitPrice  : Number(it.price || 0),
-        quantity   : Number(it.quantity || 1),
-        image      : it.image || '',
-        // あれば category/variety も送る（cart側で設定していない場合は空）
-        category   : it.category || '',
-        variety    : it.variety  || ''
-      }));
+      var items = cart.map(function(it){
+        return {
+          id        : it.id || null,
+          name      : it.name || '',
+          unitPrice : Number(it.price || 0),
+          quantity  : Number(it.quantity || 1),
+          image     : it.image || '',
+          category  : it.category || '',
+          variety   : it.variety || ''
+        };
+      });
 
-      // 合計のスナップショット（checkout）を取得（無ければ再計算）
-      const checkout = JSON.parse(localStorage.getItem('checkout') || 'null');
-      const subtotal = items.reduce((s, it)=> s + it.unitPrice * it.quantity, 0);
-      // cartと同じ基本送料ロジック
-      function calcBaseShipping(n){
-        if (n >= 10000) return 0;
-        if (n >= 5000)  return 350;
-        return 700;
-      }
-      const baseShipping = checkout?.baseShipping ?? calcBaseShipping(subtotal);
-      const addOpt       = checkout?.addOpt ?? 0;
-      const addOptText   = checkout?.addOptText ?? '';
-      const paymentMethod= checkout?.paymentMethod ?? 'bank_transfer';
-      const total        = checkout?.total ?? (subtotal + baseShipping + addOpt);
+      var checkout = JSON.parse(localStorage.getItem('checkout') || 'null');
+      var subtotal = items.reduce(function(s, it){ return s + it.unitPrice * it.quantity; }, 0);
+      function calcBaseShipping(n){ if (n >= 10000) return 0; if (n >= 5000) return 350; return 700; }
+      var baseShipping  = (checkout && typeof checkout.baseShipping !== 'undefined') ? checkout.baseShipping : calcBaseShipping(subtotal);
+      var addOpt        = (checkout && checkout.addOpt) || 0;
+      var addOptText    = (checkout && checkout.addOptText) || '';
+      var paymentMethod = (checkout && checkout.paymentMethod) || 'bank_transfer';
+      var total         = (checkout && checkout.total) || (subtotal + baseShipping + addOpt);
 
-      const payload = {
-        customer,
-        note: (fd.get('memo') || '').toString(),
-        items,
-        // サマリー（さまりー：合計まとめ）
+      var payload = {
+        customer: customer,
+        note: String(fd.get('memo') || ''),
+        items: items,
         summary: {
-          subtotal,
+          subtotal: subtotal,
           shipping: baseShipping,
           shippingOptionAdd: addOpt,
-          total,
+          total: total,
           shippingOptionText: addOptText,
-          paymentMethod
-        },
-        // デバッグ用に元データ全体もサーバで参照できるよう持たせたい場合：
-        // cartSnapshot: cart
+          paymentMethod: paymentMethod
+        }
       };
 
       try{
-        const res = await fetch(`${window.API_BASE}/orders`, {
+        var res = await fetch((window.API_BASE || '') + '/orders', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
-        if (!res.ok) throw new Error(await res.text() || '注文送信に失敗しました');
+        if (!res.ok) throw new Error((await res.text()) || '注文送信に失敗しました');
 
-        const data = await res.json(); // サーバは { orderId, total } を返す想定
-        alert(`ありがとうございました。ご注文番号 #${data.orderId}（合計 ¥${Number(data.total).toLocaleString()}）を受け付けました。`);
+        var data = await res.json();
+        alert('ありがとうございました。ご注文番号 #' + data.orderId + '（合計 ¥' + Number(data.total).toLocaleString() + '）を受け付けました。');
 
-        // 後始末：ローカル保存をクリア
         localStorage.removeItem('cart');
         localStorage.removeItem('checkout');
 
-        // フォームリセット＆プレースホルダ初期化
         e.target.reset();
-        lastName.placeholder='お名前'; firstName.placeholder='';
-        [lastName,firstName,lastKana,firstKana].forEach(el=>el.classList.remove('ph-on'));
-        lastKana.placeholder='フリガナ（セイ）'; firstKana.placeholder='フリガナ（メイ）';
-
-        // 必要ならトップへ
-        // go('/?page=index');
+        var lastName  = document.getElementById('lastName');
+        var firstName = document.getElementById('firstName');
+        var lastKana  = document.getElementById('lastKana');
+        var firstKana = document.getElementById('firstKana');
+        if (lastName)  lastName.placeholder='お名前';
+        if (firstName) firstName.placeholder='';
+        [lastName,firstName,lastKana,firstKana].forEach(function(el){ if(el) el.classList.remove('ph-on'); });
+        if (lastKana)  lastKana.placeholder='フリガナ（セイ）';
+        if (firstKana) firstKana.placeholder='フリガナ（メイ）';
       }catch(err){
         alert('エラー：' + err.message);
       }
     });
-
-// 入力をカタカナに自動変換する関数
-function toKatakana(str) {
-  return str.replace(/[\u3041-\u3096]/g, function(ch) {
-    return String.fromCharCode(ch.charCodeAt(0) + 0x60);
-  });
-}
-
-// フリガナ欄に入力されたら自動変換
-[lastKana, firstKana].forEach(el => {
-  el.addEventListener('input', () => {
-    el.value = toKatakana(el.value);
-  });
-});
-  </script>
+  })();
+</script>
 </body>
 </html>
