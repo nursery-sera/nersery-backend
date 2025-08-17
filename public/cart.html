@@ -612,16 +612,43 @@ opacity:0.8;
       localStorage.setItem('cart', JSON.stringify(cart));
       loadCart();
     }
+    
+    // 小計だけ計算（subtotalだけ使い回したいとき用）
+function getCartSubtotal(){
+  const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+  return cart.reduce((s, it) => s + Number(it.price || 0) * Number(it.quantity || 1), 0);
+}
 
-    function goToOrder() {
-      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-      if (cart.length === 0) {
-        alert("カートが空です");
-        return;
-      }
-      window.top.location.href = '<?= url ?>?page=order';
-    }
-
++    // 注文ボタン：遷移直前に「合計情報のスナップショット」を保存してから order へ
++    function goToOrder() {
++      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
++      if (cart.length === 0) {
++        alert("カートが空です");
++        return;
++      }
++      // 小計を計算（画面表示と同じ計算）
++      const subtotal = cart.reduce((s, it) => s + Number(it.price || 0) * Number(it.quantity || 1), 0);
++      // 送料の基本（画面と同じロジック）
++      const baseShipping = calcBaseShipping(subtotal);
++      // 追加オプション（セレクトの値）
++      const sel = document.getElementById('opt-select');
++      const addOpt = sel ? Number(sel.value || 0) : 0;
++      // 合計
++      const total = subtotal + baseShipping + addOpt;
++      // 画面で選ばれた配送オプションの文言（送信用メモ）
++      const addOptText = sel ? sel.options[sel.selectedIndex].text : '';
++      // 支払い方法（固定メモ：銀行振込）
++      const paymentMethod = 'bank_transfer'; // （ばんく・とらんすふぁー：銀行振込）
++      // 保存（order.html で読み出してAPIへPOST）
++      const checkout = {
++        subtotal, baseShipping, addOpt, total,
++        addOptText,
++        paymentMethod
++      };
++      localStorage.setItem('checkout', JSON.stringify(checkout));
++      // そのまま order へ（同一タブ）
++      window.top.location.href = '<?= url ?>?page=order';
++    }
     function goToindex() {
       window.top.location.href = '<?= url ?>?page=index';
     }
