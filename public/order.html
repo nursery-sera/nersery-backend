@@ -489,95 +489,125 @@ attachKanaAutoKatakana(document.getElementById('firstKana'));
     }
   })();
 
-  /* ====== 送信（APIへPOST） ====== */
-  (function(){
-    var form = document.getElementById('contact-form');
-    if (!form) return;
-    form.addEventListener('submit', async function(e){
-      e.preventDefault();
+/* ====== 送信（APIへPOST） ====== */
+(function(){
+  const API = (window.API_BASE || '') + '/orders';
 
-      var cart = JSON.parse(localStorage.getItem('cart') || '[]');
-      if (!cart.length) { alert('カートが空です。先に商品をお選びください。'); return; }
+  function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
 
-      var fd = new FormData(e.target);
-      var customer = {
-        lastName   : String(fd.get('lastName')   || '').trim(),
-        firstName  : String(fd.get('firstName')  || '').trim(),
-        lastKana   : String(fd.get('lastKana')   || '').trim(),
-        firstKana  : String(fd.get('firstKana')  || '').trim(),
-        zipcode    : String(fd.get('zipcode')    || '').trim(),
-        prefecture : String(fd.get('prefecture') || '').trim(),
-        city       : String(fd.get('city')       || '').trim(),
-        address    : String(fd.get('address')    || '').trim(),
-        building   : String(fd.get('building')   || '').trim(),
-        email      : String(fd.get('email')      || '').trim(),
-        payment    : String(fd.get('payment')    || '銀行振込（PayPay銀行）')
-      };
-
-      var items = cart.map(function(it){
-        return {
-          id        : it.id || null,
-          name      : it.name || '',
-          unitPrice : Number(it.price || 0),
-          quantity  : Number(it.quantity || 1),
-          image     : it.image || '',
-          category  : it.category || '',
-          variety   : it.variety || ''
-        };
+  async function postJsonWithTimeout(url, body, {timeoutMs=20000}={}){
+    const ctrl = new AbortController();
+    const t = setTimeout(()=>ctrl.abort(new Error('timeout')), timeoutMs);
+    try{
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(body),
+        cache: 'no-store',
+        keepalive: true,
+        signal: ctrl.signal
       });
+      const text = await res.text(); // 成功/失敗どちらでも本文を先に確保
+      let data; try{ data = text ? JSON.parse(text) : null; }catch{ data = { raw:text }; }
+      return { ok: res.ok, status: res.status, data };
+    } finally {
+      clearTimeout(t);
+    }
+  }
 
-      var checkout = JSON.parse(localStorage.getItem('checkout') || 'null');
-      var subtotal = items.reduce(function(s, it){ return s + it.unitPrice * it.quantity; }, 0);
-      function calcBaseShipping(n){ if (n >= 10000) return 0; if (n >= 5000) return 350; return 700; }
-      var baseShipping  = (checkout && typeof checkout.baseShipping !== 'undefined') ? checkout.baseShipping : calcBaseShipping(subtotal);
-      var addOpt        = (checkout && checkout.addOpt) || 0;
-      var addOptText    = (checkout && checkout.addOptText) || '';
-      var paymentMethod = (checkout && checkout.paymentMethod) || 'bank_transfer';
-      var total         = (checkout && checkout.total) || (subtotal + baseShipping + addOpt);
+  function sanitize(str){ return String(str || '').replace(/\p{Cf}/gu,'').trim(); }
 
-      var payload = {
-        customer: customer,
-        note: String(fd.get('memo') || ''),
-        items: items,
-        summary: {
-          subtotal: subtotal,
-          shipping: baseShipping,
-          shippingOptionAdd: addOpt,
-          total: total,
-          shippingOptionText: addOptText,
-          paymentMethod: paymentMethod
-        }
-      };
+  var form = document.getElementById('contact-form');
+  if (!form) return;
 
-      try{
-        var res = await fetch((window.API_BASE || '') + '/orders', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        if (!res.ok) throw new Error((await res.text()) || '注文送信に失敗しました');
+  form.addEventListener('submit', async function(e){
+    e.preventDefault();
 
-        var data = await res.json();
-        alert('ありがとうございました。ご注文番号 #' + data.orderId + '（合計 ¥' + Number(data.total).toLocaleString() + '）を受け付けました。');
+    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    if (!cart.length) { alert('カートが空です。先に商品をお選びください。'); return; }
 
-        localStorage.removeItem('cart');
-        localStorage.removeItem('checkout');
+    const fd = new FormData(e.target);
+    // 文字列を念のため安全化（不可視制御文字などを除去）
+    const customer = {
+      lastName   : sanitize(fd.get('lastName')),
+      firstName  : sanitize(fd.get('firstName')),
+      lastKana   : sanitize(fd.get('lastKana')),
+      firstKana  : sanitize(fd.get('firstKana')),
+      zipcode    : sanitize(fd.get('zipcode')),
+      prefecture : sanitize(fd.get('prefecture')),
+      city       : sanitize(fd.get('city')),
+      address    : sanitize(fd.get('address')),
+      building   : sanitize(fd.get('building')),
+      email      : sanitize(fd.get('email')),
+      payment    : sanitize(fd.get('payment') || '銀行振込（PayPay銀行）'),
+    };
 
-        e.target.reset();
-        var lastName  = document.getElementById('lastName');
-        var firstName = document.getElementById('firstName');
-        var lastKana  = document.getElementById('lastKana');
-        var firstKana = document.getElementById('firstKana');
-        if (lastName)  lastName.placeholder='お名前';
-        if (firstName) firstName.placeholder='';
-        [lastName,firstName,lastKana,firstKana].forEach(function(el){ if(el) el.classList.remove('ph-on'); });
-        if (lastKana)  lastKana.placeholder='フリガナ（セイ）';
-        if (firstKana) firstKana.placeholder='フリガナ（メイ）';
-      }catch(err){
-        alert('エラー：' + err.message);
+    // 画像URLが巨大な場合に備え、先頭1件だけ・クエリを短縮
+    const items = cart.map(it => ({
+      id        : it.id || null,
+      name      : sanitize(it.name),
+      unitPrice : Number(it.price || 0),
+      quantity  : Number(it.quantity || 1),
+      image     : (it.image || '').split('?')[0].slice(0,512),
+      category  : sanitize(it.category || ''),
+      variety   : sanitize(it.variety || '')
+    }));
+
+    const checkout = JSON.parse(localStorage.getItem('checkout') || 'null');
+    const subtotal = items.reduce((s, it) => s + it.unitPrice * it.quantity, 0);
+    const calcBaseShipping = n => (n >= 10000 ? 0 : n >= 5000 ? 350 : 700);
+    const baseShipping  = (checkout && typeof checkout.baseShipping !== 'undefined') ? checkout.baseShipping : calcBaseShipping(subtotal);
+    const addOpt        = (checkout && checkout.addOpt) || 0;
+    const addOptText    = sanitize((checkout && checkout.addOptText) || '');
+    const paymentMethod = (checkout && checkout.paymentMethod) || 'bank_transfer';
+    const total         = (checkout && checkout.total) || (subtotal + baseShipping + addOpt);
+
+    const payload = {
+      customer,
+      note: sanitize(fd.get('memo')),
+      items,
+      summary: {
+        subtotal,
+        shipping: baseShipping,
+        shippingOptionAdd: addOpt,
+        total,
+        shippingOptionText: addOptText,
+        paymentMethod
       }
-    });
-  })();
+    };
+
+    try{
+      // 1回目
+      let r = await postJsonWithTimeout(API, payload, { timeoutMs: 20000 });
+
+      // タイムアウト/502/504 は1回だけリトライ（短い待ち）
+      if ((!r.ok && [502,504].includes(r.status)) || (r.data && r.data.code === 502)){
+        await sleep(1200);
+        r = await postJsonWithTimeout(API, payload, { timeoutMs: 20000 });
+      }
+
+      if (!r.ok){
+        const msg = r.data?.message || r.data?.error || r.data?.raw || 'サーバーエラー';
+        const reqId = r.data?.request_id ? `\nrequest_id: ${r.data.request_id}` : '';
+        throw new Error(`HTTP ${r.status}: ${msg}${reqId}`);
+      }
+
+      const data = r.data || {};
+      alert(`ありがとうございました。ご注文番号 #${data.orderId || '-'}（合計 ¥${Number(data.total ?? total).toLocaleString()}）を受け付けました。`);
+
+      localStorage.removeItem('cart');
+      localStorage.removeItem('checkout');
+      e.target.reset();
+
+    }catch(err){
+      alert(`エラー：${err.message}\n\n送信先: ${API}`);
+      console.error('order error', err);
+    }
+  });
+})();
 </script>
 </body>
 </html>
