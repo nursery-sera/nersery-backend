@@ -121,10 +121,22 @@ app.post("/api/orders", async (req, res) => {
   if (!pool) return res.status(500).json({ error: "DB not available" });
 
   try {
-    const { customer, note, items } = req.body || {};
+    const { customer = {}, note, items = [], summary } = req.body || {};
 
-    // ★ ここで姓名を結合して name を作る
-    const name = [customer.lastName, customer.firstName].filter(Boolean).join(" ").trim();
+    // ★ 姓名の結合（customer.name があればそれも許可）
+    const name =
+      [customer.lastName, customer.firstName].filter(Boolean).join(" ").trim() ||
+      (customer.name || "").trim();
+
+    // ★ 住所の結合（address / addressFull / 各フィールド結合の順で採用）
+    const address =
+      (customer.address && String(customer.address).trim()) ||
+      (customer.addressFull && String(customer.addressFull).trim()) ||
+      [customer.prefecture, customer.city, customer.address, customer.building]
+        .filter(Boolean)
+        .join("")
+        .trim() || null;
+
     if (!name) {
       return res.status(400).json({ error: "customer name required" });
     }
@@ -132,24 +144,26 @@ app.post("/api/orders", async (req, res) => {
     // お客さま登録
     const c = await pool.query(
       "INSERT INTO customers(name,email,address) VALUES ($1,$2,$3) RETURNING id",
-      [name, customer.email, customer.address]
+      [name, customer.email || null, address]
     );
     const customerId = c.rows[0].id;
 
-    // 合計計算
-    const total = (items || []).reduce(
+    // 合計（小計）計算
+    const itemsSubtotal = (items || []).reduce(
       (s, it) => s + Number(it.unitPrice || 0) * Number(it.quantity || 1),
       0
     );
+    // ★ クライアントから受け取った総額（送料・オプション込み）を返却用に採用
+    const grandTotal = summary?.total ?? itemsSubtotal;
 
-    // 注文作成
+    // 注文作成（DBは従来通り小計で保存）
     const o = await pool.query(
       "INSERT INTO orders(customer_id, note, total_amount) VALUES ($1,$2,$3) RETURNING id",
-      [customerId, note || null, total]
+      [customerId, note || null, itemsSubtotal]
     );
     const orderId = o.rows[0].id;
 
-    // 明細登録
+    // 明細登録（productId/productName 想定）
     for (const it of items || []) {
       await pool.query(
         "INSERT INTO order_items(order_id, product_id, product_name, unit_price, quantity) VALUES ($1,$2,$3,$4,$5)",
@@ -169,7 +183,7 @@ app.post("/api/orders", async (req, res) => {
         htmlContent: `
           <p>${name} 様</p>
           <p>ご注文（#${orderId}）を受け付けました。</p>
-          <p>合計：${total.toLocaleString()}円</p>
+          <p>合計：${grandTotal.toLocaleString()}円</p>
           <p>お支払い方法：銀行振込</p>
           <p>※ご入金確認後に発送いたします。</p>
         `
@@ -186,7 +200,8 @@ app.post("/api/orders", async (req, res) => {
       }
     }
 
-    res.json({ orderId, total });
+    // 返す合計は grandTotal（送料込み）に変更
+    res.json({ orderId, total: grandTotal });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "server error" });
