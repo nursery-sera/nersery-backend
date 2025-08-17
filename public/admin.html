@@ -582,50 +582,43 @@ async function saveProduct(){
           return;
         }
 
-        listEl.innerHTML = '';
-        docs.forEach(d=>{
-          const data = d.data();
-          const id   = d.id;
-          const imgs = Array.isArray(data.images) ? data.images : [];
-          const el = document.createElement('div');
-          el.className = 'item';
-          el.innerHTML = `
-  <div class="imgs">
-    ${imgs.length ? imgs.map(u=>`<img src="${u}" alt="">`).join('') : '<span class="muted">（画像なし）</span>'}
-  </div>
-  <div class="body">
-    <div class="title">${escapeHtml(data.categoryName || '')}</div>
-    <div class="sub">${escapeHtml(data.varietyName || '')}</div>
-    <div class="sub">¥ ${Number(data.price||0).toLocaleString()}</div>
-    <div class="sub muted">ID: <code>${id}</code></div>
-    <div class="ops">
-      <button class="btn ghost"  data-edit="${id}">編集</button>
-      <button class="btn danger" data-del="${id}">削除</button>
-    </div>
-  </div>
-`;
-          listEl.appendChild(el);
-        });
+listEl.innerHTML = '';
+docs.forEach(d=>{
+  const data = d.data();
+  const id   = d.id;
+  const imgs = Array.isArray(data.images) ? data.images : [];
 
-        // 既存：削除
-listEl.querySelectorAll('[data-del]').forEach(btn=>{
-  btn.addEventListener('click', async ()=>{
-    const id = btn.getAttribute('data-del');
+  const el = document.createElement('div');
+  el.className = 'item';
+  el.innerHTML = `
+    <div class="imgs">
+      ${imgs.length ? imgs.map(u=>`<img src="${u}" alt="">`).join('') : '<span class="muted">（画像なし）</span>'}
+    </div>
+    <div class="body">
+      <div class="title">${escapeHtml(data.categoryName || '')}</div>
+      <div class="sub">${escapeHtml(data.varietyName || '')}</div>
+      <div class="sub">¥ ${Number(data.price||0).toLocaleString()}</div>
+      <div class="sub muted">ID: <code>${id}</code></div>
+      <div class="ops">
+        <button class="btn ghost"  data-edit="${id}">編集</button>
+        <button class="btn danger" data-del="${id}">削除</button>
+      </div>
+    </div>
+  `;
+  listEl.appendChild(el);
+
+  // ★ここで“その el のボタン”に紐づける（data を閉じ込める）
+  const editBtn = el.querySelector('[data-edit]');
+  editBtn?.addEventListener('click', ()=> openEdit(id, data));
+
+  const delBtn = el.querySelector('[data-del]');
+  delBtn?.addEventListener('click', async ()=>{
     if (!confirm('この商品を削除しますか？（画像も削除）')) return;
     await deleteProduct(id);
     await loadList();
   });
 });
 
-// ★ 追加：編集
-listEl.querySelectorAll('[data-edit]').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    const id = btn.getAttribute('data-edit');
-    // 画面に描いた data を拾うのが手軽なので、直上で使った変数 data を閉じ込めるため
-    // el を作る forEach 内でハンドラを定義（＝このスコープで data が参照できる）
-    openEdit(id, data);
-  });
-});
 
       }catch(err){
         console.error(err);
