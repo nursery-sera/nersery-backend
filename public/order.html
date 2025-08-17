@@ -3,9 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <base target="_top">
-   <meta name="viewport" content="width=950, user-scalable=no">
+  <script>
+    // APIのベースURL（ここに注文データをPOSTします）
+    window.API_BASE = 'https://www.nurserysera.com/api';
+  </script>
+  <meta name="viewport" content="width=950, user-scalable=no">
   <title>nursery sera — ご注文フォーム</title>
-  <link href="https://fonts.googleapis.com/css2?family=Bayon&family=Tangerine:wght@700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bayon&family=Tangerine:wght@700&family=Italianno&display=swap" rel="stylesheet">
   <style>
     /* ===== ベース（下のコードの見た目を踏襲） ===== */
     html, body {
@@ -154,11 +158,6 @@ margin-left: 37%;
 
    
   </style>
-
-  <!-- ★ APIベースURL：RailwayのURLに差し替え（API：えーぴーあい＝アプリ同士の窓口） -->
-  <script>
-    window.API_BASE = 'https://<あなたのRailwayドメイン>/api';
-  </script>
 </head>
 <body>
   <? var url = getScriptUrl(); ?>
@@ -441,101 +440,101 @@ margin-left: 37%;
       window.setPrefecture = function(){};
     }
 
-+    /* ====== 送信（APIへPOST：DB保存＆Brevo自動返信はサーバー側） ====== */
-+    document.getElementById('contact-form')?.addEventListener('submit', async (e)=>{
-+      e.preventDefault();
-+
-+      // カート確認
-+      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-+      if (cart.length === 0) { alert('カートが空です。先に商品をお選びください。'); return; }
-+
-+      // 入力値を収集（customer：かすたまー＝お客様情報）
-+      const fd = new FormData(e.target);
-+      const customer = {
-+        lastName   : (fd.get('lastName')   || '').toString().trim(),
-+        firstName  : (fd.get('firstName')  || '').toString().trim(),
-+        lastKana   : (fd.get('lastKana')   || '').toString().trim(),
-+        firstKana  : (fd.get('firstKana')  || '').toString().trim(),
-+        zipcode    : (fd.get('zipcode')    || '').toString().trim(),
-+        prefecture : (fd.get('prefecture') || '').toString().trim(),
-+        city       : (fd.get('city')       || '').toString().trim(),
-+        address    : (fd.get('address')    || '').toString().trim(),
-+        building   : (fd.get('building')   || '').toString().trim(),
-+        email      : (fd.get('email')      || '').toString().trim(),
-+        payment    : (fd.get('payment')    || '銀行振込（PayPay銀行）').toString()
-+      };
-+
-+      // 明細（めいさい：1品ごとの情報）… index/cartで保持してる形に合わせる
-+      const items = cart.map(it => ({
-+        id         : it.id ?? null,
-+        name       : it.name ?? '',
-+        unitPrice  : Number(it.price || 0),
-+        quantity   : Number(it.quantity || 1),
-+        image      : it.image || '',
-+        // あれば category/variety も送る（cart側で設定していない場合は空）
-+        category   : it.category || '',
-+        variety    : it.variety  || ''
-+      }));
-+
-+      // 合計のスナップショット（checkout）を取得（無ければ再計算）
-+      const checkout = JSON.parse(localStorage.getItem('checkout') || 'null');
-+      const subtotal = items.reduce((s, it)=> s + it.unitPrice * it.quantity, 0);
-+      // cartと同じ基本送料ロジック
-+      function calcBaseShipping(n){
-+        if (n >= 10000) return 0;
-+        if (n >= 5000)  return 350;
-+        return 700;
-+      }
-+      const baseShipping = checkout?.baseShipping ?? calcBaseShipping(subtotal);
-+      const addOpt       = checkout?.addOpt ?? 0;
-+      const addOptText   = checkout?.addOptText ?? '';
-+      const paymentMethod= checkout?.paymentMethod ?? 'bank_transfer';
-+      const total        = checkout?.total ?? (subtotal + baseShipping + addOpt);
-+
-+      const payload = {
-+        customer,
-+        note: (fd.get('memo') || '').toString(),
-+        items,
-+        // サマリー（さまりー：合計まとめ）
-+        summary: {
-+          subtotal,
-+          shipping: baseShipping,
-+          shippingOptionAdd: addOpt,
-+          total,
-+          shippingOptionText: addOptText,
-+          paymentMethod
-+        },
-+        // デバッグ用に元データ全体もサーバで参照できるよう持たせたい場合：
-+        // cartSnapshot: cart
-+      };
-+
-+      try{
-+        const res = await fetch(`${window.API_BASE}/orders`, {
-+          method: 'POST',
-+          headers: { 'Content-Type': 'application/json' },
-+          body: JSON.stringify(payload)
-+        });
-+        if (!res.ok) throw new Error(await res.text() || '注文送信に失敗しました');
-+
-+        const data = await res.json(); // サーバは { orderId, total } を返す想定
-+        alert(`ありがとうございました。ご注文番号 #${data.orderId}（合計 ¥${Number(data.total).toLocaleString()}）を受け付けました。`);
-+
-+        // 後始末：ローカル保存をクリア
-+        localStorage.removeItem('cart');
-+        localStorage.removeItem('checkout');
-+
-+        // フォームリセット＆プレースホルダ初期化
-+        e.target.reset();
-+        lastName.placeholder='お名前'; firstName.placeholder='';
-+        [lastName,firstName,lastKana,firstKana].forEach(el=>el.classList.remove('ph-on'));
-+        lastKana.placeholder='フリガナ（セイ）'; firstKana.placeholder='フリガナ（メイ）';
-+
-+        // 必要ならトップへ
-+        // go('/?page=index');
-+      }catch(err){
-+        alert('エラー：' + err.message);
-+      }
-+    });
+    /* ====== 送信（APIへPOST：DB保存＆Brevo自動返信はサーバー側） ====== */
+    document.getElementById('contact-form')?.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+
+      // カート確認
+      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      if (cart.length === 0) { alert('カートが空です。先に商品をお選びください。'); return; }
+
+      // 入力値を収集（customer：かすたまー＝お客様情報）
+      const fd = new FormData(e.target);
+      const customer = {
+        lastName   : (fd.get('lastName')   || '').toString().trim(),
+        firstName  : (fd.get('firstName')  || '').toString().trim(),
+        lastKana   : (fd.get('lastKana')   || '').toString().trim(),
+        firstKana  : (fd.get('firstKana')  || '').toString().trim(),
+        zipcode    : (fd.get('zipcode')    || '').toString().trim(),
+        prefecture : (fd.get('prefecture') || '').toString().trim(),
+        city       : (fd.get('city')       || '').toString().trim(),
+        address    : (fd.get('address')    || '').toString().trim(),
+        building   : (fd.get('building')   || '').toString().trim(),
+        email      : (fd.get('email')      || '').toString().trim(),
+        payment    : (fd.get('payment')    || '銀行振込（PayPay銀行）').toString()
+      };
+
+      // 明細（めいさい：1品ごとの情報）… index/cartで保持してる形に合わせる
+      const items = cart.map(it => ({
+        id         : it.id ?? null,
+        name       : it.name ?? '',
+        unitPrice  : Number(it.price || 0),
+        quantity   : Number(it.quantity || 1),
+        image      : it.image || '',
+        // あれば category/variety も送る（cart側で設定していない場合は空）
+        category   : it.category || '',
+        variety    : it.variety  || ''
+      }));
+
+      // 合計のスナップショット（checkout）を取得（無ければ再計算）
+      const checkout = JSON.parse(localStorage.getItem('checkout') || 'null');
+      const subtotal = items.reduce((s, it)=> s + it.unitPrice * it.quantity, 0);
+      // cartと同じ基本送料ロジック
+      function calcBaseShipping(n){
+        if (n >= 10000) return 0;
+        if (n >= 5000)  return 350;
+        return 700;
+      }
+      const baseShipping = checkout?.baseShipping ?? calcBaseShipping(subtotal);
+      const addOpt       = checkout?.addOpt ?? 0;
+      const addOptText   = checkout?.addOptText ?? '';
+      const paymentMethod= checkout?.paymentMethod ?? 'bank_transfer';
+      const total        = checkout?.total ?? (subtotal + baseShipping + addOpt);
+
+      const payload = {
+        customer,
+        note: (fd.get('memo') || '').toString(),
+        items,
+        // サマリー（さまりー：合計まとめ）
+        summary: {
+          subtotal,
+          shipping: baseShipping,
+          shippingOptionAdd: addOpt,
+          total,
+          shippingOptionText: addOptText,
+          paymentMethod
+        },
+        // デバッグ用に元データ全体もサーバで参照できるよう持たせたい場合：
+        // cartSnapshot: cart
+      };
+
+      try{
+        const res = await fetch(`${window.API_BASE}/orders`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error(await res.text() || '注文送信に失敗しました');
+
+        const data = await res.json(); // サーバは { orderId, total } を返す想定
+        alert(`ありがとうございました。ご注文番号 #${data.orderId}（合計 ¥${Number(data.total).toLocaleString()}）を受け付けました。`);
+
+        // 後始末：ローカル保存をクリア
+        localStorage.removeItem('cart');
+        localStorage.removeItem('checkout');
+
+        // フォームリセット＆プレースホルダ初期化
+        e.target.reset();
+        lastName.placeholder='お名前'; firstName.placeholder='';
+        [lastName,firstName,lastKana,firstKana].forEach(el=>el.classList.remove('ph-on'));
+        lastKana.placeholder='フリガナ（セイ）'; firstKana.placeholder='フリガナ（メイ）';
+
+        // 必要ならトップへ
+        // go('/?page=index');
+      }catch(err){
+        alert('エラー：' + err.message);
+      }
+    });
 
 // 入力をカタカナに自動変換する関数
 function toKatakana(str) {
