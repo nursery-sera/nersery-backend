@@ -131,13 +131,13 @@ AlocasiaJacqueline38AnthuriumRedCrystallinum25 のように記入して商品自
   </div>
 </div>
     <!-- ▼複数商品フォーム（常に表示） -->
-    <div id="multiWrap">
-      <div id="prods"></div>
-      <div class="actions" style="justify-content:flex-start">
-        <button id="addProdBtn" class="btn ghost">＋ 商品フォームを追加
-<button id="saveBtn" class="btn primary">保存</button></button>
-      </div>
-    </div>
+  <div id="multiWrap">
+  <div id="prods"></div>
+  <div class="actions" style="justify-content:flex-start">
+    <button id="addProdBtn" class="btn ghost">＋ 商品フォームを追加</button>
+    <button id="saveBtn" class="btn primary">保存</button>
+  </div>
+</div>
 
     <!-- ▼アクション：自動計算 / 一括入力 / キャンセル / 保存 -->
     <div class="actions">
@@ -186,16 +186,14 @@ function setPanelTitle(){
   const h2 = document.querySelector('#panel h2');
   h2.textContent = editTargetId ? '商品を編集' : '商品を追加';
 }
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
--  getFirestore, doc, setDoc, serverTimestamp,
-+  getFirestore, doc, setDoc, updateDoc, serverTimestamp,
+  getFirestore, doc, setDoc, updateDoc, serverTimestamp,
   collection, getDocs, query, orderBy, deleteDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-    import {
-      getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject, listAll
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
-
+import {
+  getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject, listAll
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
     const firebaseConfig = {
       apiKey: "AIzaSyCVOfVGTlfTGRfpNggT55l3raCqjo7OcBo",
       authDomain: "nursery-9bd14.firebaseapp.com",
@@ -592,21 +590,20 @@ async function saveProduct(){
           const el = document.createElement('div');
           el.className = 'item';
           el.innerHTML = `
-            <div class="imgs">
-              ${imgs.length ? imgs.map(u=>`<img src="${u}" alt="">`).join('') : '<span class="muted">（画像なし）</span>'}
-            </div>
-            <div class="body">
-              <div class="title">${escapeHtml(data.categoryName || '')}</div>
-              <div class="sub">${escapeHtml(data.varietyName || '')}</div>
-              <div class="sub">¥ ${Number(data.price||0).toLocaleString()}</div>
-              <div class="sub muted">ID: <code>${id}</code></div>
-             <div class="ops">
--  <button class="btn danger" data-del="${id}">削除</button>
-+  <button class="btn ghost"  data-edit='${id}'>編集</button>
-+  <button class="btn danger" data-del='${id}'>削除</button>
-</div>
-            </div>
-          `;
+  <div class="imgs">
+    ${imgs.length ? imgs.map(u=>`<img src="${u}" alt="">`).join('') : '<span class="muted">（画像なし）</span>'}
+  </div>
+  <div class="body">
+    <div class="title">${escapeHtml(data.categoryName || '')}</div>
+    <div class="sub">${escapeHtml(data.varietyName || '')}</div>
+    <div class="sub">¥ ${Number(data.price||0).toLocaleString()}</div>
+    <div class="sub muted">ID: <code>${id}</code></div>
+    <div class="ops">
+      <button class="btn ghost"  data-edit="${id}">編集</button>
+      <button class="btn danger" data-del="${id}">削除</button>
+    </div>
+  </div>
+`;
           listEl.appendChild(el);
         });
 
