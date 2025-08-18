@@ -4,28 +4,28 @@ import cors from "cors";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { Pool } from "pg";
 
-// __dirname（でぃあーねいむ：現在ファイルの場所）
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// ====== 設定（せってい） ======
-const ROOT_DIR   = __dirname;
-const PUBLIC_DIR = path.join(ROOT_DIR, "public"); // ← あなたのHTMLはここにある
-const PAGES_DIR  = path.join(ROOT_DIR, "pages");  // 予備（なければ無視OK）
-
-// ★ www固定でも動くが、プロキシ越しを考慮して実際のURLを検出
-function getBaseUrl(req) {
-  const proto = (req.headers["x-forwarded-proto"] || req.protocol || "http").toString().split(",")[0];
-  const host  = req.headers["x-forwarded-host"]  || req.get("host");
-  return `${proto}://${host}`; // 例: https://www.nurserysera.com
-}
-
-// ====== DB（でーたべーす）接続 ======
+// ===== pg 接続（Railway/環境変数対応） =====
 import pkg from "pg";
 const { Pool } = pkg;
 
+// __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname  = path.dirname(__filename);
+
+// ====== 設定 ======
+const ROOT_DIR   = __dirname;
+const PUBLIC_DIR = path.join(ROOT_DIR, "public");
+const PAGES_DIR  = path.join(ROOT_DIR, "pages");
+
+// 実際のベースURL検出（プロキシ考慮）
+function getBaseUrl(req) {
+  const proto = (req.headers["x-forwarded-proto"] || req.protocol || "http").toString().split(",")[0];
+  const host  = req.headers["x-forwarded-host"]  || req.get("host");
+  return `${proto}://${host}`;
+}
+
+// ---- DB接続設定（Railway Variables か DATABASE_URL のどちらでもOK） ----
 function cfgFromPgVars() {
   const { PGHOST, PGUSER, PGPASSWORD, PGDATABASE, PGPORT } = process.env;
   if (!PGHOST || !PGUSER || !PGDATABASE) return null;
@@ -41,16 +41,26 @@ function cfgFromPgVars() {
 
 let pool;
 if (process.env.DATABASE_URL) {
-  // DATABASE_URL があるとき（自分で設定した場合）
   pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: process.env.DB_SSL === "false" ? false : { rejectUnauthorized: false },
   });
 } else {
-  // Railway提供の PGHOST / PGUSER ... から組み立て
   const cfg = cfgFromPgVars();
   pool = cfg ? new Pool(cfg) : null;
 }
+
+// 管理トークン
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "dev-token";
+
+// ====== アプリ本体 ======
+const app = express();
+app.set("trust proxy", true);
+app.use(express.json({ limit: "5mb" }));
+app.use(cors({
+  origin: ["https://www.nurserysera.com"],
+  credentials: true
+}));
 
 // ====== HTML 配信（public優先）。GASタグ置換もここで実施 ======
 function candidateFiles(page) {
@@ -66,6 +76,7 @@ function normalizePage(raw) {
 }
 function loadAndPatchHtml(filePath, baseUrl) {
   let html = fs.readFileSync(filePath, "utf8");
+  // GAS置換
   html = html.replace(/\<\?\s*var\s+url\s*=\s*getScriptUrl\(\);\s*\?\>/g, "");
   html = html.replace(/\<\?\=\s*url\s*\?\>/g, baseUrl);
   if (!/window\.API_BASE/.test(html)) {
@@ -132,19 +143,17 @@ app.post("/api/orders", async (req, res) => {
   try {
     const { customer = {}, note, items = [], summary } = req.body || {};
 
-    // ★ 姓名の結合（customer.name があればそれも許可）
+    // 姓名の結合（customer.name があればそれも許可）
     const name =
       [customer.lastName, customer.firstName].filter(Boolean).join(" ").trim() ||
       (customer.name || "").trim();
 
-    // ★ 住所の結合（address / addressFull / 各フィールド結合の順で採用）
+    // 住所の結合（address / addressFull / 各フィールド結合）
     const address =
       (customer.address && String(customer.address).trim()) ||
       (customer.addressFull && String(customer.addressFull).trim()) ||
       [customer.prefecture, customer.city, customer.address, customer.building]
-        .filter(Boolean)
-        .join("")
-        .trim() || null;
+        .filter(Boolean).join("").trim() || null;
 
     if (!name) {
       return res.status(400).json({ error: "customer name required" });
@@ -157,22 +166,22 @@ app.post("/api/orders", async (req, res) => {
     );
     const customerId = c.rows[0].id;
 
-    // 合計（小計）計算
+    // 小計
     const itemsSubtotal = (items || []).reduce(
       (s, it) => s + Number(it.unitPrice || 0) * Number(it.quantity || 1),
       0
     );
-    // ★ クライアントから受け取った総額（送料・オプション込み）を返却用に採用
+    // 返却用の総額（送料・オプション込）
     const grandTotal = summary?.total ?? itemsSubtotal;
 
-    // 注文作成（DBは従来通り小計で保存）
+    // 注文作成（DBは小計で保存）
     const o = await pool.query(
       "INSERT INTO orders(customer_id, note, total_amount) VALUES ($1,$2,$3) RETURNING id",
       [customerId, note || null, itemsSubtotal]
     );
     const orderId = o.rows[0].id;
 
-    // 明細登録（productId/productName 想定）
+    // 明細
     for (const it of items || []) {
       await pool.query(
         "INSERT INTO order_items(order_id, product_id, product_name, unit_price, quantity) VALUES ($1,$2,$3,$4,$5)",
@@ -180,7 +189,7 @@ app.post("/api/orders", async (req, res) => {
       );
     }
 
-    // 自動返信メール
+    // 自動返信メール（任意）
     if (process.env.BREVO_API_KEY) {
       const body = {
         sender: {
@@ -209,7 +218,6 @@ app.post("/api/orders", async (req, res) => {
       }
     }
 
-    // 返す合計は grandTotal（送料込み）に変更
     res.json({ orderId, total: grandTotal });
   } catch (err) {
     console.error(err);
@@ -224,6 +232,7 @@ app.put("/api/orders/:id/paid", async (req, res) => {
   res.json({ ok: true });
 });
 
+// レポート
 app.get("/api/reports/category", async (_, res) => {
   if (!pool) return res.json([]);
   const { rows } = await pool.query("SELECT * FROM v_category_summary ORDER BY total_qty DESC");
