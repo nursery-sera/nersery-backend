@@ -25,7 +25,7 @@ function getBaseUrl(req) {
   return `${proto}://${host}`;
 }
 
-// ---- DB接続設定（Railway Variables か DATABASE_URL のどちらでもOK） ----
+// ---- DB接続設定（Railway Variables か DATABASE_URL のどちらでもOK）----
 function cfgFromPgVars() {
   const { PGHOST, PGUSER, PGPASSWORD, PGDATABASE, PGPORT } = process.env;
   if (!PGHOST || !PGUSER || !PGDATABASE) return null;
@@ -181,11 +181,14 @@ app.post("/api/orders", async (req, res) => {
     );
     const orderId = o.rows[0].id;
 
-    // 明細
+    // 明細（productId が数値でなければ NULL にして挿入）
     for (const it of items || []) {
+      const pid = /^\d+$/.test(String(it.productId)) ? Number(it.productId) : null;
       await pool.query(
-        "INSERT INTO order_items(order_id, product_id, product_name, unit_price, quantity) VALUES ($1,$2,$3,$4,$5)",
-        [orderId, it.productId || null, it.productName, it.unitPrice, it.quantity]
+        `INSERT INTO order_items
+           (order_id, product_id, product_name, unit_price, quantity)
+         VALUES ($1,$2,$3,$4,$5)`,
+        [orderId, pid, it.productName, it.unitPrice, it.quantity]
       );
     }
 
