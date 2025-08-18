@@ -553,17 +553,23 @@ attachKanaAutoKatakana(document.getElementById('firstKana'));
   ).trim()
 };
 
-const items = cart.map(it => ({
-  // ★ サーバーに合わせて productId/productName を送る（フォールバック完備）
-  productId   : it.productId ?? it.id ?? null,
-  productName : sanitize(it.productName ?? it.variety ?? it.name ?? ''),
-  unitPrice   : Number(it.price || 0),
-  quantity    : Number(it.quantity || 1),
-  // 追加情報（今後の拡張用：今はサーバーでは未使用）
-  image       : (it.image || '').split('?')[0].slice(0,512),
-  category    : sanitize(it.category || ''),
-  variety     : sanitize(it.variety || '')
-}));
+const items = cart.map(it => {
+  const raw = it.productId ?? it.id ?? null;        // ここに slug が来てる
+  const numericId = /^\d+$/.test(String(raw)) ? Number(raw) : null;
+
+  return {
+    productId   : numericId,                         // 数字じゃなければ null
+    productName : sanitize(it.productName ?? it.variety ?? it.name ?? ''),
+    unitPrice   : Number(it.price || 0),
+    quantity    : Number(it.quantity || 1),
+
+    // おまけ（追跡したいなら残す、要らなければ消してOK）
+    productSlug : String(raw || ''),                 // "red-crystallinum" など
+    image       : (it.image || '').split('?')[0].slice(0,512),
+    category    : sanitize(it.category || ''),
+    variety     : sanitize(it.variety || '')
+  };
+});
 
     const checkout = JSON.parse(localStorage.getItem('checkout') || 'null');
     const subtotal = items.reduce((s, it) => s + it.unitPrice * it.quantity, 0);
