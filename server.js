@@ -23,25 +23,34 @@ function getBaseUrl(req) {
 }
 
 // ====== DB（でーたべーす）接続 ======
-const pool = process.env.DATABASE_URL
-  ? new Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: process.env.DB_SSL === "true" ? { rejectUnauthorized: false } : false
-    })
-  : null;
+import pkg from "pg";
+const { Pool } = pkg;
 
-const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "dev-token"; // 管理トークン（とうくん）
+function cfgFromPgVars() {
+  const { PGHOST, PGUSER, PGPASSWORD, PGDATABASE, PGPORT } = process.env;
+  if (!PGHOST || !PGUSER || !PGDATABASE) return null;
+  return {
+    host: PGHOST,
+    user: PGUSER,
+    password: PGPASSWORD,
+    database: PGDATABASE,
+    port: PGPORT ? Number(PGPORT) : 5432,
+    ssl: { rejectUnauthorized: false }, // Railwayは基本SSL必須
+  };
+}
 
-// ====== アプリ本体 ======
-const app = express();
-app.set("trust proxy", true); // ぷろきし越しの https 検出
-app.use(express.json({ limit: "5mb" }));
-
-// CORS（こーず：他ドメイン許可）— 本番は www のみ許可
-app.use(cors({
-  origin: ["https://www.nurserysera.com"],
-  credentials: true
-}));
+let pool;
+if (process.env.DATABASE_URL) {
+  // DATABASE_URL があるとき（自分で設定した場合）
+  pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.DB_SSL === "false" ? false : { rejectUnauthorized: false },
+  });
+} else {
+  // Railway提供の PGHOST / PGUSER ... から組み立て
+  const cfg = cfgFromPgVars();
+  pool = cfg ? new Pool(cfg) : null;
+}
 
 // ====== HTML 配信（public優先）。GASタグ置換もここで実施 ======
 function candidateFiles(page) {
