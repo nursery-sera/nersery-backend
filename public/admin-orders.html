@@ -171,7 +171,7 @@ let currentView = 'v_orders_summary';
 let currentRows = [];
 let currentColumns = [];
 
-// 発送仕分け picked 保存用 ＆ 1株単位の支払い更新用トークン索引
+/* 追加：発送仕分け picked 保存用 ＆ 本物トークン索引 */
 let tokenIndex = Object.create(null);
 function getPickedKey(row){
   return `picked:${(row.name||'')}|${(row.product||'')}`;
@@ -183,24 +183,30 @@ function isPickedChecked(row){
 function setPicked(key, on){
   if(on) localStorage.setItem(key,'1'); else localStorage.removeItem(key);
 }
-async function ensureTokenIndex(){
+// /api/admin/orders から name+address_full → real order_token の索引を作る
+async function ensureRealTokenIndex(){
   if (Object.keys(tokenIndex).length) return;
-  const data = await callApi(`/view/v_orders_summary`);
+  const list = await callApi(`/admin/orders`); // 要 x-admin-token
   tokenIndex = Object.create(null);
-  for (const r of (Array.isArray(data)?data:[data])) {
+  for (const r of (Array.isArray(list)?list:[list])) {
     const key = `${(r.name||'')}||${(r.address_full||'')}`;
+    // 同一キーが複数ある場合は最新を優先
     if (!tokenIndex[key] || new Date(r.created_at) > new Date(tokenIndex[key].created_at||0)) {
       tokenIndex[key] = { token: r.order_token, created_at: r.created_at };
     }
   }
 }
+function isMd5Token(t){ return /^[a-f0-9]{32}$/i.test(t||''); }
 function tokenForRow(row){
-  if (row.order_token || row.orderToken) return row.order_token || row.orderToken;
-  if (currentView === 'v_shipping_picklist_each_unit') {
-    const key = `${(row.name||'')}||${(row.address_full||'')}`;
-    return (tokenIndex[key] && tokenIndex[key].token) || '';
+  // 1) 行に realトークンがあればそれを使う（ダッシュ入り等）
+  if (row.order_token || row.orderToken) {
+    const t = row.order_token || row.orderToken;
+    if (!isMd5Token(t)) return t; // 本物
+    // md5なら name+address_full から本物に変換を試みる
   }
-  return '';
+  // 2) 1株単位や md5 の場合は name + address_full で索引
+  const key = `${(row.name||'')}||${(row.address_full||'')}`;
+  return (tokenIndex[key] && tokenIndex[key].token) || '';
 }
 
 buttons.forEach(btn => {
@@ -237,9 +243,9 @@ async function callApi(path, options = {}) {
 
 async function loadView() {
   try {
-    // 1株単位で is_paid を更新するため、先にトークン索引を用意
-    if (currentView === 'v_shipping_picklist_each_unit') {
-      await ensureTokenIndex();
+    // 本物トークン索引を用意（v_orders_summary と 1株単位のチェック更新に必須）
+    if (currentView === 'v_orders_summary' || currentView === 'v_shipping_picklist_each_unit') {
+      await ensureRealTokenIndex();
     }
 
     const paidParam = paidOnly.checked ? '?paid=1' : '';
@@ -346,7 +352,7 @@ function renderRows(rows, columns){
         return `<td><input type="checkbox" ${checked} onclick="setPicked('${escapeAttr(key)}', this.checked)"></td>`;
       }
 
-      // is_paid はバッジ＋チェック更新（order_token が無い行は name/address から推定）
+      // is_paid はバッジ＋チェック更新（md5擬似トークンは本物へ変換してPUT）
       if (col === 'is_paid') {
         const token = tokenForRow(row);
         const checked = v ? 'checked' : '';
