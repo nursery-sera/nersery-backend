@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>管理: 注文一覧</title>
+<style>
+  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;padding:16px}
+  h1{font-size:20px}
+  label{margin-right:12px}
+  table{border-collapse:collapse;width:100%;margin-top:12px}
+  th,td{border:1px solid #ddd;padding:8px;font-size:14px}
+  th{background:#f7f7f7}
+  button{cursor:pointer}
+  .row-actions{display:flex;gap:8px}
+  details > summary{cursor:pointer}
+  .topbar{display:flex;gap:12px;align-items:center}
+  input[type="text"]{padding:6px 8px;font-size:14px}
+</style>
+</head>
+<body>
+  <h1>注文一覧（クイック）</h1>
+
+  <div class="topbar">
+    <label><input id="paidOnly" type="checkbox"> 支払い済みのみ</label>
+    <input id="adminToken" type="text" placeholder="x-admin-token（初回のみ）" style="width:260px">
+    <button id="reloadBtn">再読み込み</button>
+  </div>
+
+  <table id="tbl">
+    <thead>
+      <tr>
+        <th>日時</th>
+        <th>注文トークン</th>
+        <th>名前</th>
+        <th>住所</th>
+        <th>商品一覧</th>
+        <th>合計(¥)</th>
+        <th>備考</th>
+        <th>メール</th>
+        <th>支払い</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+<script>
+(function(){
+  const API_BASE = (window.location.origin) + "/api";
+  const tblBody = document.querySelector("#tbl tbody");
+  const paidOnlyEl = document.getElementById("paidOnly");
+  const tokenEl = document.getElementById("adminToken");
+  const reloadBtn = document.getElementById("reloadBtn");
+
+  // 保存しておく（次回入力不要）
+  tokenEl.value = localStorage.getItem("ADMIN_TOKEN") || "";
+  tokenEl.addEventListener("change", () => {
+    localStorage.setItem("ADMIN_TOKEN", tokenEl.value.trim());
+  });
+
+  async function fetchJSON(url, opts={}){
+    const headers = Object.assign(
+      { "Content-Type":"application/json" },
+      opts.headers || {}
+    );
+    const adminToken = (tokenEl.value || "").trim();
+    if (adminToken) headers["x-admin-token"] = adminToken;
+
+    const res = await fetch(url, { ...opts, headers });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  }
+
+  async function load(){
+    tblBody.innerHTML = "<tr><td colspan='10'>読み込み中…</td></tr>";
+    try{
+      const url = `${API_BASE}/admin/orders${paidOnlyEl.checked ? "?paid=1" : ""}`;
+      const rows = await fetchJSON(url);
+      render(rows);
+    }catch(e){
+      tblBody.innerHTML = `<tr><td colspan="10" style="color:#c00">エラー: ${e.message}</td></tr>`;
+    }
+  }
+
+  function render(rows){
+    if (!rows.length){
+      tblBody.innerHTML = "<tr><td colspan='10'>データなし</td></tr>";
+      return;
+    }
+    tblBody.innerHTML = "";
+    for (const r of rows){
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${new Date(r.created_at).toLocaleString()}</td>
+        <td><code>${r.order_token}</code></td>
+        <td>${escapeHtml(r.name || "")}</td>
+        <td>${escapeHtml(r.address_full || "")}</td>
+        <td>
+          <details>
+            <summary>${escapeHtml(r.product_list || "")}</summary>
+            <div data-items="holder">明細読込中…</div>
+          </details>
+        </td>
+        <td style="text-align:right">${Number(r.order_total||0).toLocaleString()}</td>
+        <td>${escapeHtml(r.note || "")}</td>
+        <td>${escapeHtml(r.email || "")}</td>
+        <td>${r.is_paid ? "✅" : "—"}</td>
+        <td class="row-actions">
+          <button data-act="toggle" data-token="${r.order_token}" data-paid="${r.is_paid?1:0}">
+            ${r.is_paid ? "未払いに戻す" : "支払い済みにする"}
+          </button>
+        </td>
+      `;
+      // 明細読み込み
+      const holder = tr.querySelector("[data-items='holder']");
+      fetchItems(r.order_token, holder).catch(_=>holder.textContent="読込失敗");
+      // トグル
+      tr.querySelector("[data-act='toggle']").addEventListener("click", togglePaid);
+      tblBody.appendChild(tr);
+    }
+  }
+
+  async function fetchItems(token, holder){
+    const rows = await fetchJSON(`${API_BASE}/admin/orders/${token}/items`);
+    if (!rows.length){ holder.textContent = "明細なし"; return; }
+    holder.innerHTML = `<ul>${rows.map(x=>`<li>${escapeHtml(x.product_name)} × ${x.quantity}（¥${Number(x.unit_price).toLocaleString()}）</li>`).join("")}</ul>`;
+  }
+
+  async function togglePaid(e){
+    const btn = e.currentTarget;
+    const token = btn.getAttribute("data-token");
+    const current = btn.getAttribute("data-paid")==="1";
+    btn.disabled = true;
+    try{
+      await fetchJSON(`${API_BASE}/admin/orders/${token}/paid`, {
+        method: "PUT",
+        body: JSON.stringify({ paid: !current })
+      });
+      await load();
+    }catch(err){
+      alert("更新失敗: " + err.message);
+    }finally{
+      btn.disabled = false;
+    }
+  }
+
+  function escapeHtml(s){
+    return String(s||"").replace(/[&<>"']/g, c=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+  }
+
+  paidOnlyEl.addEventListener("change", load);
+  reloadBtn.addEventListener("click", load);
+  load();
+})();
+</script>
+</body>
+</html>
