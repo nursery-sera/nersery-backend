@@ -611,7 +611,7 @@ const items = cart.map(it => {
       }
 
       const data = r.data || {};
-      alert(`ありがとうございました。ご注文番号 #${data.orderId || '-'}（合計 ¥${Number(data.total ?? total).toLocaleString()}）を受け付けました。`);
+      alert(`ありがとうございました。ご注文番号 #${data.orderToken || '-'}（合計 ¥${Number(data.total ?? total).toLocaleString()}）を受け付けました。`);
 
       localStorage.removeItem('cart');
       localStorage.removeItem('checkout');
