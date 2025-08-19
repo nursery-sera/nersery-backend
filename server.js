@@ -1,4 +1,4 @@
-// server.js — public優先 + API（全部入り）
+// server.js — public優先 + API（orders_all 1テーブル方式）
 import express from "express";
 import cors from "cors";
 import fs from "fs";
@@ -50,7 +50,7 @@ if (process.env.DATABASE_URL) {
   pool = cfg ? new Pool(cfg) : null;
 }
 
-// 管理トークン
+// 管理トークン（必要に応じて）
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "dev-token";
 
 // ====== アプリ本体 ======
@@ -151,12 +151,8 @@ app.post("/api/orders", async (req, res) => {
   // 住所（address / addressFull / 各フィールド結合の順）
   const addressFull =
     (customer.addressFull && String(customer.addressFull).trim()) ||
-    [
-      customer.prefecture,
-      customer.city,
-      customer.address,
-      customer.building
-    ].filter(Boolean).join("").trim() ||
+    [customer.prefecture, customer.city, customer.address, customer.building]
+      .filter(Boolean).join("").trim() ||
     (customer.address || "");
 
   // 小計・合計（frontの summary を尊重）
@@ -167,12 +163,10 @@ app.post("/api/orders", async (req, res) => {
   const paymentMethod = String(summary?.paymentMethod || "bank_transfer");
 
   // 同一注文を束ねるトークン（1注文=複数行に同じ値）
-  const orderToken = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`; // 例: "maxp2i34-k9q3t8"
+  const orderToken = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
-  // 1注文に1商品以上は必要
   if (!items.length) return res.status(400).json({ error: "no items" });
 
-  // トランザクションで明細分だけ複数INSERT
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
@@ -183,15 +177,12 @@ app.post("/api/orders", async (req, res) => {
         last_name, first_name, last_kana, first_kana,
         zipcode, prefecture, city, address, building, email,
         name, address_full,
-
         -- 注文ヘッダ
         note, subtotal, shipping, shipping_option_add, total, payment_method,
         is_paid, status, order_token,
-
-        -- 明細（商品ごと）
+        -- 明細
         product_id, product_name, unit_price, quantity,
         product_slug, image, category, variety,
-
         -- 元データ
         source, raw_payload
       )
@@ -204,8 +195,7 @@ app.post("/api/orders", async (req, res) => {
         $20,$21,$22,$23,
         $24,$25,$26,$27,
         'web',$28
-      )
-      RETURNING id
+      ) RETURNING id
     `;
 
     for (const it of items) {
@@ -220,11 +210,9 @@ app.post("/api/orders", async (req, res) => {
         customer.city || "", (customer.address || ""), (customer.building || ""),
         customer.email || "",
         name, addressFull,
-
         // 注文ヘッダ
         note || null, subtotal, shipping, shippingOptionAdd, total, paymentMethod,
         orderToken,
-
         // 明細
         pid,
         String(it.productName || ""),
@@ -234,17 +222,51 @@ app.post("/api/orders", async (req, res) => {
         (it.image || null),
         (it.category || null),
         (it.variety || null),
-
         // 元データ
         JSON.stringify(req.body || {})
       ];
-
       await client.query(sql, params);
     }
 
     await client.query("COMMIT");
 
-    // 返信は「注文番号の代わりに order_token と合計」
+    // ----- Brevo 自動返信（任意） -----
+    if (process.env.BREVO_API_KEY && customer.email) {
+      const baseUrl = getBaseUrl(req);
+      const subject = `ご注文ありがとうございます（#${orderToken}）`;
+      const html = `
+        <p>${name} 様</p>
+        <p>ご注文（#${orderToken}）を受け付けました。</p>
+        <p><strong>合計：¥${total.toLocaleString()}</strong></p>
+        <p>お支払い方法：銀行振込</p>
+        <p>※ご入金確認後に発送いたします。</p>
+        <p><a href="${baseUrl}">nursery sera</a></p>
+      `;
+      try {
+        const resp = await fetch("https://api.brevo.com/v3/smtp/email", {
+          method: "POST",
+          headers: {
+            "api-key": process.env.BREVO_API_KEY,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            sender: {
+              email: process.env.MAIL_FROM || "info@example.com",
+              name : process.env.MAIL_NAME || "nursery sera"
+            },
+            to: [{ email: customer.email, name }],
+            subject,
+            htmlContent: html
+          })
+        });
+        if (!resp.ok) console.error("Brevo error:", await resp.text());
+      } catch (e) {
+        console.error("Brevo error:", e);
+      }
+    }
+    // -----------------------------------
+
+    // 返信は注文トークンと合計のみ
     res.json({ orderToken, total });
   } catch (e) {
     await client.query("ROLLBACK");
@@ -255,50 +277,18 @@ app.post("/api/orders", async (req, res) => {
   }
 });
 
-    // 自動返信メール（任意）
-    if (process.env.BREVO_API_KEY) {
-      const body = {
-        sender: {
-          email: process.env.MAIL_FROM || "info@example.com",
-          name: process.env.MAIL_NAME || "nursery sera"
-        },
-        to: [{ email: customer.email, name }],
-        subject: `ご注文ありがとうございます（#${orderId}）`,
-        htmlContent: `
-          <p>${name} 様</p>
-          <p>ご注文（#${orderId}）を受け付けました。</p>
-          <p>合計：${grandTotal.toLocaleString()}円</p>
-          <p>お支払い方法：銀行振込</p>
-          <p>※ご入金確認後に発送いたします。</p>
-        `
-      };
-      try {
-        const resp = await fetch("https://api.brevo.com/v3/smtp/email", {
-          method: "POST",
-          headers: { "api-key": process.env.BREVO_API_KEY, "Content-Type": "application/json" },
-          body: JSON.stringify(body)
-        });
-        if (!resp.ok) console.error("Brevo error:", await resp.text());
-      } catch (e) {
-        console.error("Brevo error:", e);
-      }
-    }
-
-    res.json({ orderId, total: grandTotal });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "server error" });
-  }
-});
-
-// 入金反映
-app.put("/api/orders/:id/paid", async (req, res) => {
+// 入金反映（トークンで全行更新）
+app.put("/api/orders/:token/paid", async (req, res) => {
   if (!pool) return res.status(500).json({ error: "DB not available" });
-  await pool.query("UPDATE orders SET is_paid = TRUE WHERE id = $1", [req.params.id]);
+  const { token } = req.params;
+  await pool.query(
+    "UPDATE orders_all SET is_paid = TRUE, paid_at = now() WHERE order_token = $1",
+    [token]
+  );
   res.json({ ok: true });
 });
 
-// レポート
+// （必要なら）レポートAPIは orders_all を参照するビューに合わせて実装してください
 app.get("/api/reports/category", async (_, res) => {
   if (!pool) return res.json([]);
   const { rows } = await pool.query("SELECT * FROM v_category_summary ORDER BY total_qty DESC");
