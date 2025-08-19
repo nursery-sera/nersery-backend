@@ -171,6 +171,38 @@ let currentView = 'v_orders_summary';
 let currentRows = [];
 let currentColumns = [];
 
+// 発送仕分け picked 保存用 ＆ 1株単位の支払い更新用トークン索引
+let tokenIndex = Object.create(null);
+function getPickedKey(row){
+  return `picked:${(row.name||'')}|${(row.product||'')}`;
+}
+function isPickedChecked(row){
+  const key = getPickedKey(row);
+  return localStorage.getItem(key) === '1';
+}
+function setPicked(key, on){
+  if(on) localStorage.setItem(key,'1'); else localStorage.removeItem(key);
+}
+async function ensureTokenIndex(){
+  if (Object.keys(tokenIndex).length) return;
+  const data = await callApi(`/view/v_orders_summary`);
+  tokenIndex = Object.create(null);
+  for (const r of (Array.isArray(data)?data:[data])) {
+    const key = `${(r.name||'')}||${(r.address_full||'')}`;
+    if (!tokenIndex[key] || new Date(r.created_at) > new Date(tokenIndex[key].created_at||0)) {
+      tokenIndex[key] = { token: r.order_token, created_at: r.created_at };
+    }
+  }
+}
+function tokenForRow(row){
+  if (row.order_token || row.orderToken) return row.order_token || row.orderToken;
+  if (currentView === 'v_shipping_picklist_each_unit') {
+    const key = `${(row.name||'')}||${(row.address_full||'')}`;
+    return (tokenIndex[key] && tokenIndex[key].token) || '';
+  }
+  return '';
+}
+
 buttons.forEach(btn => {
   btn.addEventListener('click', () => {
     buttons.forEach(b => b.classList.remove('active'));
@@ -205,10 +237,14 @@ async function callApi(path, options = {}) {
 
 async function loadView() {
   try {
+    // 1株単位で is_paid を更新するため、先にトークン索引を用意
+    if (currentView === 'v_shipping_picklist_each_unit') {
+      await ensureTokenIndex();
+    }
+
     const paidParam = paidOnly.checked ? '?paid=1' : '';
-    // DBビューをそのまま返す汎用API（サーバー側パッチで追加）
+    // DBビューをそのまま返す汎用API
     const data = await callApi(`/view/${currentView}${paidParam}`);
-    // data は配列 or オブジェクト（単一集計）を想定
     const rows = Array.isArray(data) ? data : [data];
 
     // カラム自動抽出（順序は要件に寄せて調整）
@@ -236,12 +272,15 @@ function autoColumnsFor(view, rows){
     return pickColumns(rows, pref);
   }
   if (view === 'v_products_totals') {
-    const pref = ['product_name','total_qty','total_amount','paid_qty','paid_amount'];
-    return pickColumns(rows, pref);
+    // paidOnly のときは paid列のみ、通常は全体列＋paid列
+    const prefPaid = ['product_name','paid_qty','paid_amount'];
+    const prefAll  = ['product_name','total_qty','total_amount','paid_qty','paid_amount'];
+    return pickColumns(rows, paidOnly.checked ? prefPaid : prefAll);
   }
   if (view === 'v_products_overall') {
-    const pref = ['all_items_qty','all_items_amount','paid_items_qty','paid_items_amount'];
-    return pickColumns(rows, pref);
+    const prefPaid = ['paid_items_qty','paid_items_amount'];
+    const prefAll  = ['all_items_qty','all_items_amount','paid_items_qty','paid_items_amount'];
+    return pickColumns(rows, paidOnly.checked ? prefPaid : prefAll);
   }
   if (view === 'v_shipping_picklist_by_person') {
     // ご指定の順：name, product, quantity, quantity_paid, picked, "shipping option add", is_paid, first_order_at
@@ -274,7 +313,7 @@ function renderError(msg){
   const thead = document.querySelector('#grid thead');
   const tbody = document.querySelector('#grid tbody');
   thead.innerHTML = '<tr><th>エラー</th></tr>';
-  tbody.innerHTML = `<tr><td style="white-space:normal">${msg}<br>※ サーバーに <code>GET /api/view/:name</code> を追加してください（下の「サーバー側 追加パッチ」参照）。</td></tr>`;
+  tbody.innerHTML = `<tr><td style="white-space:normal">${msg}<br>※ サーバーに <code>GET /api/view/:name</code> を追加してください。</td></tr>`;
 }
 
 function renderRows(rows, columns){
@@ -290,18 +329,28 @@ function renderRows(rows, columns){
   if (keyword) {
     filtered = rows.filter(r => JSON.stringify(r).toLowerCase().includes(keyword));
   }
+  // 「支払い確認済みだけ表示」ON かつ is_paid列があるときは true のみ
+  if (paidOnly.checked && filtered.length && Object.prototype.hasOwnProperty.call(filtered[0], 'is_paid')) {
+    filtered = filtered.filter(r => !!r.is_paid);
+  }
 
   // ボディ
   tbody.innerHTML = filtered.map(row => {
     return '<tr>' + columns.map(col => {
       let v = row[col];
 
-      // is_paid はバッジ表示＋（order_token があれば）チェックボックスで更新
+      // 発送仕分けの picked はチェック操作（ローカル保存）
+      if (col === 'picked' && currentView === 'v_shipping_picklist_by_person') {
+        const key = getPickedKey(row);
+        const checked = isPickedChecked(row) ? 'checked' : '';
+        return `<td><input type="checkbox" ${checked} onclick="setPicked('${escapeAttr(key)}', this.checked)"></td>`;
+      }
+
+      // is_paid はバッジ＋チェック更新（order_token が無い行は name/address から推定）
       if (col === 'is_paid') {
-        const token = row.order_token || row.orderToken || '';
+        const token = tokenForRow(row);
         const checked = v ? 'checked' : '';
         const disabled = token ? '' : 'disabled';
-        // チェックで /api/admin/orders/:token/paid を叩いて反映
         return `<td>
           <label class="badge ${v ? 'paid':'unpaid'}">${v ? '支払い済み':'未払い'}</label>
           ${ token ? `<div><input type="checkbox" ${checked} ${disabled} onchange="togglePaid('${escapeAttr(token)}', this.checked)"></div>` : '' }
@@ -331,7 +380,6 @@ function formatDate(v){
   try{
     const d = new Date(v);
     if (isNaN(d)) return v;
-    // YYYY-MM-DD HH:mm
     const z = n => String(n).padStart(2,'0');
     return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}`;
   }catch(_){ return v; }
