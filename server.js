@@ -303,3 +303,67 @@ app.get("/api/reports/all", async (_, res) => {
 // ====== 起動 ======
 const port = process.env.PORT || 8080;
 app.listen(port, () => console.log(`App running on :${port}`));
+
+// ===== 管理API用の超シンプル認証 =====
+function adminAuth(req, res, next) {
+  const token = req.headers["x-admin-token"] || req.query.token;
+  if (!ADMIN_TOKEN || token === ADMIN_TOKEN) return next();
+  return res.status(401).json({ error: "unauthorized" });
+}
+
+// ===== 管理：注文一覧（クイック表示用のビューを返す） =====
+// ?paid=1 で支払い済みのみ
+app.get("/api/admin/orders", adminAuth, async (req, res) => {
+  if (!pool) return res.status(500).json({ error: "DB not available" });
+  try {
+    const sql = req.query.paid === "1"
+      ? "SELECT * FROM v_order_quick_paid ORDER BY created_at DESC"
+      : "SELECT * FROM v_order_quick ORDER BY created_at DESC";
+    const { rows } = await pool.query(sql);
+    res.json(rows);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "server error" });
+  }
+});
+
+// ===== 管理：ある注文（order_token）の明細を取る =====
+app.get("/api/admin/orders/:token/items", adminAuth, async (req, res) => {
+  if (!pool) return res.status(500).json({ error: "DB not available" });
+  try {
+    const { token } = req.params;
+    const { rows } = await pool.query(
+      `SELECT product_name, unit_price, quantity
+         FROM orders_all
+        WHERE order_token = $1
+        ORDER BY product_name`,
+      [token]
+    );
+    res.json(rows);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "server error" });
+  }
+});
+
+// ===== 管理：支払いフラグの更新（チェックON/OFF） =====
+app.put("/api/admin/orders/:token/paid", adminAuth, async (req, res) => {
+  if (!pool) return res.status(500).json({ error: "DB not available" });
+  try {
+    const { token } = req.params;
+    // body: { paid: true/false }
+    const paid = !!req.body?.paid;
+    await pool.query(
+      `UPDATE orders_all
+          SET is_paid = $1,
+              paid_at = CASE WHEN $1 THEN now() ELSE NULL END,
+              status = CASE WHEN $1 THEN 'paid' ELSE 'pending' END
+        WHERE order_token = $2`,
+      [paid, token]
+    );
+    res.json({ ok: true });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "server error" });
+  }
+});
