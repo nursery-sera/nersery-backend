@@ -1,158 +1,360 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>管理: 注文一覧</title>
-<style>
-  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;padding:16px}
-  h1{font-size:20px}
-  label{margin-right:12px}
-  table{border-collapse:collapse;width:100%;margin-top:12px}
-  th,td{border:1px solid #ddd;padding:8px;font-size:14px}
-  th{background:#f7f7f7}
-  button{cursor:pointer}
-  .row-actions{display:flex;gap:8px}
-  details > summary{cursor:pointer}
-  .topbar{display:flex;gap:12px;align-items:center}
-  input[type="text"]{padding:6px 8px;font-size:14px}
-</style>
+  <!-- ■ 同一タブ遷移の指定 -->
+  <base target="_self">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <title>Admin Orders - nursery sera</title>
+  <style>
+    /* =========================
+       ■ レイアウト（スマホ額縁・等倍表示）
+       ========================= */
+    :root{
+      --pink:#f8c6dc;
+      --ink:#333;
+      --bg:#fff;
+      --muted:#777;
+      --shadow:0 8px 20px rgba(0,0,0,.08);
+      --radius:14px;
+      --radius-sm:10px;
+      --maxw:480px; /* スマホの額縁幅 */
+    }
+    html,body{
+      margin:0; padding:0; background:var(--bg); color:var(--ink);
+      font-family: Arial, sans-serif; -webkit-text-size-adjust:100%;
+      font-size:16px; line-height:1.5;
+    }
+    .phone{
+      max-width:var(--maxw); margin:0 auto; min-height:100vh;
+      display:flex; flex-direction:column; padding:12px;
+    }
+    header{
+      position:sticky; top:0; z-index:10; background:var(--bg);
+      padding:10px 6px; border-bottom:1px solid #eee;
+    }
+    h1{ margin:0; font-size:clamp(18px, 4.5vw, 22px); letter-spacing:0.02em; }
+    .sub{ color:var(--muted); font-size:12px; margin-top:4px; }
+
+    /* =========================
+       ■ ボタングリッド（7個：上4＋下3）
+       ========================= */
+    .view-switch{
+      margin:12px 0; display:grid; gap:8px;
+      grid-template-columns: repeat(4, 1fr);
+    }
+    .view-switch.row2{ grid-template-columns: repeat(3, 1fr); }
+    .btn{
+      all:unset; text-align:center; padding:10px 6px; cursor:pointer;
+      border-radius: var(--radius-sm);
+      background:#fff; border:1px solid #eee; box-shadow:var(--shadow);
+      font-size:clamp(12px, 3.3vw, 14px);
+    }
+    .btn.active{ outline:2px solid var(--pink); }
+
+    /* =========================
+       ■ ツールバー（Paidのみ・検索・トークン）
+       ========================= */
+    .toolbar{
+      display:flex; gap:8px; align-items:center; flex-wrap:wrap;
+      margin:6px 0 10px;
+    }
+    .chip{
+      display:inline-flex; align-items:center; gap:6px; padding:6px 10px;
+      border:1px solid #eee; border-radius:999px; background:#fff; box-shadow:var(--shadow);
+      font-size:13px;
+    }
+    .chip input[type="checkbox"]{ width:18px; height:18px; }
+    .chip input[type="text"]{
+      border:none; outline:none; font-size:13px; min-width:140px; background:transparent;
+    }
+    .chip .save{ all:unset; color:#0066cc; cursor:pointer; font-size:13px; }
+
+    /* =========================
+       ■ テーブル（横スクロール）
+       ========================= */
+    .table-wrap{
+      overflow:auto; -webkit-overflow-scrolling:touch; border:1px solid #eee;
+      border-radius: var(--radius); background:#fff; box-shadow:var(--shadow);
+    }
+    table{ border-collapse:separate; border-spacing:0; min-width:700px; width:100%; }
+    th, td{ padding:10px 8px; border-bottom:1px solid #f2f2f2; font-size:14px; white-space:nowrap; }
+    th{ position:sticky; top:0; background:#fff; z-index:1; }
+    tr:nth-child(even) td{ background:#fafafa; }
+    .badge{ display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; }
+    .paid{ background:#eaffea; color:#268a2a; border:1px solid #b6e4b6; }
+    .unpaid{ background:#fff5f5; color:#b74242; border:1px solid #f2caca; }
+
+    /* =========================
+       ■ フッター
+       ========================= */
+    footer{ margin:14px 0 6px; color:var(--muted); font-size:12px; text-align:center; }
+  </style>
 </head>
 <body>
-  <h1>注文一覧（クイック）</h1>
+<div class="phone">
+  <header>
+    <h1>Admin Orders</h1>
+    <div class="sub">7ビュー（view：見える用テーブル）を切り替え。支払いチェックを付けるとDBに反映。</div>
+  </header>
 
-  <div class="topbar">
-    <label><input id="paidOnly" type="checkbox"> 支払い済みのみ</label>
-    <input id="adminToken" type="text" placeholder="x-admin-token（初回のみ）" style="width:260px">
-    <button id="reloadBtn">再読み込み</button>
+  <!-- ■ 7つのボタン（上段4・下段3） -->
+  <div class="view-switch">
+    <button class="btn" data-view="v_orders_summary" title="基本情報">基本情報</button>
+    <button class="btn" data-view="v_payment_check" title="入金確認">入金確認</button>
+    <button class="btn" data-view="v_products_totals" title="品種ごと数と金額">品種合計</button>
+    <button class="btn" data-view="v_products_overall" title="全商品数と金額">全体合計</button>
+  </div>
+  <div class="view-switch row2">
+    <button class="btn" data-view="v_shipping_picklist_by_person" title="発送仕分け">発送仕分け</button>
+    <button class="btn" data-view="v_shipping_labels" title="宛名">宛名</button>
+    <button class="btn" data-view="v_shipping_picklist_each_unit" title="1株単位">1株単位</button>
   </div>
 
-  <table id="tbl">
-    <thead>
-      <tr>
-        <th>日時</th>
-        <th>注文トークン</th>
-        <th>名前</th>
-        <th>住所</th>
-        <th>商品一覧</th>
-        <th>合計(¥)</th>
-        <th>備考</th>
-        <th>メール</th>
-        <th>支払い</th>
-        <th>操作</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+  <!-- ■ ツールバー（支払い済みだけ・検索・管理トークン保存） -->
+  <div class="toolbar">
+    <label class="chip" title="支払い確認済みの行だけ集約表示">
+      <input type="checkbox" id="paidOnly"> 支払い確認済みだけ表示
+    </label>
+
+    <label class="chip" title="名前や品種でクイック検索（絞り込み）">
+      検索
+      <input type="text" id="q" placeholder="名前・品種など">
+    </label>
+
+    <label class="chip" title="管理用トークン（APIに送る合言葉）">
+      Admin Token
+      <input type="text" id="adm" placeholder="x-admin-token">
+      <button class="save" id="saveToken">保存</button>
+    </label>
+  </div>
+
+  <!-- ■ 表示領域 -->
+  <div class="table-wrap" id="tableWrap">
+    <table id="grid"><thead></thead><tbody></tbody></table>
+  </div>
+
+  <footer>nursery sera — admin orders</footer>
+</div>
 
 <script>
-(function(){
-  const API_BASE = (window.location.origin) + "/api";
-  const tblBody = document.querySelector("#tbl tbody");
-  const paidOnlyEl = document.getElementById("paidOnly");
-  const tokenEl = document.getElementById("adminToken");
-  const reloadBtn = document.getElementById("reloadBtn");
+/* =========================
+   ■ フロント設定とユーティリティ
+   ========================= */
+// APIベースURL（server.js が <head> に注入：window.API_BASE='/api'）
+const API_BASE = window.API_BASE || '/api';
 
-  // 保存しておく（次回入力不要）
-  tokenEl.value = localStorage.getItem("ADMIN_TOKEN") || "";
-  tokenEl.addEventListener("change", () => {
-    localStorage.setItem("ADMIN_TOKEN", tokenEl.value.trim());
+// 管理トークン（localStorageに保存）
+const admInput = document.getElementById('adm');
+const saved = localStorage.getItem('ns_admin_token') || '';
+admInput.value = saved;
+document.getElementById('saveToken').addEventListener('click', () => {
+  localStorage.setItem('ns_admin_token', admInput.value.trim());
+  alert('Admin Tokenを保存しました。');
+});
+function adminHeaders() {
+  const token = (localStorage.getItem('ns_admin_token') || '').trim();
+  return token ? { 'x-admin-token': token } : {};
+}
+
+// クイック検索（フロント側フィルタ）
+const q = document.getElementById('q');
+q.addEventListener('input', () => renderRows(currentRows, currentColumns));
+
+/* =========================
+   ■ ビュー切り替え
+   ========================= */
+const buttons = [...document.querySelectorAll('.btn[data-view]')];
+const paidOnly = document.getElementById('paidOnly');
+
+let currentView = 'v_orders_summary';
+let currentRows = [];
+let currentColumns = [];
+
+buttons.forEach(btn => {
+  btn.addEventListener('click', () => {
+    buttons.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentView = btn.dataset.view;
+    loadView();
   });
+});
+// 初期選択
+buttons[0].classList.add('active');
 
-  async function fetchJSON(url, opts={}){
-    const headers = Object.assign(
-      { "Content-Type":"application/json" },
-      opts.headers || {}
-    );
-    const adminToken = (tokenEl.value || "").trim();
-    if (adminToken) headers["x-admin-token"] = adminToken;
+// “支払い済みだけ”トグル
+paidOnly.addEventListener('change', loadView);
 
-    const res = await fetch(url, { ...opts, headers });
-    if (!res.ok) throw new Error(await res.text());
-    return res.json();
+/* =========================
+   ■ API呼び出し
+   - /api/view/:name?paid=1 を想定
+   - 支払い更新：PUT /api/admin/orders/:token/paid {paid:boolean}
+   ========================= */
+async function callApi(path, options = {}) {
+  const url = API_BASE + path;
+  const res = await fetch(url, {
+    ...options,
+    headers: { 'Content-Type': 'application/json', ...(options.headers||{}), ...adminHeaders() }
+  });
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error(`API ${url} error: ${res.status} ${t}`);
+  }
+  return res.json();
+}
+
+async function loadView() {
+  try {
+    const paidParam = paidOnly.checked ? '?paid=1' : '';
+    // DBビューをそのまま返す汎用API（サーバー側パッチで追加）
+    const data = await callApi(`/view/${currentView}${paidParam}`);
+    // data は配列 or オブジェクト（単一集計）を想定
+    const rows = Array.isArray(data) ? data : [data];
+
+    // カラム自動抽出（順序は要件に寄せて調整）
+    let columns = autoColumnsFor(currentView, rows);
+
+    currentRows = rows;
+    currentColumns = columns;
+    renderRows(rows, columns);
+  } catch (e) {
+    console.error(e);
+    renderError(e.message);
+  }
+}
+
+function autoColumnsFor(view, rows){
+  const exists = key => rows.length && (key in rows[0]);
+
+  // ビューごとに“望ましい列順”を指定（ユーザー要望を反映）
+  if (view === 'v_orders_summary') {
+    const pref = ['order_token','name','address_full','products','order_total','note','email','is_paid','created_at'];
+    return pickColumns(rows, pref);
+  }
+  if (view === 'v_payment_check') {
+    const pref = ['order_token','last_kana','first_kana','order_total','is_paid','created_at'];
+    return pickColumns(rows, pref);
+  }
+  if (view === 'v_products_totals') {
+    const pref = ['product_name','total_qty','total_amount','paid_qty','paid_amount'];
+    return pickColumns(rows, pref);
+  }
+  if (view === 'v_products_overall') {
+    const pref = ['all_items_qty','all_items_amount','paid_items_qty','paid_items_amount'];
+    return pickColumns(rows, pref);
+  }
+  if (view === 'v_shipping_picklist_by_person') {
+    // ご指定の順：name, product, quantity, quantity_paid, picked, "shipping option add", is_paid, first_order_at
+    const pref = ['name','product','quantity','quantity_paid','picked','shipping option add','is_paid','first_order_at'];
+    return pickColumns(rows, pref);
+  }
+  if (view === 'v_shipping_labels') {
+    const pref = ['order_token','name','zipcode','prefecture','city','address','building','is_paid','created_at'];
+    return pickColumns(rows, pref);
+  }
+  if (view === 'v_shipping_picklist_each_unit') {
+    // ご指定の順：name, address_full, product, quantity(=1), is_paid, first_order_at
+    const pref = ['name','address_full','product','quantity','is_paid','first_order_at'];
+    return pickColumns(rows, pref);
+  }
+  // デフォルト：最初の行のキー順
+  return rows.length ? Object.keys(rows[0]) : [];
+}
+function pickColumns(rows, pref){
+  const has = rows.length ? Object.keys(rows[0]) : [];
+  const ordered = pref.filter(k => has.includes(k));
+  const others = has.filter(k => !ordered.includes(k));
+  return [...ordered, ...others];
+}
+
+/* =========================
+   ■ レンダリング
+   ========================= */
+function renderError(msg){
+  const thead = document.querySelector('#grid thead');
+  const tbody = document.querySelector('#grid tbody');
+  thead.innerHTML = '<tr><th>エラー</th></tr>';
+  tbody.innerHTML = `<tr><td style="white-space:normal">${msg}<br>※ サーバーに <code>GET /api/view/:name</code> を追加してください（下の「サーバー側 追加パッチ」参照）。</td></tr>`;
+}
+
+function renderRows(rows, columns){
+  const thead = document.querySelector('#grid thead');
+  const tbody = document.querySelector('#grid tbody');
+  const keyword = (q.value || '').trim().toLowerCase();
+
+  // ヘッダー
+  thead.innerHTML = '<tr>' + columns.map(c => `<th>${escapeHtml(c)}</th>`).join('') + '</tr>';
+
+  // フィルタ
+  let filtered = rows;
+  if (keyword) {
+    filtered = rows.filter(r => JSON.stringify(r).toLowerCase().includes(keyword));
   }
 
-  async function load(){
-    tblBody.innerHTML = "<tr><td colspan='10'>読み込み中…</td></tr>";
-    try{
-      const url = `${API_BASE}/admin/orders${paidOnlyEl.checked ? "?paid=1" : ""}`;
-      const rows = await fetchJSON(url);
-      render(rows);
-    }catch(e){
-      tblBody.innerHTML = `<tr><td colspan="10" style="color:#c00">エラー: ${e.message}</td></tr>`;
-    }
-  }
+  // ボディ
+  tbody.innerHTML = filtered.map(row => {
+    return '<tr>' + columns.map(col => {
+      let v = row[col];
 
-  function render(rows){
-    if (!rows.length){
-      tblBody.innerHTML = "<tr><td colspan='10'>データなし</td></tr>";
-      return;
-    }
-    tblBody.innerHTML = "";
-    for (const r of rows){
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${new Date(r.created_at).toLocaleString()}</td>
-        <td><code>${r.order_token}</code></td>
-        <td>${escapeHtml(r.name || "")}</td>
-        <td>${escapeHtml(r.address_full || "")}</td>
-        <td>
-          <details>
-            <summary>${escapeHtml(r.product_list || "")}</summary>
-            <div data-items="holder">明細読込中…</div>
-          </details>
-        </td>
-        <td style="text-align:right">${Number(r.order_total||0).toLocaleString()}</td>
-        <td>${escapeHtml(r.note || "")}</td>
-        <td>${escapeHtml(r.email || "")}</td>
-        <td>${r.is_paid ? "✅" : "—"}</td>
-        <td class="row-actions">
-          <button data-act="toggle" data-token="${r.order_token}" data-paid="${r.is_paid?1:0}">
-            ${r.is_paid ? "未払いに戻す" : "支払い済みにする"}
-          </button>
-        </td>
-      `;
-      // 明細読み込み
-      const holder = tr.querySelector("[data-items='holder']");
-      fetchItems(r.order_token, holder).catch(_=>holder.textContent="読込失敗");
-      // トグル
-      tr.querySelector("[data-act='toggle']").addEventListener("click", togglePaid);
-      tblBody.appendChild(tr);
-    }
-  }
+      // is_paid はバッジ表示＋（order_token があれば）チェックボックスで更新
+      if (col === 'is_paid') {
+        const token = row.order_token || row.orderToken || '';
+        const checked = v ? 'checked' : '';
+        const disabled = token ? '' : 'disabled';
+        // チェックで /api/admin/orders/:token/paid を叩いて反映
+        return `<td>
+          <label class="badge ${v ? 'paid':'unpaid'}">${v ? '支払い済み':'未払い'}</label>
+          ${ token ? `<div><input type="checkbox" ${checked} ${disabled} onchange="togglePaid('${escapeAttr(token)}', this.checked)"></div>` : '' }
+        </td>`;
+      }
 
-  async function fetchItems(token, holder){
-    const rows = await fetchJSON(`${API_BASE}/admin/orders/${token}/items`);
-    if (!rows.length){ holder.textContent = "明細なし"; return; }
-    holder.innerHTML = `<ul>${rows.map(x=>`<li>${escapeHtml(x.product_name)} × ${x.quantity}（¥${Number(x.unit_price).toLocaleString()}）</li>`).join("")}</ul>`;
-  }
+      // created_at / first_order_at は短い日時に整形
+      if (/_at$/.test(col) || col === 'created_at' || col === 'first_order_at') {
+        if (v) v = formatDate(v);
+      }
 
-  async function togglePaid(e){
-    const btn = e.currentTarget;
-    const token = btn.getAttribute("data-token");
-    const current = btn.getAttribute("data-paid")==="1";
-    btn.disabled = true;
-    try{
-      await fetchJSON(`${API_BASE}/admin/orders/${token}/paid`, {
-        method: "PUT",
-        body: JSON.stringify({ paid: !current })
-      });
-      await load();
-    }catch(err){
-      alert("更新失敗: " + err.message);
-    }finally{
-      btn.disabled = false;
-    }
-  }
+      // 長文（note, address等）は折返し表示
+      const nowrap = (col === 'note' || col.includes('address')) ? 'style="white-space:normal; max-width:280px;"' : '';
 
-  function escapeHtml(s){
-    return String(s||"").replace(/[&<>"']/g, c=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
-  }
+      return `<td ${nowrap}>${escapeHtml(v)}</td>`;
+    }).join('') + '</tr>';
+  }).join('');
+}
 
-  paidOnlyEl.addEventListener("change", load);
-  reloadBtn.addEventListener("click", load);
-  load();
-})();
+function escapeHtml(v){
+  if (v === null || v === undefined) return '';
+  return String(v).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
+}
+function escapeAttr(v){ return String(v).replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+
+function formatDate(v){
+  try{
+    const d = new Date(v);
+    if (isNaN(d)) return v;
+    // YYYY-MM-DD HH:mm
+    const z = n => String(n).padStart(2,'0');
+    return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}`;
+  }catch(_){ return v; }
+}
+
+/* =========================
+   ■ 支払いフラグ更新
+   ========================= */
+async function togglePaid(orderToken, to){
+  try{
+    await callApi(`/admin/orders/${encodeURIComponent(orderToken)}/paid`, {
+      method:'PUT',
+      body: JSON.stringify({ paid: !!to })
+    });
+    // 反映後リロード（今のビューとPaidOnlyトグルを保持）
+    loadView();
+  }catch(e){
+    alert('支払い更新に失敗しました：' + e.message);
+  }
+}
+
+/* 初回ロード */
+loadView();
 </script>
 </body>
 </html>
