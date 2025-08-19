@@ -136,61 +136,124 @@ app.post("/api/products/quick-add", async (req, res) => {
   res.json(rows[0]);
 });
 
-// ====== 注文作成 ======
+// ====== 注文作成（orders_all 1テーブル方式） ======
 app.post("/api/orders", async (req, res) => {
   if (!pool) return res.status(500).json({ error: "DB not available" });
 
+  const { customer = {}, note, items = [], summary } = req.body || {};
+
+  // 氏名（frontから name が来ていればそれもOK）
+  const name =
+    [customer.lastName, customer.firstName].filter(Boolean).join(" ").trim() ||
+    (customer.name || "").trim();
+  if (!name) return res.status(400).json({ error: "customer name required" });
+
+  // 住所（address / addressFull / 各フィールド結合の順）
+  const addressFull =
+    (customer.addressFull && String(customer.addressFull).trim()) ||
+    [
+      customer.prefecture,
+      customer.city,
+      customer.address,
+      customer.building
+    ].filter(Boolean).join("").trim() ||
+    (customer.address || "");
+
+  // 小計・合計（frontの summary を尊重）
+  const subtotal = items.reduce((s, it) => s + Number(it.unitPrice || 0) * Number(it.quantity || 1), 0);
+  const shipping = Number(summary?.shipping ?? 0);
+  const shippingOptionAdd = Number(summary?.shippingOptionAdd ?? 0);
+  const total = Number(summary?.total ?? (subtotal + shipping + shippingOptionAdd));
+  const paymentMethod = String(summary?.paymentMethod || "bank_transfer");
+
+  // 同一注文を束ねるトークン（1注文=複数行に同じ値）
+  const orderToken = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`; // 例: "maxp2i34-k9q3t8"
+
+  // 1注文に1商品以上は必要
+  if (!items.length) return res.status(400).json({ error: "no items" });
+
+  // トランザクションで明細分だけ複数INSERT
+  const client = await pool.connect();
   try {
-    const { customer = {}, note, items = [], summary } = req.body || {};
+    await client.query("BEGIN");
 
-    // 姓名の結合（customer.name があればそれも許可）
-    const name =
-      [customer.lastName, customer.firstName].filter(Boolean).join(" ").trim() ||
-      (customer.name || "").trim();
+    const sql = `
+      INSERT INTO orders_all (
+        -- 顧客
+        last_name, first_name, last_kana, first_kana,
+        zipcode, prefecture, city, address, building, email,
+        name, address_full,
 
-    // 住所の結合（address / addressFull / 各フィールド結合）
-    const address =
-      (customer.address && String(customer.address).trim()) ||
-      (customer.addressFull && String(customer.addressFull).trim()) ||
-      [customer.prefecture, customer.city, customer.address, customer.building]
-        .filter(Boolean).join("").trim() || null;
+        -- 注文ヘッダ
+        note, subtotal, shipping, shipping_option_add, total, payment_method,
+        is_paid, status, order_token,
 
-    if (!name) {
-      return res.status(400).json({ error: "customer name required" });
+        -- 明細（商品ごと）
+        product_id, product_name, unit_price, quantity,
+        product_slug, image, category, variety,
+
+        -- 元データ
+        source, raw_payload
+      )
+      VALUES (
+        $1,$2,$3,$4,
+        $5,$6,$7,$8,$9,$10,
+        $11,$12,
+        $13,$14,$15,$16,$17,$18,
+        FALSE,'pending',$19,
+        $20,$21,$22,$23,
+        $24,$25,$26,$27,
+        'web',$28
+      )
+      RETURNING id
+    `;
+
+    for (const it of items) {
+      const rawPid = it.productId ?? null;
+      const pid = /^\d+$/.test(String(rawPid)) ? Number(rawPid) : null;
+
+      const params = [
+        // 顧客
+        customer.lastName || "", customer.firstName || "",
+        customer.lastKana || "", customer.firstKana || "",
+        customer.zipcode || "", customer.prefecture || "",
+        customer.city || "", (customer.address || ""), (customer.building || ""),
+        customer.email || "",
+        name, addressFull,
+
+        // 注文ヘッダ
+        note || null, subtotal, shipping, shippingOptionAdd, total, paymentMethod,
+        orderToken,
+
+        // 明細
+        pid,
+        String(it.productName || ""),
+        Number(it.unitPrice || 0),
+        Number(it.quantity || 1),
+        (it.productSlug || null),
+        (it.image || null),
+        (it.category || null),
+        (it.variety || null),
+
+        // 元データ
+        JSON.stringify(req.body || {})
+      ];
+
+      await client.query(sql, params);
     }
 
-    // お客さま登録
-    const c = await pool.query(
-      "INSERT INTO customers(name,email,address) VALUES ($1,$2,$3) RETURNING id",
-      [name, customer.email || null, address]
-    );
-    const customerId = c.rows[0].id;
+    await client.query("COMMIT");
 
-    // 小計
-    const itemsSubtotal = (items || []).reduce(
-      (s, it) => s + Number(it.unitPrice || 0) * Number(it.quantity || 1),
-      0
-    );
-    // 返却用の総額（送料・オプション込）
-    const grandTotal = summary?.total ?? itemsSubtotal;
-
-    // 注文作成（DBは小計で保存）
-    const o = await pool.query(
-      "INSERT INTO orders(customer_id, note, total_amount) VALUES ($1,$2,$3) RETURNING id",
-      [customerId, note || null, itemsSubtotal]
-    );
-    const orderId = o.rows[0].id;
-
-    // 明細（productId が数値でなければ NULL にして挿入）
-    for (const it of items || []) {
-      const pid = /^\d+$/.test(String(it.productId)) ? Number(it.productId) : null;
-      await pool.query(
-        `INSERT INTO order_items
-           (order_id, product_id, product_name, unit_price, quantity)
-         VALUES ($1,$2,$3,$4,$5)`,
-        [orderId, pid, it.productName, it.unitPrice, it.quantity]
-      );
-    }
+    // 返信は「注文番号の代わりに order_token と合計」
+    res.json({ orderToken, total });
+  } catch (e) {
+    await client.query("ROLLBACK");
+    console.error(e);
+    res.status(500).json({ error: "server error" });
+  } finally {
+    client.release();
+  }
+});
 
     // 自動返信メール（任意）
     if (process.env.BREVO_API_KEY) {
