@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=950, user-scalable=no">
   <title>nursery sera - カート</title>
   <link href="https://fonts.googleapis.com/css2?family=Bayon&family=Tangerine:wght@700&family=Italianno&family=Noto+Serif+JP&display=swap" rel="stylesheet">
-  <style>
+<style>
   html, body {
       margin: 0;
       padding: 0;
@@ -88,56 +88,55 @@
   }
   .overlay.show { display: block; }
 
+  .category-menu{
+    position:fixed; top:0; left:0;
+    width:55vw; height:100vh;
+    background-color:rgba(255,255,255,.7);
+    backdrop-filter:blur(8px);
+    z-index:3000;
+    border:2px solid rgba(0,0,0,.1);
+    box-shadow:4px 0 20px rgba(0,0,0,.2);
+    transform:translateX(-100%); opacity:0; pointer-events:none;
+    transition:transform .4s ease, opacity .4s ease;
+    padding:30px;
+  }
+  .category-menu.show{
+    transform:translateX(0); opacity:1; pointer-events:auto;
+  }
 
-    .category-menu{
-      position:fixed; top:0; left:0;
-      width:55vw; height:100vh;
-      background-color:rgba(255,255,255,.7);
-      backdrop-filter:blur(8px);
-      z-index:3000;
-      border:2px solid rgba(0,0,0,.1);
-      box-shadow:4px 0 20px rgba(0,0,0,.2);
-      transform:translateX(-100%); opacity:0; pointer-events:none;
-      transition:transform .4s ease, opacity .4s ease;
-      padding:30px;
-    }
-    .category-menu.show{
-      transform:translateX(0); opacity:1; pointer-events:auto;
-    }
+  .category-header{
+    font-family:'Cinzel', serif;
+    font-size:80px; margin-bottom:40px; letter-spacing:3px; color:#000;
+    text-align:center;
+  }
+  .category-menu ul{ list-style:none; padding:0; margin:0; }
+  .category-menu li{
+    opacity: 0.8;
+    font-family: 'Noto Serif JP', serif;
+    font-size:36px; margin:20px 0; padding-bottom:10px; position:relative;
+    border-bottom:1px solid rgba(0,0,0,.1);
+    transition:transform .2s ease, color .2s ease;
+    cursor:pointer; font-weight:400; color:#000!important; text-align:left; padding-right:20px;
+  }
+  .category-menu li:hover{ color:#c2185b; transform:scale(1.05); }
+  .category-menu li::after{
+    content:"＞"; position:absolute; right:0; top:2px; color:#bbb; font-size:20px;
+  }
 
-    .category-header{
-      font-family:'Cinzel', serif;
-      font-size:80px; margin-bottom:40px; letter-spacing:3px; color:#000;
-      text-align:center;
-    }
-    .category-menu ul{ list-style:none; padding:0; margin:0; }
-    .category-menu li{opacity: 0.8;
-font-family: 'Noto Serif JP', serif;
-      font-size:36px; margin:20px 0; padding-bottom:10px; position:relative;
-      border-bottom:1px solid rgba(0,0,0,.1);
-      transition:transform .2s ease, color .2s ease;
-      cursor:pointer; font-weight:400; color:#000!important; text-align:left; padding-right:20px;
-    }
-    .category-menu li:hover{ color:#c2185b; transform:scale(1.05); }
-    .category-menu li::after{
-      content:"＞"; position:absolute; right:0; top:2px; color:#bbb; font-size:20px;
-    }
-
-.category-subtitle {
-  font-size: 48px;
-  font-family: 'Playfair Display SC', serif;
-  margin: 66px 0 10px;
-  color: #000000;
-  font-weight: 400;
-  border-bottom: 1px solid rgba(0,0,0,0.1);
-  padding-bottom: 4px;
-text-align:center;
-}
-.contact-links a {
-  color: #000;     
-  text-decoration: none; /* 下線消し */
-}
-
+  .category-subtitle {
+    font-size: 48px;
+    font-family: 'Playfair Display SC', serif;
+    margin: 66px 0 10px;
+    color: #000000;
+    font-weight: 400;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+    padding-bottom: 4px;
+    text-align:center;
+  }
+  .contact-links a {
+    color: #000;
+    text-decoration: none;
+  }
 
   .subtitle1 {
       font-family: 'Tangerine', cursive;
@@ -173,20 +172,32 @@ text-align:center;
     background: #ccc;
   }
 
-  .cart-item img {
-      width: 35vw;
-      max-width: none;
-      cursor: zoom-in;
+  /* 同じサイズのサムネ枠（正方形） */
+  .cart-thumb{
+    width: 35vw;
+    max-width: none;
+    aspect-ratio: 1 / 1;
+    flex: 0 0 auto;
+    position: relative;
+    overflow: hidden;
+    border-radius: 8px;
+    background: #f6f6f6;
+    cursor: zoom-in;
+  }
+  .cart-thumb img{
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
   }
 
   .item-info { flex: 1; }
 
-
-
-  .item-price {transform: translate(0px, px);
+  .item-price {
+    transform: translate(0px, px);
     font-size: 28px;
     margin: 0px 0 0;
-opacity:0.9;
+    opacity:0.9;
   }
 
   .quantity-control {
@@ -195,11 +206,11 @@ opacity:0.9;
     align-items: center;
     gap: 0px;
     margin: 10px 0 0;
-   opacity:0.9;
+    opacity:0.9;
   }
   .quantity-control button {
       font-size: 28px;
-      border: none;	
+      border: none;
       background: none;
       color: #888;
       cursor: pointer;
@@ -211,21 +222,23 @@ opacity:0.9;
       border: 1px solid #ccc;
       border-radius: 0px;
       background: none;
-color:#888;
+      color:#888;
   }
 
-  .remove-btn {
-      font-size: 25px;
-      margin-top: 30px;
-      color: #000;
-      background: none;
-      border: none;
-      text-decoration: underline;
-      cursor: pointer;
-  }
+  /* 削除ボタンを下線のすぐ上に固定配置 */
+.remove-btn {
+    position: absolute;
+    right: 0; 
+    bottom: 10px; 
+    font-size: 25px;
+    background: none;
+    border: none;
+    color: #000;
+    cursor: pointer;
+    text-decoration: underline;
+}
 
   .container { flex: 1 0 auto; }
-
   .cart-area { padding: 0 5vw 40px; }
 
   .total {
@@ -243,36 +256,32 @@ color:#888;
   .sum-row.total{ font-weight:bold; font-size:24px; }
   .sum-hr{ height:1px; background:#ccc; margin:14px 0; }
 
-.cart-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  align-items: center; /* 中央揃え */
-  padding: 0 20px 40px;
-}
-
-.cart-actions .order-btn,
-.cart-actions .back-btn {
-  background: none;   /* 背景なし */
-  border: none;       /* 枠なし */
-  padding: 0;         /* 余白なし */
-  font-size: 48px;
-  font-weight: 200;
-  color: inherit;     /* グレー継承 */
-  cursor: pointer;
-
-  /* ▼ 下線は0.5pxのボーダーで作る（細い＆オフセット自由） */
-  text-decoration: none;
-  border-bottom: 1px solid currentColor;
-  padding-bottom: 6px;         /* 文字との間隔 */
-  margin-top: 50px;
-
-}
+  .cart-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    align-items: center;
+    padding: 0 20px 40px;
+  }
+  .cart-actions .order-btn,
+  .cart-actions .back-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 48px;
+    font-weight: 200;
+    color: inherit;
+    cursor: pointer;
+    text-decoration: none;
+    border-bottom: 1px solid currentColor;
+    padding-bottom: 6px;
+    margin-top: 50px;
+  }
 
   footer {
       margin-top: auto;
       padding: 30px 20px;
-      background: #fff0f5;
+      background: #fff;
       text-align: center;
   }
   .footer-icons {
@@ -318,8 +327,6 @@ color:#888;
     font-size:1em; line-height:1; color:inherit;
   }
   .option-select::-ms-expand{ display:none; }
-
-  /* 矢印はテキスト「∨」でフォント連動・色も連動 */
   .option-caret{
     display:inline-block;
     font-size:1em;
@@ -327,53 +334,61 @@ color:#888;
     margin-left:0.25em;
     color:inherit;
   }
-
-  /* 選択中テキスト幅を測るための不可視要素 */
   .opt-measure{ position:absolute; visibility:hidden; white-space:nowrap; font-size:1em; }
 
-.item-name{
-  font-family: 'Noto Serif JP', serif;
-  font-size: 44px;
+  /* ====== ここから重複整理後 ====== */
+  .item-info { min-width: 0; }
 
-  color: #333;
-
-  display:flex;
-  flex-direction:column;
-  width:100%;
-  position: relative;
-margin-top:-20px;
-
+  .item-name{
+    font-family: 'Noto Serif JP', serif;
+    font-size: 44px;
+    color: #333;
+    display:flex;
+    flex-direction:column;
+    width:100%;
+    position: relative;
+    line-height:1.1;
+    min-width:0;
+    margin-top:-0px;
+　　 }
+  /* 上に固定スペース（インデックスの top:44px 相当） */
+  .item-name::before{
+    content:"";
+    display:block;
+    height:0px;
   }
 
-   /* カテゴリーネーム（属名など） */
-.item-category {
-  color: #555;
-margin-bottom:px;
-opacity:0.9;
-}
+  /* 2段固定の内側ラッパー */
+  .name-shrink{
+    display: flex;             /* ← 最終宣言を採用しつつ */
+    flex-direction: column;    /*    既存のサイズ指定も保持 */
+    font-size:44px;
+    line-height:1.1;
+  }
 
-/* バリエティーネーム（品種名） */
-.item-variety {
-  
-   /* 左マージン自動で右端に寄せる */
-  text-align: right;       /* 内部テキストも右寄せ */
-  white-space: nowrap;     /* 折り返しなし */
-  direction: ltr;          /* 文字順は通常のまま（重要） */
-margin-top:-10px;
-opacity:0.8;
-}
-/* ← 追記（最小限） */
-.item-info { min-width: 0; }        /* フレックス内で中身が縮められる土台 */
-.item-name { min-width: 0; }        /* 見出しブロックも縮めOKに */
-.item-variety {
-  display: block;
-  max-width: 100%;
-  white-space: nowrap;               /* 途中改行はしない */
-  overflow: hidden;                  /* はみ出しは隠す（JSでまず縮める） */
-  text-overflow: ellipsis;           /* それでも無理な時だけ「…」保険 */
-}
+  /* カテゴリ名（1行固定） */
+  .item-category{
+    color:#555;
+    margin-bottom:px;   /* 元コードを維持（値は無効だが見た目は不変） */
+    opacity:0.9;
+    white-space: nowrap;
+    overflow: visible;
+    text-overflow: clip;
+    display: block;
+  }
 
-  </style>
+  /* バリエティ名（1行固定） */
+  .item-variety{
+    text-align:right;
+    direction:ltr;
+    margin-top:0px;   /* 最後の宣言を採用（-10px → 0px） */
+    opacity:0.8;
+    white-space: nowrap;
+    overflow: visible;
+    text-overflow: clip;
+    display: block;
+  }
+</style>
 </head>
 <body>
 
@@ -452,24 +467,23 @@ opacity:0.8;
 
   <script>
 
-/* === カートの商品名を幅に収める（子 .item-variety を基準に計測） === */
 (function(){
-  const MIN_PX = 14; // これ以下には小さくしない
+  const MIN_PX = 14;  // 下限
 
-  function fitRow(wrapper){                // wrapper は .item-name
-    if (!wrapper) return;
-    const target = wrapper.querySelector('.item-variety') || wrapper;
+  function fitRow(row){                 // row は .item-name
+    if (!row) return;
+    const target = row.querySelector('.name-shrink');
+    if (!target) return;
 
-    // いったん元サイズに戻してからスタート
-    wrapper.style.fontSize = '';
-    let size  = parseFloat(getComputedStyle(wrapper).fontSize) || 44;
+    // 内側だけリセットしてから縮める
+    target.style.fontSize = '';
+    let size  = parseFloat(getComputedStyle(target).fontSize) || 44;
     let guard = 80;
 
-    // はみ出している間だけ 1px ずつ親(.item-name)のフォントを縮める
-    // 判定は実際にはみ出している子(.item-variety)の scrollWidth で行う
-    while (target.scrollWidth > target.clientWidth && size > MIN_PX && guard-- > 0){
+    // "親の幅(row.clientWidth)" に収まるまで target を縮小
+    while (target.scrollWidth > row.clientWidth && size > MIN_PX && guard-- > 0){
       size -= 1;
-      wrapper.style.fontSize = size + 'px';
+      target.style.fontSize = size + 'px';
     }
   }
 
@@ -477,9 +491,10 @@ opacity:0.8;
     document.querySelectorAll('.item-name').forEach(fitRow);
   }
 
-  // 外から呼べるように公開（loadCart 後の requestAnimationFrame などで呼ぶ）
   window.__fitCartNames = fitCartNames;
 })();
+
+
 
   const BASE = window.location.origin;
   function go(path){ window.top.location.href = new URL(path, BASE).toString(); }
@@ -530,17 +545,21 @@ opacity:0.8;
   subtotal += (isFinite(unit) ? unit : 0) * (isFinite(quantity) ? quantity : 1);
 
   // 画像が空なら <img> 自体を描画しない（レイアウト崩れ防止・見た目は既存と同じ幅感）
-  const imgHTML = imgSrc
-    ? `<img src="${imgSrc}" onclick="openImageModal('${imgSrc}')">`
-    : "";
+const imgHTML = imgSrc
+  ? `<div class="cart-thumb" onclick="openImageModal('${imgSrc}')">
+       <img src="${imgSrc}" alt="">
+     </div>`
+  : "";
 
   div.innerHTML = `
     ${imgHTML}
     <div class="item-info">
       <p class="item-name">
-        <span class="item-category">${category}</span>
-        <span class="item-variety">${variety}</span>
-      </p>
+  <span class="name-shrink">
+    <span class="item-category">${category}</span>
+    <span class="item-variety">${variety}</span>
+  </span>
+</p>
       <p class="item-price">価格　：　¥${(unit * quantity).toLocaleString()}（税込）</p>
       <div class="quantity-control">
         <span class="quantity-label">数量　：</span>
@@ -563,8 +582,7 @@ opacity:0.8;
             <label>配送オプション</label>
             <span id="opt-measure" class="opt-measure"></span>
             <select id="opt-select" class="option-select">
-              <option value="0">選択</option>
-<option value="0">なし</option>
+              <option value="0">選択なし</option>
               <option value="300">ヤマト運輸 +300円</option>
               <option value="160">第四種郵便+特定記録(追跡番号付き) +160円</option>
             </select>
