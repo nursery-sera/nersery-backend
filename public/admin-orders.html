@@ -257,8 +257,9 @@ function autoColumnsFor(view, rows){
     return pickColumns(rows, paidOnly.checked ? prefPaid : prefAll);
   }
   if (view === 'v_shipping_picklist_by_person') {
-    const pref = ['name','product','quantity','quantity_paid','picked','shipping option add','is_paid','first_order_at'];
-    return pickColumns(rows, pref);
+  const pref = ['name','product','quantity_paid','picked','shipping option add','is_paid','first_order_at'];
+  return pickColumns(rows, pref);
+}
   }
   if (view === 'v_shipping_labels') {
     const pref = ['order_token','name','zipcode','prefecture','city','address','building','is_paid','created_at'];
