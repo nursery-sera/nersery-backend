@@ -142,27 +142,27 @@ app.post("/api/orders", async (req, res) => {
 
   const { customer = {}, note, items = [], summary } = req.body || {};
 
-  // 氏名（frontから name が来ていればそれもOK）
+  // 氏名
   const name =
     [customer.lastName, customer.firstName].filter(Boolean).join(" ").trim() ||
     (customer.name || "").trim();
   if (!name) return res.status(400).json({ error: "customer name required" });
 
-  // 住所（address / addressFull / 各フィールド結合の順）
+  // 住所
   const addressFull =
     (customer.addressFull && String(customer.addressFull).trim()) ||
     [customer.prefecture, customer.city, customer.address, customer.building]
       .filter(Boolean).join("").trim() ||
     (customer.address || "");
 
-  // 小計・合計（frontの summary を尊重）
+  // 金額
   const subtotal = items.reduce((s, it) => s + Number(it.unitPrice || 0) * Number(it.quantity || 1), 0);
   const shipping = Number(summary?.shipping ?? 0);
   const shippingOptionAdd = Number(summary?.shippingOptionAdd ?? 0);
   const total = Number(summary?.total ?? (subtotal + shipping + shippingOptionAdd));
   const paymentMethod = String(summary?.paymentMethod || "bank_transfer");
 
-  // 同一注文を束ねるトークン（1注文=複数行に同じ値）
+  // 注文トークン
   const orderToken = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
   if (!items.length) return res.status(400).json({ error: "no items" });
@@ -173,17 +173,13 @@ app.post("/api/orders", async (req, res) => {
 
     const sql = `
       INSERT INTO orders_all (
-        -- 顧客
         last_name, first_name, last_kana, first_kana,
         zipcode, prefecture, city, address, building, email,
         name, address_full,
-        -- 注文ヘッダ
         note, subtotal, shipping, shipping_option_add, total, payment_method,
         is_paid, status, order_token,
-        -- 明細
         product_id, product_name, unit_price, quantity,
         product_slug, image, category, variety,
-        -- 元データ
         source, raw_payload
       )
       VALUES (
@@ -203,17 +199,14 @@ app.post("/api/orders", async (req, res) => {
       const pid = /^\d+$/.test(String(rawPid)) ? Number(rawPid) : null;
 
       const params = [
-        // 顧客
         customer.lastName || "", customer.firstName || "",
         customer.lastKana || "", customer.firstKana || "",
         customer.zipcode || "", customer.prefecture || "",
         customer.city || "", (customer.address || ""), (customer.building || ""),
         customer.email || "",
         name, addressFull,
-        // 注文ヘッダ
         note || null, subtotal, shipping, shippingOptionAdd, total, paymentMethod,
         orderToken,
-        // 明細
         pid,
         String(it.productName || ""),
         Number(it.unitPrice || 0),
@@ -222,7 +215,6 @@ app.post("/api/orders", async (req, res) => {
         (it.image || null),
         (it.category || null),
         (it.variety || null),
-        // 元データ
         JSON.stringify(req.body || {})
       ];
       await client.query(sql, params);
@@ -266,7 +258,6 @@ app.post("/api/orders", async (req, res) => {
     }
     // -----------------------------------
 
-    // 返信は注文トークンと合計のみ
     res.json({ orderToken, total });
   } catch (e) {
     await client.query("ROLLBACK");
@@ -277,7 +268,7 @@ app.post("/api/orders", async (req, res) => {
   }
 });
 
-// 入金反映（トークンで全行更新）
+// 入金反映（トークンで全行更新）→ order_units も一括更新に拡張
 app.put("/api/orders/:token/paid", async (req, res) => {
   if (!pool) return res.status(500).json({ error: "DB not available" });
   const { token } = req.params;
@@ -285,19 +276,8 @@ app.put("/api/orders/:token/paid", async (req, res) => {
     "UPDATE orders_all SET is_paid = TRUE, paid_at = now() WHERE order_token = $1",
     [token]
   );
+  // 既存互換のまま残す（/api/orders 用）
   res.json({ ok: true });
-});
-
-// （必要なら）レポートAPIは orders_all を参照するビューに合わせて実装してください
-app.get("/api/reports/category", async (_, res) => {
-  if (!pool) return res.json([]);
-  const { rows } = await pool.query("SELECT * FROM v_category_summary ORDER BY total_qty DESC");
-  res.json(rows);
-});
-app.get("/api/reports/all", async (_, res) => {
-  if (!pool) return res.json({ total_amount: 0, total_orders: 0 });
-  const { rows } = await pool.query("SELECT * FROM v_all_total");
-  res.json(rows[0] || { total_amount: 0, total_orders: 0 });
 });
 
 // ====== 起動 ======
@@ -312,7 +292,6 @@ function adminAuth(req, res, next) {
 }
 
 // ===== 管理：注文一覧（クイック表示用のビューを返す） =====
-// ?paid=1 で支払い済みのみ
 app.get("/api/admin/orders", adminAuth, async (req, res) => {
   if (!pool) return res.status(500).json({ error: "DB not available" });
   try {
@@ -327,7 +306,7 @@ app.get("/api/admin/orders", adminAuth, async (req, res) => {
   }
 });
 
-// ===== 管理：ある注文（order_token）の明細を取る =====
+// ===== 管理：ある注文（order_token）の明細 =====
 app.get("/api/admin/orders/:token/items", adminAuth, async (req, res) => {
   if (!pool) return res.status(500).json({ error: "DB not available" });
   try {
@@ -346,18 +325,26 @@ app.get("/api/admin/orders/:token/items", adminAuth, async (req, res) => {
   }
 });
 
-// ===== 管理：支払いフラグの更新（チェックON/OFF） =====
+// ===== 管理：支払いフラグの更新（チェックON/OFF：注文単位） =====
+// ← ここを order_units も一括更新するよう拡張
 app.put("/api/admin/orders/:token/paid", adminAuth, async (req, res) => {
   if (!pool) return res.status(500).json({ error: "DB not available" });
   try {
     const { token } = req.params;
-    // body: { paid: true/false }
     const paid = !!req.body?.paid;
     await pool.query(
       `UPDATE orders_all
           SET is_paid = $1,
               paid_at = CASE WHEN $1 THEN now() ELSE NULL END,
               status = CASE WHEN $1 THEN 'paid' ELSE 'pending' END
+        WHERE order_token = $2`,
+      [paid, token]
+    );
+    // ★ 追加：単株テーブルも一括更新
+    await pool.query(
+      `UPDATE order_units
+          SET is_paid = $1,
+              paid_at = CASE WHEN $1 THEN now() ELSE NULL END
         WHERE order_token = $2`,
       [paid, token]
     );
@@ -372,7 +359,6 @@ app.put("/api/admin/orders/:token/paid", adminAuth, async (req, res) => {
 app.get("/api/admin/token-index", adminAuth, async (req, res) => {
   if (!pool) return res.status(500).json({ error: "DB not available" });
   try {
-    // address_full が空なら prefecture/city/address/building から再構成してキーに使う
     const sql = `
       WITH base AS (
         SELECT
@@ -420,22 +406,12 @@ app.get("/api/view/:name", adminAuth, async (req, res) => {
   if (!pool) return res.status(500).json({ error: "DB not available" });
   try {
     const n = String(req.params.name || '').trim();
-
-    // （必要なら）paid=1 で “支払い済み専用ビュー”に切り替えられるマップ
-    const mapPaid = {
-      // 例：v_orders_summary → v_orders_summary_paid（もし作るなら）
-      // "v_orders_summary": "v_orders_summary_paid",
-      // v_products_totals / v_products_overall は paid_* 列があるので切替不要
-    };
-
+    const mapPaid = {};
     const paid = req.query.paid === '1';
     const viewName = paid && mapPaid[n] ? mapPaid[n] : n;
-
-    // view名バリデーション
     if (!/^v_[a-z0-9_]+$/.test(viewName)) {
       return res.status(400).json({ error: "invalid view name" });
     }
-
     const sql = `SELECT * FROM ${viewName}`;
     const { rows } = await pool.query(sql);
     res.json(rows);
@@ -445,7 +421,7 @@ app.get("/api/view/:name", adminAuth, async (req, res) => {
   }
 });
 
-// 1株単位の支払い更新
+// ===== 単株：支払い更新（1株単位） =====
 app.put("/api/admin/unit/:id/paid", adminAuth, async (req, res) => {
   if (!pool) return res.status(500).json({ error: "DB not available" });
   try {
@@ -459,6 +435,48 @@ app.put("/api/admin/unit/:id/paid", adminAuth, async (req, res) => {
       [paid, id]
     );
     res.json({ ok: true });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "server error" });
+  }
+});
+
+// ===== 単株：集計（トークン別：全株/支払株数） =====
+app.get("/api/admin/units/summary-token", adminAuth, async (_req, res) => {
+  if (!pool) return res.status(500).json({ error: "DB not available" });
+  try {
+    const sql = `
+      SELECT
+        order_token,
+        COUNT(*)                        AS total_units,
+        COUNT(*) FILTER (WHERE is_paid) AS paid_units
+      FROM order_units
+      GROUP BY order_token
+    `;
+    const { rows } = await pool.query(sql);
+    res.json(rows);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "server error" });
+  }
+});
+
+// ===== 単株：集計（品種別：支払株数/金額） =====
+app.get("/api/admin/units/summary-product", adminAuth, async (_req, res) => {
+  if (!pool) return res.status(500).json({ error: "DB not available" });
+  try {
+    const sql = `
+      SELECT
+        oa.product_name,
+        COUNT(u.id) FILTER (WHERE u.is_paid)                                      AS paid_qty,
+        COALESCE(SUM(CASE WHEN u.is_paid THEN oa.unit_price ELSE 0 END), 0)::bigint AS paid_amount
+      FROM order_units u
+      JOIN orders_all oa ON oa.id = u.orders_all_id
+      GROUP BY oa.product_name
+      ORDER BY oa.product_name
+    `;
+    const { rows } = await pool.query(sql);
+    res.json(rows);
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: "server error" });
