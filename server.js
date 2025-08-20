@@ -368,28 +368,45 @@ app.put("/api/admin/orders/:token/paid", adminAuth, async (req, res) => {
   }
 });
 
-// ===== 管理：任意ビューを返す汎用API  =====
-app.get("/api/view/:name", adminAuth, async (req, res) => {
+// ===== 管理：実トークン索引（name+address_full -> real order_token） =====
+app.get("/api/admin/token-index", adminAuth, async (req, res) => {
   if (!pool) return res.status(500).json({ error: "DB not available" });
   try {
-    const n = String(req.params.name || '').trim();
-
-    // （必要なら）paid=1 で “支払い済み専用ビュー”に切り替えられるマップ
-    const mapPaid = {
-      // 例：v_orders_summary → v_orders_summary_paid（もし用意するなら）
-      // "v_orders_summary": "v_orders_summary_paid",
-      // 今回は v_products_totals / v_products_overall 等は WHERE でなく集計列に paid_* があるので切替不要
-    };
-
-    const paid = req.query.paid === '1';
-    const viewName = paid && mapPaid[n] ? mapPaid[n] : n;
-
-    // 危険な文字を拒否（SQLインジェクション対策の最低限）
-    if (!/^v_[a-z0-9_]+$/.test(viewName)) {
-      return res.status(400).json({ error: "invalid view name" });
-    }
-
-    const sql = `SELECT * FROM ${viewName}`;
+    // address_full が空なら prefecture/city/address/building から再構成してキーに使う
+    const sql = `
+      WITH base AS (
+        SELECT
+          COALESCE(NULLIF(name,''), CONCAT_WS(' ', NULLIF(last_name,''), NULLIF(first_name,''))) AS name_key,
+          COALESCE(
+            NULLIF(address_full,''),
+            CONCAT_WS('',
+              NULLIF(prefecture,''),
+              NULLIF(city,''),
+              COALESCE(address,''),
+              COALESCE(building,'')
+            )
+          ) AS address_full_norm,
+          email,
+          order_token,
+          created_at
+        FROM orders_all
+      ),
+      ranked AS (
+        SELECT
+          name_key, address_full_norm, email, order_token, created_at,
+          ROW_NUMBER() OVER (PARTITION BY name_key, address_full_norm ORDER BY created_at DESC) AS rn
+        FROM base
+      )
+      SELECT
+        name_key            AS name,
+        address_full_norm   AS address_full,
+        email,
+        order_token,
+        created_at
+      FROM ranked
+      WHERE rn = 1
+      ORDER BY created_at DESC;
+    `;
     const { rows } = await pool.query(sql);
     res.json(rows);
   } catch (e) {
