@@ -414,3 +414,33 @@ app.get("/api/admin/token-index", adminAuth, async (req, res) => {
     res.status(500).json({ error: "server error" });
   }
 });
+
+// ===== 管理：任意ビューを返す汎用API =====
+app.get("/api/view/:name", adminAuth, async (req, res) => {
+  if (!pool) return res.status(500).json({ error: "DB not available" });
+  try {
+    const n = String(req.params.name || '').trim();
+
+    // （必要なら）paid=1 で “支払い済み専用ビュー”に切り替えられるマップ
+    const mapPaid = {
+      // 例：v_orders_summary → v_orders_summary_paid（もし作るなら）
+      // "v_orders_summary": "v_orders_summary_paid",
+      // v_products_totals / v_products_overall は paid_* 列があるので切替不要
+    };
+
+    const paid = req.query.paid === '1';
+    const viewName = paid && mapPaid[n] ? mapPaid[n] : n;
+
+    // view名バリデーション
+    if (!/^v_[a-z0-9_]+$/.test(viewName)) {
+      return res.status(400).json({ error: "invalid view name" });
+    }
+
+    const sql = `SELECT * FROM ${viewName}`;
+    const { rows } = await pool.query(sql);
+    res.json(rows);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "server error" });
+  }
+});
