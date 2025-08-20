@@ -186,7 +186,7 @@ function setPicked(key, on){
 // /api/admin/orders から name+address_full → real order_token の索引を作る
 async function ensureRealTokenIndex(){
   if (Object.keys(tokenIndex).length) return;
-  const list = await callApi(`/admin/orders`); // 要 x-admin-token
+  const list = await callApi(`/admin/token-index`); // 要 x-admin-token
   tokenIndex = Object.create(null);
   for (const r of (Array.isArray(list)?list:[list])) {
     const key = `${(r.name||'')}||${(r.address_full||'')}`;
