@@ -183,7 +183,7 @@ function isPickedChecked(row){
 function setPicked(key, on){
   if(on) localStorage.setItem(key,'1'); else localStorage.removeItem(key);
 }
-// /api/admin/orders から name+address_full → real order_token の索引を作る
+// /api/admin/token-index から name+address_full → real order_token の索引を作る
 async function ensureRealTokenIndex(){
   if (Object.keys(tokenIndex).length) return;
   const list = await callApi(`/admin/token-index`); // 要 x-admin-token
