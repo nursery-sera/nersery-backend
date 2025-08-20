@@ -362,6 +362,16 @@ opacity:0.9;
 margin-top:-10px;
 opacity:0.8;
 }
+/* ← 追記（最小限） */
+.item-info { min-width: 0; }        /* フレックス内で中身が縮められる土台 */
+.item-name { min-width: 0; }        /* 見出しブロックも縮めOKに */
+.item-variety {
+  display: block;
+  max-width: 100%;
+  white-space: nowrap;               /* 途中改行はしない */
+  overflow: hidden;                  /* はみ出しは隠す（JSでまず縮める） */
+  text-overflow: ellipsis;           /* それでも無理な時だけ「…」保険 */
+}
 
   </style>
 </head>
@@ -441,6 +451,36 @@ opacity:0.8;
   </div>
 
   <script>
+
+/* === カートの商品名を幅に収める（子 .item-variety を基準に計測） === */
+(function(){
+  const MIN_PX = 14; // これ以下には小さくしない
+
+  function fitRow(wrapper){                // wrapper は .item-name
+    if (!wrapper) return;
+    const target = wrapper.querySelector('.item-variety') || wrapper;
+
+    // いったん元サイズに戻してからスタート
+    wrapper.style.fontSize = '';
+    let size  = parseFloat(getComputedStyle(wrapper).fontSize) || 44;
+    let guard = 80;
+
+    // はみ出している間だけ 1px ずつ親(.item-name)のフォントを縮める
+    // 判定は実際にはみ出している子(.item-variety)の scrollWidth で行う
+    while (target.scrollWidth > target.clientWidth && size > MIN_PX && guard-- > 0){
+      size -= 1;
+      wrapper.style.fontSize = size + 'px';
+    }
+  }
+
+  function fitCartNames(){
+    document.querySelectorAll('.item-name').forEach(fitRow);
+  }
+
+  // 外から呼べるように公開（loadCart 後の requestAnimationFrame などで呼ぶ）
+  window.__fitCartNames = fitCartNames;
+})();
+
   const BASE = window.location.origin;
   function go(path){ window.top.location.href = new URL(path, BASE).toString(); }
 
@@ -555,16 +595,29 @@ opacity:0.8;
         </div>
       `;
 
-      // 初期反映
+      // 初期反映（しょきはんえい：最初の表示に数値を反映）
       updateSummaryNumbers(subtotal);
-      sizeOption(); // 追加：選択テキスト幅に合わせてセレクトを縮める
+      sizeOption(); // 選択中のテキスト幅に合わせてセレクトを縮める
 
-      // 変更イベント
+      // 変更イベント（へんこういべんと：プルダウン変更時に再計算＋再フィット）
       const sel = document.getElementById('opt-select');
       sel && sel.addEventListener('change', () => {
-        sizeOption();                 // 選択変更時も幅を更新
+        sizeOption();
         updateSummaryNumbers(subtotal);
+
+        // 描画直後の最適なタイミングで実行（requestAnimationFrame：りくえすと・あにめーしょん・ふれーむ）
+        // 長い商品名の自動縮小（__fitCartNames：ふぃっと・かーと・ねーむず）
+        requestAnimationFrame(() => window.__fitCartNames?.());
       });
+
+      // 描画が終わったフレームで1回だけフィット（はみ出す前に調整）
+      requestAnimationFrame(() => window.__fitCartNames?.());
+
+      // 画面サイズ変更（resize：りさいず）でも再フィット ※初回だけバインド（ばいんど：1回だけ登録）
+      if (!window.__cartFitBound){
+        window.addEventListener('resize', () => window.__fitCartNames?.(), { passive:true });
+        window.__cartFitBound = true;
+      }
     }
 
     // 送料の基本計算（小計で変化）
