@@ -7,76 +7,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
   <title>Admin Orders - nursery sera</title>
   <style>
-    /* =========================
-       ■ レイアウト（スマホ額縁・等倍表示）
-       ========================= */
-    :root{
-      --pink:#f8c6dc;
-      --ink:#333;
-      --bg:#fff;
-      --muted:#777;
-      --shadow:0 8px 20px rgba(0,0,0,.08);
-      --radius:14px;
-      --radius-sm:10px;
-      --maxw:480px; /* スマホの額縁幅 */
-    }
-    html,body{
-      margin:0; padding:0; background:var(--bg); color:var(--ink);
-      font-family: Arial, sans-serif; -webkit-text-size-adjust:100%;
-      font-size:16px; line-height:1.5;
-    }
-    .phone{
-      max-width:var(--maxw); margin:0 auto; min-height:100vh;
-      display:flex; flex-direction:column; padding:12px;
-    }
-    header{
-      position:sticky; top:0; z-index:10; background:var(--bg);
-      padding:10px 6px; border-bottom:1px solid #eee;
-    }
+    :root{ --pink:#f8c6dc; --ink:#333; --bg:#fff; --muted:#777; --shadow:0 8px 20px rgba(0,0,0,.08); --radius:14px; --radius-sm:10px; --maxw:480px; }
+    html,body{ margin:0; padding:0; background:var(--bg); color:var(--ink); font-family: Arial, sans-serif; -webkit-text-size-adjust:100%; font-size:16px; line-height:1.5; }
+    .phone{ max-width:var(--maxw); margin:0 auto; min-height:100vh; display:flex; flex-direction:column; padding:12px; }
+    header{ position:sticky; top:0; z-index:10; background:var(--bg); padding:10px 6px; border-bottom:1px solid #eee; }
     h1{ margin:0; font-size:clamp(18px, 4.5vw, 22px); letter-spacing:0.02em; }
     .sub{ color:var(--muted); font-size:12px; margin-top:4px; }
-
-    /* =========================
-       ■ ボタングリッド（7個：上4＋下3）
-       ========================= */
-    .view-switch{
-      margin:12px 0; display:grid; gap:8px;
-      grid-template-columns: repeat(4, 1fr);
-    }
+    .view-switch{ margin:12px 0; display:grid; gap:8px; grid-template-columns: repeat(4, 1fr); }
     .view-switch.row2{ grid-template-columns: repeat(3, 1fr); }
-    .btn{
-      all:unset; text-align:center; padding:10px 6px; cursor:pointer;
-      border-radius: var(--radius-sm);
-      background:#fff; border:1px solid #eee; box-shadow:var(--shadow);
-      font-size:clamp(12px, 3.3vw, 14px);
-    }
+    .btn{ all:unset; text-align:center; padding:10px 6px; cursor:pointer; border-radius: var(--radius-sm); background:#fff; border:1px solid #eee; box-shadow:var(--shadow); font-size:clamp(12px, 3.3vw, 14px); }
     .btn.active{ outline:2px solid var(--pink); }
-
-    /* =========================
-       ■ ツールバー（Paidのみ・検索・トークン）
-       ========================= */
-    .toolbar{
-      display:flex; gap:8px; align-items:center; flex-wrap:wrap;
-      margin:6px 0 10px;
-    }
-    .chip{
-      display:inline-flex; align-items:center; gap:6px; padding:6px 10px;
-      border:1px solid #eee; border-radius:999px; background:#fff; box-shadow:var(--shadow);
-      font-size:13px;
-    }
+    .toolbar{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:6px 0 10px; }
+    .chip{ display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border:1px solid #eee; border-radius:999px; background:#fff; box-shadow:var(--shadow); font-size:13px; }
     .chip input[type="checkbox"]{ width:18px; height:18px; }
-    .chip input[type="text"]{
-      border:none; outline:none; font-size:13px; min-width:140px; background:transparent;
-    }
+    .chip input[type="text"]{ border:none; outline:none; font-size:13px; min-width:140px; background:transparent; }
     .chip .save{ all:unset; color:#0066cc; cursor:pointer; font-size:13px; }
-
-    /* =========================
-       ■ テーブル（横スクロール）
-       ========================= */
-    .table-wrap{
-      overflow:auto; -webkit-overflow-scrolling:touch; border:1px solid #eee;
-      border-radius: var(--radius); background:#fff; box-shadow:var(--shadow);
-    }
+    .table-wrap{ overflow:auto; -webkit-overflow-scrolling:touch; border:1px solid #eee; border-radius: var(--radius); background:#fff; box-shadow:var(--shadow); }
     table{ border-collapse:separate; border-spacing:0; min-width:700px; width:100%; }
     th, td{ padding:10px 8px; border-bottom:1px solid #f2f2f2; font-size:14px; white-space:nowrap; }
     th{ position:sticky; top:0; background:#fff; z-index:1; }
@@ -84,10 +30,6 @@
     .badge{ display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; }
     .paid{ background:#eaffea; color:#268a2a; border:1px solid #b6e4b6; }
     .unpaid{ background:#fff5f5; color:#b74242; border:1px solid #f2caca; }
-
-    /* =========================
-       ■ フッター
-       ========================= */
     footer{ margin:14px 0 6px; color:var(--muted); font-size:12px; text-align:center; }
   </style>
 </head>
@@ -98,7 +40,6 @@
     <div class="sub">7ビュー（view：見える用テーブル）を切り替え。支払いチェックを付けるとDBに反映。</div>
   </header>
 
-  <!-- ■ 7つのボタン（上段4・下段3） -->
   <div class="view-switch">
     <button class="btn" data-view="v_orders_summary" title="基本情報">基本情報</button>
     <button class="btn" data-view="v_payment_check" title="入金確認">入金確認</button>
@@ -111,17 +52,14 @@
     <button class="btn" data-view="v_shipping_picklist_each_unit" title="1株単位">1株単位</button>
   </div>
 
-  <!-- ■ ツールバー（支払い済みだけ・検索・管理トークン保存） -->
   <div class="toolbar">
     <label class="chip" title="支払い確認済みの行だけ集約表示">
       <input type="checkbox" id="paidOnly"> 支払い確認済みだけ表示
     </label>
-
     <label class="chip" title="名前や品種でクイック検索（絞り込み）">
       検索
       <input type="text" id="q" placeholder="名前・品種など">
     </label>
-
     <label class="chip" title="管理用トークン（APIに送る合言葉）">
       Admin Token
       <input type="text" id="adm" placeholder="x-admin-token">
@@ -129,7 +67,6 @@
     </label>
   </div>
 
-  <!-- ■ 表示領域 -->
   <div class="table-wrap" id="tableWrap">
     <table id="grid"><thead></thead><tbody></tbody></table>
   </div>
@@ -138,13 +75,10 @@
 </div>
 
 <script>
-/* =========================
-   ■ フロント設定とユーティリティ
-   ========================= */
-// APIベースURL（server.js が <head> に注入：window.API_BASE='/api'）
+// ===== 基本設定 =====
 const API_BASE = window.API_BASE || '/api';
 
-// 管理トークン（localStorageに保存）
+// 管理トークン（localStorage）
 const admInput = document.getElementById('adm');
 const saved = localStorage.getItem('ns_admin_token') || '';
 admInput.value = saved;
@@ -157,13 +91,9 @@ function adminHeaders() {
   return token ? { 'x-admin-token': token } : {};
 }
 
-// クイック検索（フロント側フィルタ）
 const q = document.getElementById('q');
 q.addEventListener('input', () => renderRows(currentRows, currentColumns));
 
-/* =========================
-   ■ ビュー切り替え
-   ========================= */
 const buttons = [...document.querySelectorAll('.btn[data-view]')];
 const paidOnly = document.getElementById('paidOnly');
 
@@ -171,54 +101,16 @@ let currentView = 'v_orders_summary';
 let currentRows = [];
 let currentColumns = [];
 
-/* 追加：発送仕分け picked 保存用 ＆ 本物トークン索引 */
-let tokenIndex = Object.create(null);
-function getPickedKey(row){
-  return `picked:${(row.name||'')}|${(row.product||'')}`;
-}
-function isPickedChecked(row){
-  const key = getPickedKey(row);
-  return localStorage.getItem(key) === '1';
-}
-function setPicked(key, on){
-  if(on) localStorage.setItem(key,'1'); else localStorage.removeItem(key);
-}
-// /api/admin/token-index から name+address_full → real order_token の索引を作る
-async function ensureRealTokenIndex(){
-  if (Object.keys(tokenIndex).length) return;
-  const list = await callApi(`/admin/token-index`); // 要 x-admin-token
-  tokenIndex = Object.create(null);
-  for (const r of (Array.isArray(list)?list:[list])) {
-    const key = `${(r.name||'')}||${(r.address_full||'')}`;
-    if (!tokenIndex[key] || new Date(r.created_at) > new Date(tokenIndex[key].created_at||0)) {
-      tokenIndex[key] = { token: r.order_token, created_at: r.created_at };
-    }
-  }
-}
-function isMd5Token(t){ return /^[a-f0-9]{32}$/i.test(t||''); }
-function tokenForRow(row){
-  if (row.order_token || row.orderToken) {
-    const t = row.order_token || row.orderToken;
-    if (!isMd5Token(t)) return t; // 本物
-  }
-  const key = `${(row.name||'')}||${(row.address_full||'')}`;
-  return (tokenIndex[key] && tokenIndex[key].token) || '';
-}
+// 索引＆集計
+let tokenIndex = Object.create(null);         // name+address_full -> real token
+let tokenUnitsSummary = Object.create(null);  // order_token -> {total, paid}
+let productUnitsSummary = Object.create(null);// product_name -> {paid_qty, paid_amount}
 
-buttons.forEach(btn => {
-  btn.addEventListener('click', () => {
-    buttons.forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    currentView = btn.dataset.view;
-    loadView();
-  });
-});
-buttons[0].classList.add('active');
-paidOnly.addEventListener('change', loadView);
+function getPickedKey(row){ return `picked:${(row.name||'')}|${(row.product||'')}`; }
+function isPickedChecked(row){ return localStorage.getItem(getPickedKey(row)) === '1'; }
+function setPicked(key, on){ if(on) localStorage.setItem(key,'1'); else localStorage.removeItem(key); }
 
-/* =========================
-   ■ API呼び出し
-   ========================= */
+// APIヘルパ
 async function callApi(path, options = {}) {
   const url = API_BASE + path;
   const res = await fetch(url, {
@@ -232,14 +124,108 @@ async function callApi(path, options = {}) {
   return res.json();
 }
 
+// 実トークン索引
+async function ensureRealTokenIndex(){
+  if (Object.keys(tokenIndex).length) return;
+  const list = await callApi(`/admin/token-index`);
+  tokenIndex = Object.create(null);
+  for (const r of (Array.isArray(list)?list:[list])) {
+    const key = `${(r.name||'')}||${(r.address_full||'')}`;
+    if (!tokenIndex[key] || new Date(r.created_at) > new Date(tokenIndex[key].created_at||0)) {
+      tokenIndex[key] = { token: r.order_token, created_at: r.created_at };
+    }
+  }
+}
+function isMd5Token(t){ return /^[a-f0-9]{32}$/i.test(t||''); }
+function tokenForRow(row){
+  if (row.order_token || row.orderToken) {
+    const t = row.order_token || row.orderToken;
+    if (!isMd5Token(t)) return t;
+  }
+  const key = `${(row.name||'')}||${(row.address_full||'')}`;
+  return (tokenIndex[key] && tokenIndex[key].token) || '';
+}
+
+// ★ 単株集計のロード
+async function loadUnitSummaries(){
+  // トークン別
+  const tokRows = await callApi(`/admin/units/summary-token`);
+  tokenUnitsSummary = Object.create(null);
+  for (const r of tokRows) {
+    tokenUnitsSummary[r.order_token] = {
+      total: Number(r.total_units||0),
+      paid : Number(r.paid_units||0)
+    };
+  }
+  // 品種別
+  const prodRows = await callApi(`/admin/units/summary-product`);
+  productUnitsSummary = Object.create(null);
+  for (const r of prodRows) {
+    productUnitsSummary[r.product_name] = {
+      paid_qty   : Number(r.paid_qty||0),
+      paid_amount: Number(r.paid_amount||0)
+    };
+  }
+}
+function isTokenFullyPaid(orderToken){
+  const s = tokenUnitsSummary[orderToken];
+  if (!s) return false;
+  return s.total > 0 && s.paid === s.total;
+}
+
+// 画面切替
+buttons.forEach(btn => {
+  btn.addEventListener('click', () => {
+    buttons.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentView = btn.dataset.view;
+    loadView();
+  });
+});
+buttons[0].classList.add('active');
+paidOnly.addEventListener('change', loadView);
+
+// ビュー読み込み
 async function loadView() {
   try {
-    if (currentView === 'v_orders_summary' || currentView === 'v_shipping_picklist_each_unit') {
+    if (currentView === 'v_orders_summary' || currentView === 'v_shipping_picklist_each_unit' ||
+        currentView === 'v_payment_check' || currentView === 'v_shipping_labels' ||
+        currentView === 'v_products_totals' || currentView === 'v_products_overall' ||
+        currentView === 'v_shipping_picklist_by_person') {
       await ensureRealTokenIndex();
+      await loadUnitSummaries(); // ← 単株集計を毎回同期（キャッシュしてもOK）
     }
+
     const paidParam = paidOnly.checked ? '?paid=1' : '';
     const data = await callApi(`/view/${currentView}${paidParam}`);
     const rows = Array.isArray(data) ? data : [data];
+
+    // ★ 単株集計で上書き・補完
+    if (currentView === 'v_products_totals') {
+      for (const r of rows) {
+        const p = productUnitsSummary[r.product_name];
+        if (p) {
+          r.paid_qty    = p.paid_qty;
+          r.paid_amount = p.paid_amount;
+        } else {
+          r.paid_qty = r.paid_qty || 0;
+          r.paid_amount = r.paid_amount || 0;
+        }
+      }
+    }
+    if (currentView === 'v_products_overall') {
+      let q=0, amt=0;
+      for (const k in productUnitsSummary) {
+        q   += productUnitsSummary[k].paid_qty;
+        amt += productUnitsSummary[k].paid_amount;
+      }
+      // 列名は既存に合わせて上書き
+      if (rows.length) {
+        rows[0].paid_items_qty    = q;
+        rows[0].paid_items_amount = amt;
+      }
+    }
+
     let columns = autoColumnsFor(currentView, rows);
     currentRows = rows;
     currentColumns = columns;
@@ -250,6 +236,7 @@ async function loadView() {
   }
 }
 
+// 列選択
 function autoColumnsFor(view, rows){
   if (view === 'v_orders_summary') {
     const pref = ['order_token','name','address_full','products','order_total','note','email','is_paid','created_at'];
@@ -290,9 +277,7 @@ function pickColumns(rows, pref){
   return [...ordered, ...others];
 }
 
-/* =========================
-   ■ レンダリング
-   ========================= */
+// エラー表示
 function renderError(msg){
   const thead = document.querySelector('#grid thead');
   const tbody = document.querySelector('#grid tbody');
@@ -300,6 +285,7 @@ function renderError(msg){
   tbody.innerHTML = `<tr><td style="white-space:normal">${msg}<br>※ サーバーに <code>GET /api/view/:name</code> を追加してください。</td></tr>`;
 }
 
+// レンダリング
 function renderRows(rows, columns){
   const thead = document.querySelector('#grid thead');
   const tbody = document.querySelector('#grid tbody');
@@ -308,28 +294,26 @@ function renderRows(rows, columns){
   thead.innerHTML = '<tr>' + columns.map(c => `<th>${escapeHtml(c)}</th>`).join('') + '</tr>';
 
   let filtered = rows;
-  if (keyword) {
-    filtered = rows.filter(r => JSON.stringify(r).toLowerCase().includes(keyword));
-  }
+  if (keyword) filtered = rows.filter(r => JSON.stringify(r).toLowerCase().includes(keyword));
   if (paidOnly.checked && filtered.length && Object.prototype.hasOwnProperty.call(filtered[0], 'is_paid')) {
-    filtered = filtered.filter(r => !!r.is_paid);
+    // is_paid は表示時に単株基準へ差し替えるので、このフィルタは描画内で判定
   }
 
   tbody.innerHTML = filtered.map(row => {
     return '<tr>' + columns.map(col => {
       let v = row[col];
 
-      // 発送仕分け picked（ローカル保存）
+      // picked（ローカル）
       if (col === 'picked' && currentView === 'v_shipping_picklist_by_person') {
         const key = getPickedKey(row);
         const checked = isPickedChecked(row) ? 'checked' : '';
         return `<td><input type="checkbox" ${checked} onclick="setPicked('${escapeAttr(key)}', this.checked)"></td>`;
       }
 
-      // ★ is_paid：ビューごとに更新先を切替
+      // is_paid（表示と挙動を単株基準に統一）
       if (col === 'is_paid') {
-        // 1株単位ビュー → unit_idで更新
-        if (currentView === 'v_shipping_picklist_each_unit' && (row.unit_id || row.unitId)) {
+        // 1) 単株行（unit_id があれば1株単位更新）
+        if ((row.unit_id || row.unitId) && (currentView === 'v_shipping_picklist_each_unit' || currentView === 'v_shipping_picklist_by_person')) {
           const unitId  = row.unit_id || row.unitId;
           const checked = v ? 'checked' : '';
           return `<td>
@@ -337,16 +321,22 @@ function renderRows(rows, columns){
             <div><input type="checkbox" ${checked} onchange="toggleUnitPaid('${escapeAttr(unitId)}', this.checked)"></div>
           </td>`;
         }
-        // それ以外 → order_tokenで一括更新
-        const token   = tokenForRow(row);
-        const checked = v ? 'checked' : '';
+
+        // 2) 注文ヘッダ行（基本情報/入金確認/宛名）：トークンが全株支払い済みならON
+        const token = tokenForRow(row);
+        const fully = token ? isTokenFullyPaid(token) : !!v;
+        const checked = fully ? 'checked' : '';
         const disabled = token ? '' : 'disabled';
+        // paidOnly フィルタ（表示側）対応
+        if (paidOnly.checked && !fully) return `<td style="display:none"></td>`;
+
         return `<td>
-          <label class="badge ${v ? 'paid':'unpaid'}">${v ? '支払い済み':'未払い'}</label>
+          <label class="badge ${fully ? 'paid':'unpaid'}">${fully ? '支払い済み':'未払い'}</label>
           ${ token ? `<div><input type="checkbox" ${checked} ${disabled} onchange="togglePaid('${escapeAttr(token)}', this.checked)"></div>` : '' }
         </td>`;
       }
 
+      // 日付短縮
       if (/_at$/.test(col) || col === 'created_at' || col === 'first_order_at') {
         if (v) v = formatDate(v);
       }
@@ -357,49 +347,38 @@ function renderRows(rows, columns){
   }).join('');
 }
 
+// ユーティリティ
 function escapeHtml(v){
   if (v === null || v === undefined) return '';
   return String(v).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
 }
 function escapeAttr(v){ return String(v).replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
-
 function formatDate(v){
-  try{
-    const d = new Date(v);
-    if (isNaN(d)) return v;
+  try{ const d = new Date(v); if (isNaN(d)) return v;
     const z = n => String(n).padStart(2,'0');
     return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}`;
   }catch(_){ return v; }
 }
 
-/* =========================
-   ■ 支払いフラグ更新（注文単位 / 1株単位）
-   ========================= */
+// 更新API
 async function togglePaid(orderToken, to){
   try{
     await callApi(`/admin/orders/${encodeURIComponent(orderToken)}/paid`, {
-      method:'PUT',
-      body: JSON.stringify({ paid: !!to })
+      method:'PUT', body: JSON.stringify({ paid: !!to })
     });
     loadView();
-  }catch(e){
-    alert('支払い更新に失敗しました：' + e.message);
-  }
+  }catch(e){ alert('支払い更新に失敗しました：' + e.message); }
 }
-
 async function toggleUnitPaid(unitId, to){
   try{
     await callApi(`/admin/unit/${encodeURIComponent(unitId)}/paid`, {
-      method:'PUT',
-      body: JSON.stringify({ paid: !!to })
+      method:'PUT', body: JSON.stringify({ paid: !!to })
     });
     loadView();
-  }catch(e){
-    alert('1株単位の支払い更新に失敗しました：' + e.message);
-  }
+  }catch(e){ alert('1株単位の支払い更新に失敗しました：' + e.message); }
 }
 
-/* 初回ロード */
+// 初回ロード
 loadView();
 </script>
 </body>
