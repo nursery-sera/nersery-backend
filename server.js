@@ -444,3 +444,23 @@ app.get("/api/view/:name", adminAuth, async (req, res) => {
     res.status(500).json({ error: "server error" });
   }
 });
+
+// 1株単位の支払い更新
+app.put("/api/admin/unit/:id/paid", adminAuth, async (req, res) => {
+  if (!pool) return res.status(500).json({ error: "DB not available" });
+  try {
+    const { id } = req.params;
+    const paid = !!req.body?.paid;
+    await pool.query(
+      `UPDATE order_units
+         SET is_paid = $1,
+             paid_at = CASE WHEN $1 THEN now() ELSE NULL END
+       WHERE id = $2`,
+      [paid, id]
+    );
+    res.json({ ok: true });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "server error" });
+  }
+});
