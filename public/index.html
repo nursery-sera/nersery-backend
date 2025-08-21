@@ -617,27 +617,29 @@ function addToCart(id, name, price){
     });
   });
 
-  // ===== 商品名の自動フィット =====
-  (function(){
-    const MIN_PX = 14;
-    function fitName(el){
-      let size = parseFloat(getComputedStyle(el).fontSize);
-      let guard = 60;
-      while (el.scrollWidth > el.clientWidth && size > MIN_PX && guard-- > 0){
-        size -= 1;
-        el.style.fontSize = size + 'px';
-      }
+(function(){
+  const MIN_PX = 14;
+  function fitName(el){
+    let size = parseFloat(getComputedStyle(el).fontSize);
+    let guard = 60;
+    while (el.scrollWidth > el.clientWidth && size > MIN_PX && guard-- > 0){
+      size -= 1;
+      el.style.fontSize = size + 'px';
     }
-    function fitAll(){
-      document.querySelectorAll('.product-name').forEach(el=>{
-        el.style.fontSize = '';
-        fitName(el);
-      });
-    }
-    document.addEventListener('DOMContentLoaded', fitAll);
-    window.addEventListener('load', fitAll);
-    window.addEventListener('resize', fitAll);
-  })();
+  }
+  function fitAll(){
+    document.querySelectorAll('.product-name').forEach(el=>{
+      el.style.fontSize = '';
+      fitName(el);
+    });
+  }
+  document.addEventListener('DOMContentLoaded', fitAll);
+  window.addEventListener('load', fitAll);
+  window.addEventListener('resize', fitAll);
+
+  // ★追加：React が商品を描画し終えた合図（カスタムイベント）でも実行
+  document.addEventListener('products-rendered', fitAll);
+})();
 
   /* ===== GAS依存を静的環境で吸収する“互換シム” ===== */
   (function(){
