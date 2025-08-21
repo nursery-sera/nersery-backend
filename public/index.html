@@ -6,6 +6,16 @@
   <base target="_top">
   <meta name="viewport" content="width=950, user-scalable=no">
   <title>nursery sera - 商品一覧</title>
+
+  <!-- preconnect（ぷりこねくと：先につないで待ち時間短縮） -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://unpkg.com">
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://firestore.googleapis.com">
+  <link rel="preconnect" href="https://firebasestorage.googleapis.com">
+  <link rel="preconnect" href="https://gist.githubusercontent.com" crossorigin>
+
   <link href="https://fonts.googleapis.com/css2?family=Bayon&family=Tangerine:wght@700&family=Italianno&family=Noto+Serif+JP&display=swap" rel="stylesheet">
   <style>
     /* ===== ベース ===== */
@@ -59,7 +69,7 @@ opacity:1;color:#333
       position:fixed; top:0; left:0;
       width:55vw; height:100vh;
       background-color:rgba(255,255,255,.7);
-      backdrop-filter:blur(8px);
+      /* backdrop-filter は閉じている間は無効（負荷削減） */
       z-index:3000;
       border:2px solid rgba(0,0,0,.1);
       box-shadow:4px 0 20px rgba(0,0,0,.2);
@@ -69,6 +79,8 @@ opacity:1;color:#333
     }
     .category-menu.show{
       transform:translateX(0); opacity:1; pointer-events:auto;
+      /* 開いている時だけ背景ぼかし（見た目同じ） */
+      backdrop-filter:blur(8px);
     }
 
     .category-header{
@@ -413,15 +425,15 @@ text-align:center;
   <footer>
 <div class="footer-icons">
   <a href="https://www.instagram.com/nursery_sera?igsh=cWx2cTZ3cWNicGlz&utm_source=" target="_blank">
-    <img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png" alt="Instagram">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png" alt="Instagram" loading="lazy" decoding="async" width="42" height="42">
   </a>
 
   <a href="https://lin.ee/mFSu5FS" target="_blank">
-    <img src="https://upload.wikimedia.org/wikipedia/commons/4/41/LINE_logo.svg" alt="LINE">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/4/41/LINE_logo.svg" alt="LINE" loading="lazy" decoding="async" width="42" height="42">
   </a>
 
   <a href="https://www.threads.net/@nursery_sera?igshid=NTc4MTIwNjQ2YQ==" target="_blank">
-    <img src="https://cdn.simpleicons.org/threads/000000" alt="Threads">
+    <img src="https://cdn.simpleicons.org/threads/000000" alt="Threads" loading="lazy" decoding="async" width="42" height="42">
   </a>
 </div>
     <div class="footer-links">
@@ -635,7 +647,18 @@ function addToCart(id, name, price){
   }
   document.addEventListener('DOMContentLoaded', fitAll);
   window.addEventListener('load', fitAll);
-  window.addEventListener('resize', fitAll);
+  // resize の呼びすぎを抑制（すろっとる + rAF）
+  (function(){
+    let ticking = false;
+    let last = 0;
+    const MIN_INTERVAL = 150;
+    window.addEventListener('resize', () => {
+      const now = Date.now();
+      if (ticking || (now - last) < MIN_INTERVAL) return;
+      ticking = true; last = now;
+      requestAnimationFrame(() => { fitAll(); ticking = false; });
+    }, { passive: true });
+  })();
 
   // ★追加：React が商品を描画し終えた合図（カスタムイベント）でも実行
   document.addEventListener('products-rendered', fitAll);
@@ -762,7 +785,7 @@ function addToCart(id, name, price){
 
   // ===== 画像のページドット（静的に最初からあるカード用） =====
   document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('.img-wrapper').forEach((wrap) => {
+    const init = (wrap) => {
       const track = wrap.querySelector('.img-track');
       const pager = wrap.querySelector('.img-pager');
       if (!track || !pager) return;
@@ -794,7 +817,19 @@ function addToCart(id, name, price){
       track.addEventListener('scroll', () => requestAnimationFrame(updateActive));
       window.addEventListener('resize', updateActive);
       updateActive();
-    });
+    };
+
+    const wraps = document.querySelectorAll('.img-wrapper');
+    if ('IntersectionObserver' in window) {
+      const io = new IntersectionObserver((entries, obs) => {
+        entries.forEach(e => {
+          if (e.isIntersecting) { init(e.target); obs.unobserve(e.target); }
+        });
+      }, { rootMargin: '200px' });
+      wraps.forEach(w => io.observe(w));
+    } else {
+      wraps.forEach(init);
+    }
   });
 </script>
 
@@ -948,6 +983,9 @@ function addToCart(id, name, price){
               key: i, className: 'product-img',
               src: src || 'data:image/gif;base64,R0lGODlhAQABAAAAACw=',
               alt: `${d.categoryName || ''} ${d.varietyName || ''} #${i + 1}`,
+              loading: 'lazy',
+              decoding: 'async',
+              width: 286, height: 286,
               onClick: (ev) => window.enlargeImage?.(ev.target)
             })
           )
