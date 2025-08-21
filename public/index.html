@@ -56,7 +56,20 @@ opacity:1;color:#333
       background-image:url('https://gist.githubusercontent.com/nursery-sera/3bfad5863718f7147d193844bdaca462/raw/d7f9244ea2cbbaf4c13a67c30831022e37076b17/plantcart-icon.svg');
       background-size:contain; background-repeat:no-repeat;
       width:100px; height:100px; border:none; background-color:transparent; cursor:pointer;
+position:relative;
     }
+
+.cart-badge{
+  position:absolute; right:21px; top:47px;font-weight: 700;
+  min-width:50px; height:50px; padding:0 6px;
+  border-radius:25px;
+  background:#F564A9; color:#fff; 
+  font-size:24px; line-height:28px; text-align:center;
+  display:none;           /* 0個のときは非表示 */
+  align-items:center;     /* 将来flexにしても中央寄せされるように保険 */
+  justify-content:center;
+  box-shadow:0 2px 6px rgba(0,0,0,.2);
+}
 
     /* ===== メニュー（スライド＋オーバーレイ） ===== */
     .overlay{
@@ -370,7 +383,9 @@ text-align:center;
       <span></span><span></span><span></span>
     </button>
     <div class="main-title" onclick="window.top.location.href='<?= url ?>?page=index'">nursery sera</div>
-    <button class="cart-button" onclick="go('/?page=cart')"></button>
+    <button class="cart-button" onclick="go('/?page=cart')">
+  <span id="cartBadge" class="cart-badge">0</span>
+</button>
   </div>
 
   <!-- スライドメニュー -->
@@ -565,6 +580,7 @@ function addToCart(id, name, price){
   if (sel) sel.value = '1';
   const display = document.querySelector(`.qty-display[data-for="qty-${id}"]`);
   if (display) display.textContent = '1';
+updateCartBadge();
 }
 
   // ===== infoボタン（i）でパネルの開閉 =====
@@ -1118,6 +1134,30 @@ document.addEventListener('products-rendered', () => {
       });
     });
   });
+
+// 新規：カート内合計数（数量の合計）を返す
+function getCartCount(){
+  const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+  return cart.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+}
+
+// 新規：バッジ（ばっじ）を現在の合計数で更新
+function updateCartBadge(){
+  const el = document.getElementById('cartBadge');
+  if (!el) return;
+  const count = getCartCount();
+  el.textContent = String(count);
+  el.style.display = count > 0 ? 'flex' : 'none';
+}
+
+// 起動時に一度更新
+document.addEventListener('DOMContentLoaded', updateCartBadge);
+
+// 他タブでの変化も拾う（storage：すとれーじ いべんと）
+window.addEventListener('storage', (e) => {
+  if (e.key === 'cart') updateCartBadge();
+});
+
 </script>
 </body>
 </html>
