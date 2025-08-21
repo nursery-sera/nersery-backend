@@ -229,7 +229,7 @@
 .remove-btn {
     position: absolute;
     right: 0; 
-    bottom: 10px; 
+    bottom: 13px; 
     font-size: 25px;
     background: none;
     border: none;
@@ -339,32 +339,42 @@
   /* ====== ここから重複整理後 ====== */
   .item-info { min-width: 0; }
 
-  .item-name{
-    font-family: 'Noto Serif JP', serif;
-    font-size: 44px;
-    color: #333;
-    display:flex;
-    flex-direction:column;
-    width:100%;
-    position: relative;
-    line-height:1.1;
-    min-width:0;
-    margin-top:-0px;
-　　 }
-  /* 上に固定スペース（インデックスの top:44px 相当） */
-  .item-name::before{
-    content:"";
-    display:block;
-    height:0px;
-  }
+  /* 商品名ブロック：2行ぶんの固定枠を確保して、枠内の下端に揃える */
+.item-name{
+  font-family: 'Noto Serif JP', serif;
+  font-size: 44px;
+  color: #333;
+  display: flex;            /* ← 追加：内側をフレックスにして */
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;/* ← 追加：下端に文字を寄せる（下に揃う） */
+  width: 100%;
+  position: relative;
+  line-height: 1.1;
+  min-width: 0;
+  margin-top: 0;
 
-  /* 2段固定の内側ラッパー */
-  .name-shrink{
-    display: flex;             /* ← 最終宣言を採用しつつ */
-    flex-direction: column;    /*    既存のサイズ指定も保持 */
-    font-size:44px;
-    line-height:1.1;
-  }
+  /* ★ここがポイント：最大フォント(44px)×行間(1.1)×2行 ≒ 96.8px を確保 */
+  height: 98px;             /* ← 追加：固定の高さ（ズレ防止の“枠”） */
+  overflow: hidden;         /* ← 追加：はみ出しガード */
+padding-bottom: 10px;
+}
+
+/* 上に固定スペース（既存のまま） */
+.item-name::before{
+  content:"";
+  display:block;
+  height:0px;
+}
+
+/* 2段固定の内側ラッパー：文字はここで縮むだけ（枠の高さは不変） */
+.name-shrink{
+  display: flex;
+  flex-direction: column;
+  font-size: 44px;
+  line-height: 1.1;
+  width: 100%;              /* ← 追加：横幅を枠にフィット */
+}
 
   /* カテゴリ名（1行固定） */
   .item-category{
