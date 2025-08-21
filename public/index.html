@@ -534,7 +534,6 @@ function addToCart(id, name, price){
   const sel = document.getElementById('qty-'+id);
   const q = parseInt(sel?.value || '1') || 1;
 
-  // カードDOMから画像・カテゴリ・バリエティを拾う
   const card     = document.querySelector(`[id="qty-${id}"]`)?.closest('.product-item');
   const img      = card?.querySelector('.product-img')?.getAttribute('src') || '';
   const category = (card?.querySelector('.category-name')?.textContent || '').trim();
@@ -543,21 +542,29 @@ function addToCart(id, name, price){
   const cart = JSON.parse(localStorage.getItem('cart') || '[]');
   const idx  = cart.findIndex(i => i.id === id);
 
-  // 2つ目のカートが期待する形に合わせて保存
-  const item = {
-    id,
-    name    : variety || name || '',        // 後方互換で name も残す
-    price   : Number(price) || 0,
-    quantity: q,
-    image   : img,
-    category,
-    variety
-  };
-
-  if (idx > -1) cart[idx] = item; else cart.push(item);
+  if (idx > -1) {
+    // 既にあるなら加算
+    cart[idx].quantity = (Number(cart[idx].quantity) || 0) + q;
+  } else {
+    cart.push({
+      id,
+      name    : variety || name || '',
+      price   : Number(price) || 0,
+      quantity: q,
+      image   : img,
+      category,
+      variety
+    });
+  }
   localStorage.setItem('cart', JSON.stringify(cart));
 
+  const total = (cart.find(i => i.id === id)?.quantity) || q;
   alert(`${variety || name} を ${q} 株カートに追加しました。`);
+
+  // ★ここで数量を 1 にリセット
+  if (sel) sel.value = '1';
+  const display = document.querySelector(`.qty-display[data-for="qty-${id}"]`);
+  if (display) display.textContent = '1';
 }
 
   // ===== infoボタン（i）でパネルの開閉 =====
@@ -591,13 +598,9 @@ function addToCart(id, name, price){
         sel.appendChild(op);
       }
       // localStorage(cart) から数量復元（なければ1）
-      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-      const pid = sel.id.replace('qty-','');
-      const cartItem = cart.find(i => i.id === pid);
-      sel.value = String(cartItem ? (cartItem.quantity || 1) : 1);
-      // qty-display の表示も同期
-      const display = document.querySelector(`.qty-display[data-for="${sel.id}"]`);
-      if (display) display.textContent = sel.value;
+      // ★リロード時も必ず1にする（cartは無視）
+if (sel) sel.value = '1';
+if (dsp) dsp.textContent = '1';
     });
 
     document.querySelectorAll('.qty-display').forEach(btn=>{
@@ -925,12 +928,9 @@ function addToCart(id, name, price){
           sel.appendChild(op);
         }
       }
-      // cartから復元（なければ1）
-      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-      const ci   = cart.find(i => i.id === id);
-      const val  = String(ci ? (ci.quantity || 1) : 1);
-      if (sel) sel.value = val;
-      if (dsp) dsp.textContent = val;
+// ★React生成分もリロード時は常に1で初期化
+if (sel) sel.value = '1';
+if (dsp) dsp.textContent = '1';
 
       // 数量メニューのクリック挙動
       if (menu && !menu.children.length) {
