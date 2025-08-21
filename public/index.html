@@ -1046,16 +1046,39 @@ document.addEventListener('products-rendered', () => {
   renderProducts().catch(console.error);
 </script>
 <script>
-  document.addEventListener('DOMContentLoaded', () => {
+   document.addEventListener('DOMContentLoaded', () => {
     const likeOnlyBtn = document.querySelector('.like-only');
     if (likeOnlyBtn) {
-      likeOnlyBtn.onclick = null; // 既存の onclick を無効化
+      likeOnlyBtn.onclick = null;
       likeOnlyBtn.addEventListener('click', (e) => {
         e.preventDefault();
-        filterCategory('liked'); // ← これで likes の true だけ表示
+        filterCategory('liked');
         history.replaceState(null, '', '/?page=index&liked=1');
       });
     }
+
+    // ★追加：上部カテゴリ群の URL も選択に合わせて更新
+    const catBtns = document.querySelectorAll('#topCategories button');
+    catBtns.forEach((btn) => {
+      const label = (btn.textContent || '').trim().toLowerCase();
+      btn.onclick = null; // インライン onclick を無効化（filterCategoryはJS側で呼ぶ）
+
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+
+        if (label === 'all') {
+          filterCategory('all');
+          history.replaceState(null, '', '/?page=index'); // ← liked=1 を消す
+        } else if (label.includes('like')) {
+          filterCategory('liked');
+          history.replaceState(null, '', '/?page=index&liked=1');
+        } else {
+          // カテゴリ名をそのまま cat= に反映
+          filterCategory(label);
+          history.replaceState(null, '', `/?page=index&cat=${encodeURIComponent(label)}`);
+        }
+      });
+    });
   });
 </script>
 </body>
