@@ -33,11 +33,22 @@
     
     /* ===== ヘッダー ===== */
     .header-bar{
-      position:sticky; margin-top:-50px; z-index:1000;
-      background:transparent;
-      display:flex; align-items:center; justify-content:space-between;
-      padding:20px; transition:top .5s ease;
-    }
+  position:fixed; top:0; left:0; right:0; width:100%; /* 画面に張り付け（ふぃっくすど） */
+  margin-top:-50px; z-index:1000;
+  background:transparent;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:20px; transition:transform .5s ease;
+border:none; 
+  box-shadow:none;
+opacity:1;
+  transition: opacity 0.2s ease;   /* 0.6秒かけてなめらかに変化 */
+  will-change: opacity;    
+}
+
+.header-bar.is-hidden{
+  opacity: 0;
+  pointer-events: none;
+}
     .menu-icon{
       display:flex; flex-direction:column; justify-content:space-between;
       width:48px; height:40px; cursor:pointer; background:none; border:none;
@@ -133,7 +144,7 @@ font-family: 'Noto Serif JP', serif;
       font-size: 100px;
       text-align: center;
       opacity: 0.4;
-      margin-top: -30px;
+      margin-top:160px;
       margin-bottom: 10px;
     }
 
@@ -481,16 +492,177 @@ text-align:center;
     document.body.style.overflow = "";
   }
 
-  let lastScrollY = window.scrollY;
-  const titleBar = document.getElementById("titleBar");
-  const threshold = 10;
-  window.addEventListener("scroll", () => {
-    const current = window.scrollY;
-    const diff = current - lastScrollY;
-    if (Math.abs(diff) < threshold) return;
-    titleBar.style.top = (diff < 0) ? "-50px" : "-200px";
+
+
+
+let lastScrollY = window.scrollY;
+const titleBar  = document.getElementById("titleBar");
+const threshold = 10;
+
+// 初期表示位置は0に固定
+titleBar.style.transform = "translateY(0)";
+
+/* ===== トップ付近の許容幅 ===== */
+let HEADER_SHOW_OFFSET = 0;
+function updateHeaderOffset() {
+  const h = titleBar?.getBoundingClientRect().height || 0;
+  const EXTRA = 20; // ← 本来の位置より下で表示させたい余白(px)
+  HEADER_SHOW_OFFSET = h + EXTRA;
+}
+document.addEventListener('DOMContentLoaded', updateHeaderOffset);
+window.addEventListener('resize', updateHeaderOffset);
+
+/* ===== フェード時間（調整可能） ===== */
+const SHOW_FADE_MS = 1000; // フェードイン(ms)
+const HIDE_FADE_MS = 200;  // フェードアウト(ms)
+
+/* ===== タッチ・慣性状態 ===== */
+let isTouching   = false; // 指が画面に触れている間 true
+let inertiaMode  = false; // 慣性スクロール中 true（rAFで検出）
+let inertiaUpPx  = 0;     // 慣性中の「上方向」連続移動距離
+const INERTIA_MIN_UP_PX = 1; // 慣性で出すのに必要な上向き距離
+
+/* ===== 慣性検出（初速に依存しない / rAF 監視） ===== */
+let inertiaWatchOn = false;
+let lastRAFScrollY = window.scrollY;
+let stableFrames   = 0;
+const STABLE_FRAMES_TO_STOP = 4; // 停止判定フレーム数
+const MOVE_EPSILON = 1;        // スクロール変化の最小検出量(px)
+
+function startInertiaWatch(){
+  if (inertiaWatchOn) return;
+  inertiaWatchOn = true;
+  lastRAFScrollY = window.scrollY;
+  stableFrames = 0;
+
+  (function loop(){
+    if (!inertiaWatchOn) return;
+
+    const y  = window.scrollY;
+    const dy = y - lastRAFScrollY;
+
+    // 指が付いたら慣性は即終了（カウンター対策）
+    if (isTouching) {
+      inertiaMode    = false;
+      inertiaWatchOn = false;
+      return;
+    }
+
+    if (Math.abs(dy) > MOVE_EPSILON) {
+      // 指が離れていてスクロールが続いている → 慣性中
+      inertiaMode  = true;
+      stableFrames = 0;
+    } else {
+      // 動きが止まっているフレームが続いた → 慣性終了
+      stableFrames++;
+      if (stableFrames >= STABLE_FRAMES_TO_STOP) {
+        inertiaMode    = false;
+        inertiaWatchOn = false;
+        return;
+      }
+    }
+
+    lastRAFScrollY = y;
+    requestAnimationFrame(loop);
+  })();
+}
+
+/* ===== タッチ状態（captureで最優先） ===== */
+document.addEventListener('touchstart', () => {
+  isTouching     = true;
+  inertiaMode    = false; // 慣性を強制終了（折り返しでの誤発火を防止）
+  inertiaUpPx    = 0;
+  inertiaWatchOn = false; // rAF監視も停止
+  lastScrollY    = window.scrollY; // diff暴発防止
+}, { capture:true, passive:true });
+
+document.addEventListener('touchmove', () => {
+  isTouching = true;
+}, { capture:true, passive:true });
+
+document.addEventListener('touchend', () => {
+  isTouching  = false;
+  inertiaMode = false;   // ここでは未確定
+  inertiaUpPx = 0;
+  startInertiaWatch();   // 実際に動いていれば慣性ONになる（初速依存なし）
+}, { capture:true, passive:true });
+
+document.addEventListener('touchcancel', () => {
+  isTouching  = false;
+  inertiaMode = false;
+  inertiaUpPx = 0;
+  startInertiaWatch();
+}, { capture:true, passive:true });
+
+/* ===== マウス/キーボードは即表示/非表示 ===== */
+document.addEventListener('wheel', (e) => {
+  if (e.deltaY < 0) {
+    titleBar.style.transitionDuration = `${SHOW_FADE_MS}ms`;
+    titleBar.classList.remove('is-hidden');
+  } else if (e.deltaY > 0) {
+    titleBar.style.transitionDuration = `${HIDE_FADE_MS}ms`;
+    titleBar.classList.add('is-hidden');
+  }
+}, { passive:true });
+
+document.addEventListener('keydown', (e) => {
+  const showKeys = ['ArrowUp', 'PageUp', 'Home'];
+  const hideKeys = ['ArrowDown', 'PageDown', 'End', ' '];
+  if (showKeys.includes(e.key)) {
+    titleBar.style.transitionDuration = `${SHOW_FADE_MS}ms`;
+    titleBar.classList.remove('is-hidden');
+  } else if (hideKeys.includes(e.key)) {
+    titleBar.style.transitionDuration = `${HIDE_FADE_MS}ms`;
+    titleBar.classList.add('is-hidden');
+  }
+});
+
+/* ===== スクロール本体 ===== */
+window.addEventListener("scroll", () => {
+  const current = window.scrollY;
+  const diff    = current - lastScrollY; // +:下 / -:上
+  if (Math.abs(diff) < threshold) { lastScrollY = current; return; }
+
+  // 最上部〜ヘッダー高さ+余白までは必ず表示（例外）
+  if (current <= HEADER_SHOW_OFFSET) {
+    titleBar.style.transitionDuration = `${SHOW_FADE_MS}ms`;
+    titleBar.classList.remove('is-hidden');
+    titleBar.style.transform = "translateY(0)";
+    inertiaUpPx = 0;
     lastScrollY = current;
-  });
+    return;
+  }
+
+  if (diff > 0) {
+    // ▼ 下方向：即隠す（従来通り）
+    titleBar.style.transitionDuration = `${HIDE_FADE_MS}ms`;
+    titleBar.classList.add('is-hidden');
+
+    // 慣性中でも下に触れたら上向き累計はリセット（連続条件を保持）
+    if (inertiaMode) inertiaUpPx = 0;
+  } else {
+    // ▼ 上方向
+    if (isTouching) {
+      // 指が付いている間は絶対に出さない（何もしない）
+    } else if (inertiaMode) {
+      // 慣性中のみ、上方向の連続距離を加算
+      inertiaUpPx += Math.abs(diff);
+
+      // しきい値に達したら表示（1回出したら距離リセット）
+      if (inertiaUpPx >= INERTIA_MIN_UP_PX) {
+        titleBar.style.transitionDuration = `${SHOW_FADE_MS}ms`;
+        titleBar.classList.remove('is-hidden');
+        titleBar.style.transform = "translateY(0)";
+        inertiaUpPx = 0;
+        // 慣性は続いていても、次に再表示させるには再度距離を貯める
+      }
+    }
+    // 慣性でない（＝PC操作など）の上スクロールは wheel/keydown 側で即表示済み
+  }
+
+  lastScrollY = current;
+}, { passive:true });
+
 
   function enlargeImage(img){
     const m=document.getElementById('modal'), mi=document.getElementById('modal-img');
@@ -1083,8 +1255,7 @@ async function renderProducts() {
   document.dispatchEvent(new Event('products-rendered'));
 }
   
-// ▼▼▼ 追記：描画完了後に URL の cat/liked を反映
-// ▼▼▼ React描画完了後に URL の cat/liked を反映（イベントで同期）
+
 const params = new URLSearchParams(location.search);
 const want = (params.get('liked') === '1')
   ? 'liked'
