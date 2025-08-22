@@ -1,4 +1,4 @@
-	<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
@@ -93,6 +93,13 @@
       #panel .actions{flex-wrap:wrap;}
       #autoCalcBtn{min-width:88px;height:36px;font-size:12px;}
     }
+
+    /* ★追加：在庫トグルの見た目（既存デザインは流用：.btn.ghost） */
+    .seg { display:flex; gap:8px; }
+    .seg .btn { min-width:100px; height:40px; font-size:14px; padding:0; }
+    .seg .btn.active { color:#fff; }
+    .seg .btn[data-val="available"].active { background:#2e7d32; }
+    .seg .btn[data-val="soldout"].active  { background:#b00020; }
   </style>
 </head>
 <body>
@@ -177,23 +184,23 @@ AlocasiaJacqueline38AnthuriumRedCrystallinum25 のように記入して商品自
 
     // ====== Firebase 初期化 ======
 
-// 編集モード用の状態
-let editTargetId = null;                 // いま編集している商品の Firestore ID
-let editExistingImages = [];             // 既存画像のURL（画像を選ばなければこれを維持）
+    // 編集モード用の状態
+    let editTargetId = null;                 // いま編集している商品の Firestore ID
+    let editExistingImages = [];             // 既存画像のURL（画像を選ばなければこれを維持）
 
-// パネルの見出しを切り替え
-function setPanelTitle(){
-  const h2 = document.querySelector('#panel h2');
-  h2.textContent = editTargetId ? '商品を編集' : '商品を追加';
-}
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import {
-  getFirestore, doc, setDoc, updateDoc, serverTimestamp,
-  collection, getDocs, query, orderBy, deleteDoc
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import {
-  getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject, listAll
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+    // パネルの見出しを切り替え
+    function setPanelTitle(){
+      const h2 = document.querySelector('#panel h2');
+      h2.textContent = editTargetId ? '商品を編集' : '商品を追加';
+    }
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import {
+      getFirestore, doc, setDoc, updateDoc, serverTimestamp,
+      collection, getDocs, query, orderBy, deleteDoc
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import {
+      getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject, listAll
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
     const firebaseConfig = {
       apiKey: "AIzaSyCVOfVGTlfTGRfpNggT55l3raCqjo7OcBo",
       authDomain: "nursery-9bd14.firebaseapp.com",
@@ -226,29 +233,29 @@ import {
     const autoCalcBtn = document.getElementById('autoCalcBtn'); // ← 追加
 
     // ====== パネル開閉 ======
-const openPanel  = ()=>{
-  setPanelTitle();
-  panel.classList.add('show');
-  panel.setAttribute('aria-hidden','false');
-};
-// いまの closePanel をこれに置き換え
-const closePanel = ()=>{
-  panel.classList.remove('show');
-  panel.setAttribute('aria-hidden','true');
-  // ★ここでは editTargetId をリセットしない！
-  setPanelTitle();
-};
+    const openPanel  = ()=>{
+      setPanelTitle();
+      panel.classList.add('show');
+      panel.setAttribute('aria-hidden','false');
+    };
+    // いまの closePanel をこれに置き換え
+    const closePanel = ()=>{
+      panel.classList.remove('show');
+      panel.setAttribute('aria-hidden','true');
+      // ★ここでは editTargetId をリセットしない！
+      setPanelTitle();
+    };
     fab.addEventListener('click', openPanel);
-cancelBtn.addEventListener('click', (e)=>{
-  e.preventDefault();
-  // ★ キャンセル時に編集状態を捨てる
-  editTargetId = null;
-  editExistingImages = [];
-  prodsEl.innerHTML = '';
-  addProdBlock();
-  setPanelTitle();
-  closePanel();
-});
+    cancelBtn.addEventListener('click', (e)=>{
+      e.preventDefault();
+      // ★ キャンセル時に編集状態を捨てる
+      editTargetId = null;
+      editExistingImages = [];
+      prodsEl.innerHTML = '';
+      addProdBlock();
+      setPanelTitle();
+      closePanel();
+    });
     // ▼一括入力：押すとプル表示、選ぶと全カテゴリへ反映
     bulkBtn.addEventListener('click', (e)=>{
       e.preventDefault();
@@ -298,6 +305,16 @@ cancelBtn.addEventListener('click', (e)=>{
             <input class="m_price" type="number" inputmode="numeric" placeholder="例 3500" />
           </div>
         </div>
+
+        <!-- ★追加：在庫切替（デフォルト available） -->
+        <div class="col" style="flex-basis:100%">
+          <label>在庫状態</label>
+          <input class="m_status" type="hidden" value="available" />
+          <div class="seg">
+            <button type="button" class="btn ghost" data-val="available">在庫あり</button>
+            <button type="button" class="btn ghost" data-val="soldout">Sold Out</button>
+          </div>
+        </div>
       `;
       prodsEl.appendChild(el);
 
@@ -314,6 +331,20 @@ cancelBtn.addEventListener('click', (e)=>{
           const img = document.createElement('img');
           img.src = url;
           tbox.appendChild(img);
+        });
+      });
+
+      // ★追加：在庫トグル（このフォーム専用）
+      const stHidden = el.querySelector('.m_status');
+      const segBtns  = el.querySelectorAll('.seg .btn');
+      segBtns.forEach(b => {
+        b.classList.toggle('active', b.dataset.val === stHidden.value);
+      });
+      segBtns.forEach(b => {
+        b.addEventListener('click', () => {
+          stHidden.value = b.dataset.val || 'available';
+          segBtns.forEach(x => x.classList.remove('active'));
+          b.classList.add('active');
         });
       });
 
@@ -352,196 +383,209 @@ cancelBtn.addEventListener('click', (e)=>{
       });
       setStatus(changed ? `金額を自動計算しました（${changed}件）` : '金額の入力がありませんでした');
     });
-function openEdit(id, data){
-  editTargetId = id;
-  editExistingImages = Array.isArray(data.images) ? data.images.slice(0,2) : [];
-  // 1フォームだけにして既存値を流し込む
-  prodsEl.innerHTML = '';
-  addProdBlock(); // 空フォームを1つ作る
-  const block = prodsEl.querySelector('.prod');
-
-  block.querySelector('.m_category').value = data.categoryName || '';
-  block.querySelector('.m_variety').value  = data.varietyName  || '';
-  block.querySelector('.m_price').value    = Number(data.price||0);
-
-  // 既存サムネを表示（ファイルは未選択のまま）
-  const tbox = block.querySelector('.m_thumbs');
-  tbox.innerHTML = '';
-  editExistingImages.forEach(u=>{
-    const im = document.createElement('img');
-    im.src = u; tbox.appendChild(im);
-  });
-
-  // ヒントを表示（画像を選ばなければ現状維持）
-  const hint = document.createElement('div');
-  hint.className = 'muted';
-  hint.textContent = '※画像を選択しなければ既存画像をそのまま使います（最大2枚）。';
-  block.querySelector('.mini').appendChild(hint);
-
-  // パネルを開く
-  openPanel();
-}
-// ====== 保存（編集/追加 両対応の完成版） ======
-async function saveProduct(){
-  lockUI(true);
-  try{
-    setStatus('保存の準備中…');
-
-    const blocks = [...prodsEl.querySelectorAll('.prod')];
-    if (!blocks.length){
-      alert('商品フォームを追加してください');
-      setStatus('商品フォームがありません');
-      lockUI(false);
-      return;
-    }
-
-    // ★ いま編集しているIDを退避（処理の途中でリセットされても安全にするため）
-    const targetId = editTargetId;
-
-    // 編集中は1フォームのみ扱う
-    const targets = targetId ? blocks.slice(0,1) : blocks;
-
-    const mustBeValid = (cat, var_, price)=>{
-      if (!cat){ alert('カテゴリーネームを入力してください'); return false; }
-      if (!var_){ alert('バラエティーネームを入力してください'); return false; }
-      if (!Number.isFinite(price) || price < 0){ alert('金額は0以上の数字で入力してください'); return false; }
-      return true;
-    };
-
-    // ====== 編集（1件更新） ======
-    if (targetId){
-      const b  = targets[0];
-      const cat= b.querySelector('.m_category')?.value.trim() || '';
-      const va = b.querySelector('.m_variety')?.value.trim()  || '';
-      const pr = Number((b.querySelector('.m_price')?.value || '').trim());
-      const fs = [...(b.querySelector('.m_images')?.files || [])].slice(0,2);
-
-      if (!mustBeValid(cat, va, pr)) { setStatus('入力不備があります'); lockUI(false); return; }
-
-      // 入力パネルは閉じる（※ targetId は変数に退避済み）
-      closePanel();
-      setStatus('画像処理中…');
-
-      // 画像：選択されていれば置き換え、なければ既存を維持
-      let urls = editExistingImages.slice();
-      if (fs.length){
-        urls = [];
-        for (let i=0; i<fs.length; i++){
-          const f = fs[i];
-          const { blob, mime, name } = await compressImage(f, 1200, 0.78);
-          const path = `products/${targetId}/${Date.now()}_${i}_${sanitizeName(name)}`;
-          const storageRef = ref(st, path);
-          const task = uploadBytesResumable(storageRef, blob, { contentType: mime });
-          const url = await new Promise((resolve, reject)=>{
-            task.on('state_changed', s=>{
-              const pct = Math.round((s.bytesTransferred / s.totalBytes) * 100);
-              setStatus(`画像 ${i+1}/${fs.length} をアップロード中… ${pct}%`);
-            }, reject, async ()=>{
-              const u = await getDownloadURL(task.snapshot.ref);
-              resolve(u);
-            });
-          });
-          urls.push(url);
-        }
-      }
-
-      setStatus('Firestore を更新中…');
-      await updateDoc(doc(collection(db,'products'), targetId), {
-        categoryName: cat,
-        varietyName : va,
-        price       : pr,
-        images      : urls,
-        updatedAt   : serverTimestamp()
-      });
-
-      lastRes.innerHTML = `<div class="ok"><b>更新しました：</b> ${targetId}</div>`;
-      await loadList();
-
-      // ★ 成功したら編集状態をクリアしてフォームを初期化
-      editTargetId = null;
-      editExistingImages = [];
+    function openEdit(id, data){
+      editTargetId = id;
+      editExistingImages = Array.isArray(data.images) ? data.images.slice(0,2) : [];
+      // 1フォームだけにして既存値を流し込む
       prodsEl.innerHTML = '';
-      addProdBlock();
-      setPanelTitle();
+      addProdBlock(); // 空フォームを1つ作る
+      const block = prodsEl.querySelector('.prod');
 
-      setStatus('更新が完了しました。');
-      return;
-    }
+      block.querySelector('.m_category').value = data.categoryName || '';
+      block.querySelector('.m_variety').value  = data.varietyName  || '';
+      block.querySelector('.m_price').value    = Number(data.price||0);
 
-    // ====== 新規追加（複数対応） ======
-    const queue = [];
-    for (const b of targets){
-      const cat= b.querySelector('.m_category')?.value.trim() || '';
-      const va = b.querySelector('.m_variety')?.value.trim()  || '';
-      const pr = Number((b.querySelector('.m_price')?.value || '').trim());
-      const fs = [...(b.querySelector('.m_images')?.files || [])].slice(0,2);
-      if (!mustBeValid(cat, va, pr)) { setStatus('入力不備があります'); lockUI(false); return; }
-      queue.push({ categoryName:cat, varietyName:va, priceNum:pr, files:fs });
-    }
-
-    closePanel();
-    setStatus(`${queue.length}件の保存を開始します…`);
-
-    const createdIds = [];
-    for (let qi=0; qi<queue.length; qi++){
-      const item = queue[qi];
-      setStatus(`(${qi+1}/${queue.length}) 画像アップロードの準備中…`);
-
-      const newRef = doc(collection(db, 'products'));
-      const newId  = newRef.id;
-
-      const urls = [];
-      for (let i=0;i<item.files.length;i++){
-        const f = item.files[i];
-        const { blob, mime, name } = await compressImage(f, 1200, 0.78);
-        const path = `products/${newId}/${Date.now()}_${i}_${sanitizeName(name)}`;
-        const storageRef = ref(st, path);
-        const task = uploadBytesResumable(storageRef, blob, { contentType: mime });
-        const url = await new Promise((resolve, reject)=>{
-          task.on('state_changed', s=>{
-            const pct = Math.round((s.bytesTransferred / s.totalBytes) * 100);
-            setStatus(`(${qi+1}/${queue.length}) 画像 ${i+1}/${item.files.length} をアップロード中… ${pct}%`);
-          }, reject, async ()=>{
-            const u = await getDownloadURL(task.snapshot.ref);
-            resolve(u);
-          });
-        });
-        urls.push(url);
-      }
-
-      setStatus(`(${qi+1}/${queue.length}) Firestore へ保存中…`);
-      await setDoc(newRef, {
-        categoryName: item.categoryName,
-        varietyName : item.varietyName,
-        price       : item.priceNum,
-        images      : urls,
-        createdAt   : serverTimestamp()
+      // 既存サムネを表示（ファイルは未選択のまま）
+      const tbox = block.querySelector('.m_thumbs');
+      tbox.innerHTML = '';
+      editExistingImages.forEach(u=>{
+        const im = document.createElement('img');
+        im.src = u; tbox.appendChild(im);
       });
-      createdIds.push(newId);
-      setStatus(`(${qi+1}/${queue.length}) 保存完了。次を処理します…`);
+
+      // ★追加：在庫状態をUIに反映
+      const stHidden = block.querySelector('.m_status');
+      const segBtns  = block.querySelectorAll('.seg .btn');
+      const cur = (data.status === 'soldout') ? 'soldout' : 'available';
+      if (stHidden) stHidden.value = cur;
+      segBtns.forEach(b => {
+        b.classList.toggle('active', b.dataset.val === cur);
+      });
+
+      // ヒントを表示（画像を選ばなければ現状維持）
+      const hint = document.createElement('div');
+      hint.className = 'muted';
+      hint.textContent = '※画像を選択しなければ既存画像をそのまま使います（最大2枚）。';
+      block.querySelector('.mini').appendChild(hint);
+
+      // パネルを開く
+      openPanel();
     }
+    // ====== 保存（編集/追加 両対応の完成版） ======
+    async function saveProduct(){
+      lockUI(true);
+      try{
+        setStatus('保存の準備中…');
 
-    lastRes.innerHTML = `
-      <div class="ok"><b>保存に成功しました（${createdIds.length}件）。</b></div>
-      <div class="muted" style="max-height:160px;overflow:auto">
-        ${createdIds.map(id=>`<div>ID: <code>${id}</code></div>`).join('')}
-      </div>
-      <div style="margin-top:8px"><a href="/" target="_blank">サイトで確認（index）</a></div>
-    `;
-    prodsEl.innerHTML = '';
-    addProdBlock();
-    await loadList();
-    setStatus('すべての保存が完了しました。');
+        const blocks = [...prodsEl.querySelectorAll('.prod')];
+        if (!blocks.length){
+          alert('商品フォームを追加してください');
+          setStatus('商品フォームがありません');
+          lockUI(false);
+          return;
+        }
 
-  }catch(err){
-    console.error(err);
-    alert('保存中にエラーが発生しました');
-    lastRes.innerHTML = `<div class="err"><b>エラー：</b> ${String((err && err.message) || err)}</div>`;
-    setStatus('エラーが発生しました。');
-  }finally{
-    lockUI(false);
-  }
-}
+        // ★ いま編集しているIDを退避（処理の途中でリセットされても安全にするため）
+        const targetId = editTargetId;
+
+        // 編集中は1フォームのみ扱う
+        const targets = targetId ? blocks.slice(0,1) : blocks;
+
+        const mustBeValid = (cat, var_, price)=>{
+          if (!cat){ alert('カテゴリーネームを入力してください'); return false; }
+          if (!var_){ alert('バラエティーネームを入力してください'); return false; }
+          if (!Number.isFinite(price) || price < 0){ alert('金額は0以上の数字で入力してください'); return false; }
+          return true;
+        };
+
+        // ====== 編集（1件更新） ======
+        if (targetId){
+          const b  = targets[0];
+          const cat= b.querySelector('.m_category')?.value.trim() || '';
+          const va = b.querySelector('.m_variety')?.value.trim()  || '';
+          const pr = Number((b.querySelector('.m_price')?.value || '').trim());
+          const fs = [...(b.querySelector('.m_images')?.files || [])].slice(0,2);
+          const stv= b.querySelector('.m_status')?.value || 'available'; // ★追加
+
+          if (!mustBeValid(cat, va, pr)) { setStatus('入力不備があります'); lockUI(false); return; }
+
+          // 入力パネルは閉じる（※ targetId は変数に退避済み）
+          closePanel();
+          setStatus('画像処理中…');
+
+          // 画像：選択されていれば置き換え、なければ既存を維持
+          let urls = editExistingImages.slice();
+          if (fs.length){
+            urls = [];
+            for (let i=0; i<fs.length; i++){
+              const f = fs[i];
+              const { blob, mime, name } = await compressImage(f, 1200, 0.78);
+              const path = `products/${targetId}/${Date.now()}_${i}_${sanitizeName(name)}`;
+              const storageRef = ref(st, path);
+              const task = uploadBytesResumable(storageRef, blob, { contentType: mime });
+              const url = await new Promise((resolve, reject)=>{
+                task.on('state_changed', s=>{
+                  const pct = Math.round((s.bytesTransferred / s.totalBytes) * 100);
+                  setStatus(`画像 ${i+1}/${fs.length} をアップロード中… ${pct}%`);
+                }, reject, async ()=>{
+                  const u = await getDownloadURL(task.snapshot.ref);
+                  resolve(u);
+                });
+              });
+              urls.push(url);
+            }
+          }
+
+          setStatus('Firestore を更新中…');
+          await updateDoc(doc(collection(db,'products'), targetId), {
+            categoryName: cat,
+            varietyName : va,
+            price       : pr,
+            images      : urls,
+            status      : stv,                 // ★追加
+            updatedAt   : serverTimestamp()
+          });
+
+          lastRes.innerHTML = `<div class="ok"><b>更新しました：</b> ${targetId}</div>`;
+          await loadList();
+
+          // ★ 成功したら編集状態をクリアしてフォームを初期化
+          editTargetId = null;
+          editExistingImages = [];
+          prodsEl.innerHTML = '';
+          addProdBlock();
+          setPanelTitle();
+
+          setStatus('更新が完了しました。');
+          return;
+        }
+
+        // ====== 新規追加（複数対応） ======
+        const queue = [];
+        for (const b of targets){
+          const cat= b.querySelector('.m_category')?.value.trim() || '';
+          const va = b.querySelector('.m_variety')?.value.trim()  || '';
+          const pr = Number((b.querySelector('.m_price')?.value || '').trim());
+          const fs = [...(b.querySelector('.m_images')?.files || [])].slice(0,2);
+          const stv= b.querySelector('.m_status')?.value || 'available'; // ★追加
+          if (!mustBeValid(cat, va, pr)) { setStatus('入力不備があります'); lockUI(false); return; }
+          queue.push({ categoryName:cat, varietyName:va, priceNum:pr, files:fs, status:stv }); // ★追加
+        }
+
+        closePanel();
+        setStatus(`${queue.length}件の保存を開始します…`);
+
+        const createdIds = [];
+        for (let qi=0; qi<queue.length; qi++){
+          const item = queue[qi];
+          setStatus(`(${qi+1}/${queue.length}) 画像アップロードの準備中…`);
+
+          const newRef = doc(collection(db, 'products'));
+          const newId  = newRef.id;
+
+          const urls = [];
+          for (let i=0;i<item.files.length;i++){
+            const f = item.files[i];
+            const { blob, mime, name } = await compressImage(f, 1200, 0.78);
+            const path = `products/${newId}/${Date.now()}_${i}_${sanitizeName(name)}`;
+            const storageRef = ref(st, path);
+            const task = uploadBytesResumable(storageRef, blob, { contentType: mime });
+            const url = await new Promise((resolve, reject)=>{
+              task.on('state_changed', s=>{
+                const pct = Math.round((s.bytesTransferred / s.totalBytes) * 100);
+                setStatus(`(${qi+1}/${queue.length}) 画像 ${i+1}/${item.files.length} をアップロード中… ${pct}%`);
+              }, reject, async ()=>{
+                const u = await getDownloadURL(task.snapshot.ref);
+                resolve(u);
+              });
+            });
+            urls.push(url);
+          }
+
+          setStatus(`(${qi+1}/${queue.length}) Firestore へ保存中…`);
+          await setDoc(newRef, {
+            categoryName: item.categoryName,
+            varietyName : item.varietyName,
+            price       : item.priceNum,
+            images      : urls,
+            status      : item.status || 'available',   // ★追加
+            createdAt   : serverTimestamp()
+          });
+          createdIds.push(newId);
+          setStatus(`(${qi+1}/${queue.length}) 保存完了。次を処理します…`);
+        }
+
+        lastRes.innerHTML = `
+          <div class="ok"><b>保存に成功しました（${createdIds.length}件）。</b></div>
+          <div class="muted" style="max-height:160px;overflow:auto">
+            ${createdIds.map(id=>`<div>ID: <code>${id}</code></div>`).join('')}
+          </div>
+          <div style="margin-top:8px"><a href="/" target="_blank">サイトで確認（index）</a></div>
+        `;
+        prodsEl.innerHTML = '';
+        addProdBlock();
+        await loadList();
+        setStatus('すべての保存が完了しました。');
+
+      }catch(err){
+        console.error(err);
+        alert('保存中にエラーが発生しました');
+        lastRes.innerHTML = `<div class="err"><b>エラー：</b> ${String((err && err.message) || err)}</div>`;
+        setStatus('エラーが発生しました。');
+      }finally{
+        lockUI(false);
+      }
+    }
 
     // ===== 画像を圧縮&リサイズ（最長辺 1200, 品質 0.78） =====
     async function compressImage(file, maxSize = 1200, quality = 0.78) {
@@ -604,42 +648,42 @@ async function saveProduct(){
           return;
         }
 
-listEl.innerHTML = '';
-docs.forEach(d=>{
-  const data = d.data();
-  const id   = d.id;
-  const imgs = Array.isArray(data.images) ? data.images : [];
+        listEl.innerHTML = '';
+        docs.forEach(d=>{
+          const data = d.data();
+          const id   = d.id;
+          const imgs = Array.isArray(data.images) ? data.images : [];
 
-  const el = document.createElement('div');
-  el.className = 'item';
-  el.innerHTML = `
-    <div class="imgs">
-      ${imgs.length ? imgs.map(u=>`<img src="${u}" alt="">`).join('') : '<span class="muted">（画像なし）</span>'}
-    </div>
-    <div class="body">
-      <div class="title">${escapeHtml(data.categoryName || '')}</div>
-      <div class="sub">${escapeHtml(data.varietyName || '')}</div>
-      <div class="sub">¥ ${Number(data.price||0).toLocaleString()}</div>
-      <div class="sub muted">ID: <code>${id}</code></div>
-      <div class="ops">
-        <button class="btn ghost"  data-edit="${id}">編集</button>
-        <button class="btn danger" data-del="${id}">削除</button>
-      </div>
-    </div>
-  `;
-  listEl.appendChild(el);
+          const el = document.createElement('div');
+          el.className = 'item';
+          el.innerHTML = `
+            <div class="imgs">
+              ${imgs.length ? imgs.map(u=>`<img src="${u}" alt="">`).join('') : '<span class="muted">（画像なし）</span>'}
+            </div>
+            <div class="body">
+              <div class="title">${escapeHtml(data.categoryName || '')}</div>
+              <div class="sub">${escapeHtml(data.varietyName || '')}</div>
+              <div class="sub">¥ ${Number(data.price||0).toLocaleString()}</div>
+              <div class="sub muted">ID: <code>${id}</code></div>
+              <div class="ops">
+                <button class="btn ghost"  data-edit="${id}">編集</button>
+                <button class="btn danger" data-del="${id}">削除</button>
+              </div>
+            </div>
+          `;
+          listEl.appendChild(el);
 
-  // ★ここで“その el のボタン”に紐づける（data を閉じ込める）
-  const editBtn = el.querySelector('[data-edit]');
-  editBtn?.addEventListener('click', ()=> openEdit(id, data));
+          // ★ここで“その el のボタン”に紐づける（data を閉じ込める）
+          const editBtn = el.querySelector('[data-edit]');
+          editBtn?.addEventListener('click', ()=> openEdit(id, data));
 
-  const delBtn = el.querySelector('[data-del]');
-  delBtn?.addEventListener('click', async ()=>{
-    if (!confirm('この商品を削除しますか？（画像も削除）')) return;
-    await deleteProduct(id);
-    await loadList();
-  });
-});
+          const delBtn = el.querySelector('[data-del]');
+          delBtn?.addEventListener('click', async ()=>{
+            if (!confirm('この商品を削除しますか？（画像も削除）')) return;
+            await deleteProduct(id);
+            await loadList();
+          });
+        });
 
 
       }catch(err){
@@ -676,93 +720,93 @@ docs.forEach(d=>{
 
     // 初回ロード
     loadList();
-// ====== 文字列 → フォーム自動生成（カテゴリ/品種/金額の振り分け） ======
-const KNOWN_CATEGORIES = ["Monstera", "Alocasia", "Philodendron", "Anthurium"];
+    // ====== 文字列 → フォーム自動生成（カテゴリ/品種/金額の振り分け） ======
+    const KNOWN_CATEGORIES = ["Monstera", "Alocasia", "Philodendron", "Anthurium"];
 
-// 品種の見た目を少し整える（"SummerGlory" → "Summer Glory"）
-function prettifyVariety(s){
-  if (!s) return "";
-  // キャメルケースを分割
-  let t = s.replace(/([a-z])([A-Z])/g, '$1 $2');
-  // 連続大文字語も適度に分割
-  t = t.replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2');
-  return t.trim();
-}
+    // 品種の見た目を少し整える（"SummerGlory" → "Summer Glory"）
+    function prettifyVariety(s){
+      if (!s) return "";
+      // キャメルケースを分割
+      let t = s.replace(/([a-z])([A-Z])/g, '$1 $2');
+      // 連続大文字語も適度に分割
+      t = t.replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2');
+      return t.trim();
+    }
 
-// テキスト全体を解析して [{category, variety, price}, ...] で返す
-function parseProductsFromText(text){
-  const trimmed = String(text || '').replace(/\s+/g, ''); // 改行や空白は除去（連結想定）
-  if (!trimmed) return [];
+    // テキスト全体を解析して [{category, variety, price}, ...] で返す
+    function parseProductsFromText(text){
+      const trimmed = String(text || '').replace(/\s+/g, ''); // 改行や空白は除去（連結想定）
+      if (!trimmed) return [];
 
-  // カテゴリを大文字小文字無視で OR 化
-  const catAlt = KNOWN_CATEGORIES.join('|');
-  // パターン: (カテゴリ)(数字以外1文字以上)(数字1～6桁)
-  // 例: Philodendron SummerGlory 25
-  const re = new RegExp(`(${catAlt})([^0-9]+?)(\\d{1,6})`, 'gi');
+      // カテゴリを大文字小文字無視で OR 化
+      const catAlt = KNOWN_CATEGORIES.join('|');
+      // パターン: (カテゴリ)(数字以外1文字以上)(数字1～6桁)
+      // 例: Philodendron SummerGlory 25
+      const re = new RegExp(`(${catAlt})([^0-9]+?)(\\d{1,6})`, 'gi');
 
-  const out = [];
-  let m;
-  while ((m = re.exec(trimmed)) !== null){
-    const category = m[1];             // キャプチャ①: カテゴリ
-    const varietyRaw = m[2] || '';     // キャプチャ②: 品種生文字
-    const priceStr = m[3] || '';       // キャプチャ③: 数字
-    const priceNum = Number(priceStr);
+      const out = [];
+      let m;
+      while ((m = re.exec(trimmed)) !== null){
+        const category = m[1];             // キャプチャ①: カテゴリ
+        const varietyRaw = m[2] || '';     // キャプチャ②: 品種生文字
+        const priceStr = m[3] || '';       // キャプチャ③: 数字
+        const priceNum = Number(priceStr);
 
-    if (!category || !Number.isFinite(priceNum)) continue;
+        if (!category || !Number.isFinite(priceNum)) continue;
 
-    // 品種から余計な記号は軽く削除
-    const variety = prettifyVariety(varietyRaw.replace(/[_\-]+/g,' ').trim());
+        // 品種から余計な記号は軽く削除
+        const variety = prettifyVariety(varietyRaw.replace(/[_\-]+/g,' ').trim());
 
-    out.push({ categoryName: category, varietyName: variety, priceNum: priceNum });
-  }
-  return out;
-}
+        out.push({ categoryName: category, varietyName: variety, priceNum: priceNum });
+      }
+      return out;
+    }
 
-// フォームに1件反映
-// 既存の appendProdToForm をこの実装に置き換え
-function appendProdToForm({ categoryName, varietyName, priceNum }){
-  // 1) まず“空のフォーム”(#1が空ならそれ)を探す
-  const blocks = [...prodsEl.querySelectorAll('.prod')];
-  const isEmpty = (b)=>{
-    const cat = b.querySelector('.m_category')?.value.trim() || '';
-    const va  = b.querySelector('.m_variety')?.value.trim()  || '';
-    const pr  = b.querySelector('.m_price')?.value.trim()    || '';
-    const fs  = (b.querySelector('.m_images')?.files || []).length;
-    return !cat && !va && !pr && fs === 0;
-  };
-  let target = blocks.find(isEmpty);
+    // フォームに1件反映
+    // 既存の appendProdToForm をこの実装に置き換え
+    function appendProdToForm({ categoryName, varietyName, priceNum }){
+      // 1) まず“空のフォーム”(#1が空ならそれ)を探す
+      const blocks = [...prodsEl.querySelectorAll('.prod')];
+      const isEmpty = (b)=>{
+        const cat = b.querySelector('.m_category')?.value.trim() || '';
+        const va  = b.querySelector('.m_variety')?.value.trim()  || '';
+        const pr  = b.querySelector('.m_price')?.value.trim()    || '';
+        const fs  = (b.querySelector('.m_images')?.files || []).length;
+        return !cat && !va && !pr && fs === 0;
+      };
+      let target = blocks.find(isEmpty);
 
-  // 2) 空きが無ければ新規フォームを1つ追加
-  if (!target){
-    addProdBlock();
-    target = prodsEl.lastElementChild;
-  }
-  if (!target) return;
+      // 2) 空きが無ければ新規フォームを1つ追加
+      if (!target){
+        addProdBlock();
+        target = prodsEl.lastElementChild;
+      }
+      if (!target) return;
 
-  // 3) 値を反映
-  const cat = target.querySelector('.m_category');
-  const va  = target.querySelector('.m_variety');
-  const pr  = target.querySelector('.m_price');
+      // 3) 値を反映
+      const cat = target.querySelector('.m_category');
+      const va  = target.querySelector('.m_variety');
+      const pr  = target.querySelector('.m_price');
 
-  if (cat) cat.value = categoryName || '';
-  if (va)  va.value  = varietyName  || '';
-  if (pr)  pr.value  = Number.isFinite(priceNum) ? String(priceNum) : '';
-}
+      if (cat) cat.value = categoryName || '';
+      if (va)  va.value  = varietyName  || '';
+      if (pr)  pr.value  = Number.isFinite(priceNum) ? String(priceNum) : '';
+    }
 
-// 取込ボタン
-document.getElementById('parseBtn')?.addEventListener('click', (e)=>{
-  e.preventDefault();
-  const src = document.getElementById('bulkText')?.value || '';
-  const items = parseProductsFromText(src);
+    // 取込ボタン
+    document.getElementById('parseBtn')?.addEventListener('click', (e)=>{
+      e.preventDefault();
+      const src = document.getElementById('bulkText')?.value || '';
+      const items = parseProductsFromText(src);
 
-  if (!items.length){
-    setStatus('解析できる商品が見つかりませんでした（カテゴリ名+品種+数字の連結で入力してください）');
-    return;
-  }
+      if (!items.length){
+        setStatus('解析できる商品が見つかりませんでした（カテゴリ名+品種+数字の連結で入力してください）');
+        return;
+      }
 
-  items.forEach(appendProdToForm);
-  setStatus(`${items.length}件をフォームに追加しました`);
-});
+      items.forEach(appendProdToForm);
+      setStatus(`${items.length}件をフォームに追加しました`);
+    });
   </script>
 </body>
 </html>
