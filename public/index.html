@@ -17,6 +17,7 @@
   <link rel="preconnect" href="https://gist.githubusercontent.com" crossorigin>
 
   <link href="https://fonts.googleapis.com/css2?family=Bayon&family=Tangerine:wght@700&family=Italianno&family=Noto+Serif+JP&display=swap" rel="stylesheet">
+
   <style>
     /* ===== ベース ===== */
     html,body{
@@ -288,19 +289,7 @@ opacity:;
   background: none;       /* 背景も変えない */
 }
 
- .info-panel{
-      position:absolute; right:0; top:0; width:60%; left: 180px;
-      display:none; z-index:10;
-      background:transparent; border:none; box-shadow:none; padding:0; margin:0;
-      color:#333; font-size:18px; line-height:1.5;bottom: 50px;
-      max-height:none;min-width:300px; overflow:auto;margin-top: 
-    }
-    .info-panel.show{ display:block; }
-    .info-list{margin:0 ; padding:0; list-style:none;  position: relative;top:20px;left:40px;}
-    .info-list li{ margin:9px 0; padding-left:2em; text-indent:-1em; }
-    .info-list li::before{ content:"・"; }
-
-    .info-btn { background:#fff !important; margin-top:30px; }
+ 
   
 
 /* いいね未選択（♡）の文字色だけグレーに */
@@ -358,6 +347,99 @@ text-align:center;
   align-self: stretch;
   /* 無効だった padding-bottom: px は削除（見た目不変） */
 }
+
+ 
+
+
+/* 在庫ラベル（ざいこらべる：在庫表示の見た目） */
+.stock-label{
+  font-size:36px;
+  color:#2e7d32; /* 深めのグリーン */
+  margin-left:12px;
+transform: translateY(22px);
+font-weight: 200;
+}
+
+/* Sold Out ラベル（売り切れ表示） */
+.sold-out-label{
+  font-size:36px;
+  font-weight:400;
+  color:#b00020; /* 赤系 */
+  padding:10px 18px;
+  border:2px solid #b00020;
+  border-radius:16px;margin-left:auto;
+　
+}
+
+
+/* 並び替え枠全体を横並びに */
+.sort-area {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  font-size: 20px; /* 全体の文字を大きめに */
+}
+
+
+.sort-info {
+  margin-left: auto;     /* ← 右端まで押し出す */
+  text-align: right;     /* ← 行頭も右揃え */
+  max-width: 66%;        /* ← 横に広がりすぎないように半分に制限 */
+  font-size: 22px;
+  color: #333;
+  line-height: 1.7;opacity:0.66;
+}
+
+/* 下のアンダーライン */
+.sort-area {
+  border-bottom: 2px solid #F564A970;
+  margin-bottom: 16px;
+  padding-top: 66px;
+}
+
+
+
+/* ▼ 新：並べ替えトリガー（枠なし） */
+.sort-trigger{
+  appearance:none; background:none; border:none; padding:8px 0;
+  font-family:'Playfair Display SC','Lustria','Noto Serif JP',serif;
+  font-weight:300; font-size:38px; color:#333; cursor:pointer;margin-left:33px;
+}
+.sort-trigger .chev{
+  display:inline-block; margin-left:6px; transform:translateY(-1px) rotate(0deg);
+  transition:transform .18s ease;
+}
+.sort-trigger[aria-expanded="true"] .chev{ transform:translateY(-1px) rotate(90deg); } /* ＞をくるっと */
+
+/* ▼ 新：並べ替えパネル（ハンバーガーと同質感） */
+.sort-panel{
+  position:fixed; left:0; top:0;           /* top はJSでボタンの真下に合わせる */
+  width:100vw;
+  height:auto;                              /* ★中身に合わせる */
+  min-height:300px;                         /* ★見える最低ライン */
+  max-height:70vh;                          /* ★画面の7割まで。多いときは中でスクロール */
+  overflow:auto;                            /* ★中だけスクロール */
+  background-color:rgba(255,255,255,.7);
+  border:2px solid rgba(0,0,0,.1);
+  box-shadow:4px 0 20px rgba(0,0,0,.2);
+  transform:translateX(-100%); opacity:0; pointer-events:none;
+  transition:transform .4s ease, opacity .4s ease;
+  z-index:3000; padding:20px 30px;
+}
+.sort-panel.show{
+  transform:translateX(0); opacity:1; pointer-events:auto;
+  backdrop-filter:blur(8px);               /* すりガラス */
+}
+
+/* 中の項目は category-menu 風 */
+.sort-panel .sort-item{
+  font-family:'Lustria','Noto Serif JP',serif;
+  font-size:32px; color:#000; cursor:pointer; padding:14px 0;
+  border-bottom:1px solid rgba(0,0,0,.08);
+}
+.sort-panel .sort-item:hover{ color:#c2185b; transform:translateX(2px); }
+
 
   </style>
 
@@ -435,6 +517,31 @@ text-align:center;
         <button onclick="filterCategory('philodendron')">Philodendron</button>
       </div>
     </section>
+
+<section class="container">
+  <div class="sort-area">
+<button id="sortTrigger"
+        class="sort-trigger"
+        aria-haspopup="listbox"
+        aria-expanded="false"
+        aria-controls="sortPanel"
+        title="並べ替え"
+        data-default-label="並べ替え">並べ替え<span class="chev">＞</span></button>
+
+<div id="sortPanel" class="sort-panel" role="listbox" aria-label="並び替えメニュー">
+  <div class="sort-item" role="option" data-value="original">品種順</div>
+  <div class="sort-item" role="option" data-value="price-asc">価格の安い順</div>
+  <div class="sort-item" role="option" data-value="price-desc">価格の高い順</div>
+  <div class="sort-item" role="option" data-value="in-stock">在庫あり</div>
+</div>
+
+    <div class="sort-info">
+      画像をタップすると拡大表示されます。<br>画像1枚目は参考親株、2枚目は参考TC株です。
+<br>
+      組織培養株のため、購入後は順化作業が必要となります。
+    </div>
+  </div>
+</section>
 
     <!-- 商品カード（既存1件はそのまま） -->
     <section class="container">
@@ -1056,170 +1163,159 @@ if (dsp) dsp.textContent = '1';
   };
 
   // ==== 1商品カード（既存の関数をそのまま呼ぶ）====
-  function ProductCard({ d, id }) {
-    const imgs  = Array.isArray(d.images) ? d.images.slice(0, 2) : [];
-    const price = Number(d.price || 0);
+function ProductCard({ d, id }) {
+  const imgs   = Array.isArray(d.images) ? d.images.slice(0, 2) : [];
+  const price  = Number(d.price || 0);
+  const status = (d.status || 'available'); // 'available' | 'soldout'（在庫状態）
 
-    const trackRef = useRef(null);
-    const pagerRef = useRef(null);
+  const trackRef = useRef(null);
+  const pagerRef = useRef(null);
 
-    // ページドット（React生成分）
-    useEffect(() => {
-      const track = trackRef.current;
-      const pager = pagerRef.current;
-      if (!track || !pager) return;
+  // ページドット生成（既存ロジックそのまま）
+  useEffect(() => {
+    const track = trackRef.current;
+    const pager = pagerRef.current;
+    if (!track || !pager) return;
 
-      const pics = track.querySelectorAll('img.product-img');
-      pager.innerHTML = '';
-      if (pics.length > 0) {
-        pics.forEach((_, i) => {
-          const dot = document.createElement('span');
-          dot.className = 'dot' + (i === 0 ? ' active' : '');
-          dot.addEventListener('click', () => {
-            const w = pics[0].getBoundingClientRect().width || 0;
-            track.scrollTo({ left: w * i, behavior: 'smooth' });
-          });
-          pager.appendChild(dot);
+    const pics = track.querySelectorAll('img.product-img');
+    pager.innerHTML = '';
+    if (pics.length > 0) {
+      pics.forEach((_, i) => {
+        const dot = document.createElement('span');
+        dot.className = 'dot' + (i === 0 ? ' active' : '');
+        dot.addEventListener('click', () => {
+          const w = pics[0].getBoundingClientRect().width || 0;
+          track.scrollTo({ left: w * i, behavior: 'smooth' });
         });
-        const updateActive = () => {
-          const w = pics[0].getBoundingClientRect().width || 1;
-          const idx = Math.round(track.scrollLeft / w);
-          [...pager.children].forEach((d, j) => d.classList.toggle('active', j === idx));
-        };
-        track.addEventListener('scroll', () => requestAnimationFrame(updateActive), { passive: true });
-        window.addEventListener('resize', updateActive);
-        updateActive();
-        return () => window.removeEventListener('resize', updateActive);
-      }
-    }, [id]);
-
-    // いいね＆数量の復元（localStorage）――React生成分にも反映
-    useEffect(() => {
-      // いいね見た目
-      const likes = JSON.parse(localStorage.getItem('likes') || '{}');
-      const btnLike = document.getElementById('like-' + id);
-      const liked = !!likes[id];
-      if (btnLike) {
-        btnLike.classList.toggle('liked', liked);
-        btnLike.textContent = liked ? '♥' : '♡';
-      }
-
-      // 数量（カートに入れてあるものは復元）
-      const sel  = document.getElementById(`qty-${id}`);
-      const dsp  = document.querySelector(`.qty-display[data-for="qty-${id}"]`);
-      const menu = document.querySelector(`.qty-menu[data-for="qty-${id}"]`);
-
-      // option用意
-      if (sel && !sel.options.length) {
-        for (let i = 1; i <= 100; i++) {
-          const op = document.createElement('option'); op.value = i; op.textContent = i;
-          sel.appendChild(op);
-        }
-      }
-// ★React生成分もリロード時は常に1で初期化
-if (sel) sel.value = '1';
-if (dsp) dsp.textContent = '1';
-
-      // 数量メニューのクリック挙動
-      if (menu && !menu.children.length) {
-        for (let i = 1; i <= 100; i++) {
-          const it = document.createElement('div');
-          it.className = 'qty-item'; it.textContent = i;
-          it.addEventListener('click', () => {
-            if (sel) sel.value = String(i);
-            if (dsp) dsp.textContent = String(i);
-            menu.classList.remove('show');
-          });
-          menu.appendChild(it);
-        }
-      }
-      const toggleQtyMenu = (e) => { e.stopPropagation(); menu?.classList.toggle('show'); };
-      const dspBtn = dsp?.closest('.qty-wrap')?.querySelector('.qty-display');
-      dspBtn?.addEventListener('click', toggleQtyMenu);
-      const closeAll = () => menu?.classList.remove('show');
-      document.addEventListener('click', closeAll);
-      return () => {
-        dspBtn?.removeEventListener('click', toggleQtyMenu);
-        document.removeEventListener('click', closeAll);
+        pager.appendChild(dot);
+      });
+      const updateActive = () => {
+        const w = pics[0].getBoundingClientRect().width || 1;
+        const idx = Math.round(track.scrollLeft / w);
+        [...pager.children].forEach((d, j) => d.classList.toggle('active', j === idx));
       };
-    }, [id]);
+      track.addEventListener('scroll', () => requestAnimationFrame(updateActive), { passive: true });
+      window.addEventListener('resize', updateActive);
+      updateActive();
+      return () => window.removeEventListener('resize', updateActive);
+    }
+  }, [id]);
 
-    // infoボタン（既存と同じ挙動をReact側で付与）
-    const onInfoClick = (e) => {
-      const card  = e.currentTarget.closest('.product-right');
-      const panel = card?.querySelector('.info-panel');
-      const subTxt = card?.querySelector('.subtext');
-      if (!panel) return;
-      document.querySelectorAll('.info-panel.show').forEach(p => { if (p !== panel) p.classList.remove('show'); });
-      if (subTxt) {
-        panel.style.top = subTxt.offsetTop + 'px';
-      } else {
-        const mid = card?.querySelector('.mid');
-        if (mid) panel.style.top = mid.offsetTop + 'px';
+  // いいね＆数量の復元（既存ロジックそのまま）
+  useEffect(() => {
+    const likes = JSON.parse(localStorage.getItem('likes') || '{}');
+    const btnLike = document.getElementById('like-' + id);
+    const liked = !!likes[id];
+    if (btnLike) {
+      btnLike.classList.toggle('liked', liked);
+      btnLike.textContent = liked ? '♥' : '♡';
+    }
+
+    const sel  = document.getElementById(`qty-${id}`);
+    const dsp  = document.querySelector(`.qty-display[data-for="qty-${id}"]`);
+    const menu = document.querySelector(`.qty-menu[data-for="${`qty-${id}`}"]`);
+
+    if (sel && !sel.options.length) {
+      for (let i = 1; i <= 100; i++) {
+        const op = document.createElement('option'); op.value = i; op.textContent = i;
+        sel.appendChild(op);
       }
-      panel.classList.toggle('show');
-      e.currentTarget.setAttribute('aria-expanded', panel.classList.contains('show'));
+    }
+    if (sel) sel.value = '1';
+    if (dsp) dsp.textContent = '1';
+
+    if (menu && !menu.children.length) {
+      for (let i = 1; i <= 100; i++) {
+        const it = document.createElement('div');
+        it.className = 'qty-item'; it.textContent = i;
+        it.addEventListener('click', () => {
+          if (sel) sel.value = String(i);
+          if (dsp) dsp.textContent = String(i);
+          menu.classList.remove('show');
+        });
+        menu.appendChild(it);
+      }
+    }
+    const toggleQtyMenu = (e) => { e.stopPropagation(); menu?.classList.toggle('show'); };
+    const dspBtn = dsp?.closest('.qty-wrap')?.querySelector('.qty-display');
+    dspBtn?.addEventListener('click', toggleQtyMenu);
+    const closeAll = () => menu?.classList.remove('show');
+    document.addEventListener('click', closeAll);
+    return () => {
+      dspBtn?.removeEventListener('click', toggleQtyMenu);
+      document.removeEventListener('click', closeAll);
     };
+  }, [id]);
 
-    return React.createElement('article',
-      { className: 'product-item', 'data-category': (d.categoryName || '').toLowerCase(), 'data-id': id },
+  return React.createElement('article',
+    { className: 'product-item', 'data-category': (d.categoryName || '').toLowerCase(), 'data-id': id },
 
-      React.createElement('div', { className: 'img-wrapper' },
-        React.createElement('div', { className: 'img-track', ref: trackRef },
-          (imgs.length ? imgs : ['']).map((src, i) =>
-            React.createElement('img', {
-              key: i, className: 'product-img',
-              src: src || 'data:image/gif;base64,R0lGODlhAQABAAAAACw=',
-              alt: `${d.categoryName || ''} ${d.varietyName || ''} #${i + 1}`,
-              loading: 'lazy',
-              decoding: 'async',
-              width: 286, height: 286,
-              onClick: (ev) => window.enlargeImage?.(ev.target)
-            })
-          )
-        ),
-        React.createElement('div', { className: 'img-pager', ref: pagerRef })
+    // 画像
+    React.createElement('div', { className: 'img-wrapper' },
+      React.createElement('div', { className: 'img-track', ref: trackRef },
+        (imgs.length ? imgs : ['']).map((src, i) =>
+          React.createElement('img', {
+            key: i, className: 'product-img',
+            src: src || 'data:image/gif;base64,R0lGODlhAQABAAAAACw=',
+            alt: `${d.categoryName || ''} ${d.varietyName || ''} #${i + 1}`,
+            loading: 'lazy',
+            decoding: 'async',
+            width: 286, height: 286,
+            onClick: (ev) => window.enlargeImage?.(ev.target)
+          })
+        )
+      ),
+      React.createElement('div', { className: 'img-pager', ref: pagerRef })
+    ),
+
+    // 右側
+    React.createElement('div', { className: 'product-right' },
+
+      // タイトル
+      React.createElement('div', { className: 'title-row' },
+        React.createElement('div', { className: 'product-name' },
+          React.createElement('div', { className: 'name-spacer' }),
+          React.createElement('div', { className: 'category-name' }, d.categoryName || ''),
+          React.createElement('div', { className: 'variety-name'  }, d.varietyName  || '')
+        )
       ),
 
-      React.createElement('div', { className: 'product-right' },
-        React.createElement('div', { className: 'title-row' },
-          React.createElement('div', { className: 'product-name' },
-            React.createElement('div', { className: 'name-spacer' }),
-            React.createElement('div', { className: 'category-name' }, d.categoryName || ''),
-            React.createElement('div', { className: 'variety-name'  }, d.varietyName  || '')
-          )
-        ),
-        React.createElement('div', { className: 'mid' },
-          React.createElement('p', { className: 'price' }, `¥ ${Number(price).toLocaleString()}`),
-          React.createElement('button', { className: 'info-btn', 'aria-label': 'info', onClick: onInfoClick }, 'i')
-        ),
-        React.createElement('div', { className: 'info-panel' },
-          React.createElement('ul', { className: 'info-list' }, [
-            React.createElement('li', { key: 1 }, '一枚目参考親株'),
-            React.createElement('li', { key: 2 }, '二枚目参考TC株'),
-            React.createElement('li', { key: 3 }, '画像タップで拡大できます')
-          ])
-        ),
-        React.createElement('div', { className: 'bottom-row' },
-          React.createElement('button', {
-            className: 'like-btn',
-            id: `like-${id}`,
-            onClick: () => window.toggleLike?.(id),
-            'aria-label': 'like'
-          }, '♡'),
-          React.createElement('div', { className: 'qty-wrap' },
-            React.createElement('select', { id: `qty-${id}`, className: 'qty-select' }),
-            React.createElement('div', { className: 'qty-display', 'data-for': `qty-${id}` }, '1'),
-            React.createElement('div', { className: 'qty-menu', 'data-for': `qty-${id}` })
-          ),
-          React.createElement('button', {
-            className: 'add-btn',
-            onClick: () => window.addToCart?.(id, `${d.categoryName || ''} ${d.varietyName || ''}`, price)
-          }, 'Add to Cart')
-        )
+      // 価格＋在庫ラベル（infoボタンは廃止）
+      // 価格＋在庫ラベル（在庫なし時は何も出さない）
+React.createElement('div', { className: 'mid' },
+  React.createElement('p', { className: 'price' }, `¥ ${Number(price).toLocaleString()}`),
+  status === 'available'
+    ? React.createElement('span', { className: 'stock-label' }, '在庫あり')
+    : null
+),
+
+      // 下段：在庫で分岐
+      React.createElement('div', { className: 'bottom-row' },
+        React.createElement('button', {
+          className: 'like-btn',
+          id: `like-${id}`,
+          onClick: () => window.toggleLike?.(id),
+          'aria-label': 'like'
+        }, '♡'),
+
+        status === 'available'
+          ? [
+              React.createElement('div', { key:'qty', className: 'qty-wrap' },
+                React.createElement('select', { id: `qty-${id}`, className: 'qty-select' }),
+                React.createElement('div', { className: 'qty-display', 'data-for': `qty-${id}` }, '1'),
+                React.createElement('div', { className: 'qty-menu', 'data-for': `qty-${id}` })
+              ),
+              React.createElement('button', {
+                key:'add',
+                className: 'add-btn',
+                onClick: () => window.addToCart?.(id, `${d.categoryName || ''} ${d.varietyName || ''}`, price)
+              }, 'Add to Cart')
+            ]
+          : React.createElement('span', { key:'soldout', className: 'sold-out-label' }, 'Sold Out')
       )
-    );
-  }
+    )
+  );
+}
 
   function ProductList({ items }) {
     return React.createElement(React.Fragment, null,
@@ -1328,6 +1424,199 @@ document.addEventListener('DOMContentLoaded', updateCartBadge);
 window.addEventListener('storage', (e) => {
   if (e.key === 'cart') updateCartBadge();
 });
+
+
+/* === 並び替え（そーと）処理：React後のDOMを並び替えるだけ === */
+
+/** 価格（かかく）を数値で取得 */
+function getCardPrice(card){
+  const t = card.querySelector('.price')?.textContent || '';
+  const n = t.replace(/[^\d.]/g, '');
+  return Number(n) || 0;
+}
+
+/** 在庫ありかどうか（sold-outラベルが無ければ在庫あり） */
+function isAvailable(card){
+  return !card.querySelector('.sold-out-label');
+}
+
+/** 並び替え本体
+ * @param {'price-asc'|'price-desc'|'in-stock'|''} mode
+ *
+ * ポイント：
+ * - 「在庫あり」選択時は Sold Out を **非表示**（表示しない）。
+ * - それ以外に戻したら、**非表示にした分だけ**元の表示状態に戻す
+ *   （カテゴリ／likeなど既存の display 状態は保持）。
+ */
+function applySort(mode){
+  const root = document.getElementById('product-root');
+  if (!root) return;
+
+  const cards = Array.from(root.querySelectorAll('.product-item'));
+
+  // 初回のみ“元の並び順”を記録（すてーぶる：同点の時に崩れない）
+  cards.forEach((c,i)=>{
+    if (!c.dataset.originalOrder) c.dataset.originalOrder = String(i);
+  });
+
+  // ▼ いったん「在庫で隠したもの」を元に戻す（ほかのモード用）
+  cards.forEach(c => {
+    if (c.dataset.hiddenByStock === '1') {
+      // 以前の display を復元（空文字なら style指定なし）
+      c.style.display = c.dataset.prevDisplay ?? '';
+      delete c.dataset.prevDisplay;
+      delete c.dataset.hiddenByStock;
+    }
+  });
+
+  // ▼ 並び順の決定（価格系のみ並び替え、在庫ありは“非表示化”だけ）
+  const byOriginal = (a,b) =>
+    Number(a.dataset.originalOrder) - Number(b.dataset.originalOrder);
+
+  const byPriceAsc  = (a,b) => getCardPrice(a) - getCardPrice(b);
+  const byPriceDesc = (a,b) => getCardPrice(b) - getCardPrice(a);
+
+  // ▼ 品種順（＝初期描画の順）に戻す
+  if (mode === 'original' || mode === '') {
+    cards.sort(byOriginal).forEach(c => root.appendChild(c));
+  }
+
+  if (mode === 'price-asc' || mode === 'price-desc') {
+    const sorter = (mode === 'price-asc') ? byPriceAsc : byPriceDesc;
+    cards.sort(sorter).forEach(c => root.appendChild(c));
+  }
+
+  if (mode === 'in-stock') {
+    cards.forEach(c => {
+      const soldout = !isAvailable(c);
+      if (soldout) {
+        // いまの display をメモしてから非表示化（復帰用）
+        c.dataset.prevDisplay = c.style.display || '';
+        c.style.display = 'none';
+        c.dataset.hiddenByStock = '1';
+      }
+    });
+    // 並び順は崩さず（元の順を維持）。必要なら byOriginal で固定化してもOK。
+  }
+}
+
+// 既存：toggleMenu/closeMenu/overlay はそのまま使用
+
+// 追加：押したボタンの真下にパネルを配置（getBoundingClientRect：げっとばうんでぃんぐ…要素の位置と大きさを取得）
+function placeSortPanel(anchor){
+  const panel = document.getElementById('sortPanel');
+  if (!panel || !anchor) return;
+
+  const r = anchor.getBoundingClientRect();
+
+  // ビューポート基準で“ボタンの真下”に配置
+  const desiredTop  = r.bottom;
+  let   desiredLeft = r.left;
+
+  // 右にはみ出さないようにクランプ（8px 余白）
+  const pw = panel.offsetWidth || 0;
+  const maxLeft = Math.max(8, window.innerWidth - pw - 8);
+  if (desiredLeft > maxLeft) desiredLeft = maxLeft;
+
+  panel.style.top  = `${desiredTop}px`;
+  panel.style.left = `${desiredLeft}-8px`;
+}
+
+let _sortAnchor = null; // 直近で押された「並べ替え」ボタン
+
+function openSort(evt){
+  const panel   = document.getElementById('sortPanel');
+  const overlay = document.getElementById('overlay');
+  const anchor  = evt?.currentTarget || document.getElementById('sortTrigger');
+  if(!panel || !anchor) return;
+
+  _sortAnchor = anchor;
+  placeSortPanel(anchor); // ← “押した場所の真下”に置く
+
+  panel.classList.add('show');
+  overlay.classList.add('show');
+  anchor.setAttribute('aria-expanded','true');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeSort(){
+  const panel   = document.getElementById('sortPanel');
+  const overlay = document.getElementById('overlay');
+  if(!panel) return;
+
+  panel.classList.remove('show');
+  if (_sortAnchor) {
+    _sortAnchor.setAttribute('aria-expanded','false');
+  }
+
+  const catOpen = document.getElementById('categoryMenu')?.classList.contains('show');
+  if(!catOpen) overlay.classList.remove('show');
+
+  document.body.style.overflow = '';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const panel   = document.getElementById('sortPanel');
+  const overlay = document.getElementById('overlay');
+
+  // すべての並べ替えボタン（.sort-trigger）に対応
+  document.querySelectorAll('.sort-trigger').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
+      e.preventDefault();
+      panel.classList.contains('show') ? closeSort() : openSort(e);
+    });
+  });
+
+  if(panel){
+    panel.querySelectorAll('.sort-item').forEach(item=>{
+      item.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        const val   = item.dataset.value || '';
+        const label = (item.textContent || '').trim();
+
+        applySort(val);
+
+        // 押したボタン側の表示を更新（＞は維持）
+        if (_sortAnchor) {
+          _sortAnchor.innerHTML = `${label}<span class="chev">＞</span>`;
+          _sortAnchor.setAttribute('title', label);
+          _sortAnchor.setAttribute('aria-label', label);
+        }
+
+        closeSort();
+
+        const url = new URL(location.href);
+        if (val) url.searchParams.set('sort', val);
+        else     url.searchParams.delete('sort');
+        history.replaceState(null, '', url.toString());
+      });
+    });
+  }
+
+  overlay?.addEventListener('click', closeSort);
+
+  document.addEventListener('keydown', (e)=>{
+    if(e.key === 'Escape') closeSort();
+  });
+
+  // 開いている間だけ、スクロール／リサイズで押したボタンの真下に追従
+  const reposition = () => {
+    const panel = document.getElementById('sortPanel');
+    if(panel?.classList.contains('show') && _sortAnchor){
+      placeSortPanel(_sortAnchor);
+    }
+  };
+  window.addEventListener('scroll',  reposition, { passive:true });
+  window.addEventListener('resize',  reposition);
+});
+
+/* Reactで商品が出た合図：初期は未適用（表示は「並び替え」）だが
+   “元の順序”記録のために一度 applySort('') を呼んでおく */
+document.addEventListener('products-rendered', () => {
+  applySort(''); // data-original-order を確定させる
+});
+
+
 
 </script>
 </body>
