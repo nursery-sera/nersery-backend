@@ -275,7 +275,7 @@ margin-left: 37%;
           <div>※局留め希望の方は備考欄に「〇〇郵便局 局留め」と記載してください。</div>
         </div>
 
-    <button type="submit" <button type="submit" id="submitBtn" class="submit-button" aria-busy="false">注文送信 ></button>
+    <button type="submit" id="submitBtn" class="submit-button" aria-busy="false">注文送信 ></button>
   </form>
 
 
@@ -512,42 +512,52 @@ attachKanaAutoKatakana(document.getElementById('firstKana'));
   function sanitize(str){ return String(str || '').replace(/\p{Cf}/gu,'').trim(); }
 
   var form = document.getElementById('contact-form');
-  if (!form) return;
+if (!form) return;
+
+// ★ここに追加
+const submitBtn = document.getElementById('submitBtn');
+submitBtn?.addEventListener('click', e => {
+  if (submitBtn.getAttribute('aria-busy') === 'true') {
+    e.preventDefault();
+  }
+});
 
  form.addEventListener('submit', async function(e){
   e.preventDefault();
 
-  // すでに送信中なら何もしない（連打防止）
-  if (submitting) return;
-  submitting = true;
 
-  // 送信中のUI反映：ボタンと入力を一時無効化
-  const submitBtn = document.getElementById('submitBtn');
-  const restore = { text: submitBtn ? submitBtn.textContent : '' };
+
+// すでに送信中なら何もしない（連打防止）
+if (submitting) return;
+submitting = true;
+
+// ★ 先に FormData を作成（disabledにする前に“写真を撮る”）
+const fd = new FormData(form); // e.target でも可
+
+// 送信中のUI反映：ボタンと入力を一時無効化
+const submitBtn = document.getElementById('submitBtn');
+if (submitBtn) {
+  submitBtn.textContent = '送信中…';
+  submitBtn.setAttribute('aria-busy', 'true');
+  submitBtn.disabled = true;
+}
+const disabledEls = [];
+form.querySelectorAll('input, textarea, button, select').forEach(el => {
+  if (!el.disabled) { el.disabled = true; disabledEls.push(el); }
+});
+
+const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+if (!cart.length) {
+  alert('カートが空です。先に商品をお選びください。');
   if (submitBtn) {
-    submitBtn.textContent = '送信中…';
-    submitBtn.setAttribute('aria-busy', 'true');
-    submitBtn.disabled = true;
+    submitBtn.textContent = '注文送信 >';
+    submitBtn.setAttribute('aria-busy', 'false');
+    submitBtn.disabled = false;
   }
-  // 入力要素を全て一時的に無効化（Enter送信やクリックを封じる）
-  const disabledEls = [];
-  form.querySelectorAll('input, textarea, button, select').forEach(el => {
-    if (!el.disabled) { el.disabled = true; disabledEls.push(el); }
-  });
-
-  const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-  if (!cart.length) { alert('カートが空です。先に商品をお選びください。'); 
-    // 復帰してから抜ける
-    if (submitBtn) {
-      submitBtn.textContent = restore.text;
-      submitBtn.setAttribute('aria-busy', 'false');
-      submitBtn.disabled = false;
-    }
-    disabledEls.forEach(el => el.disabled = false);
-    submitting = false;
-    return;
-  }
-    const fd = new FormData(e.target);
+  disabledEls.forEach(el => el.disabled = false);
+  submitting = false;
+  return;
+}
     // 文字列を念のため安全化（不可視制御文字などを除去）
     const customer = {
   lastName   : sanitize(fd.get('lastName')),
@@ -570,6 +580,18 @@ attachKanaAutoKatakana(document.getElementById('firstKana'));
     sanitize(fd.get('building'))
   ).trim()
 };
+
+if (!customer.lastName || !customer.firstName) {
+  alert('お名前（姓・名）を入力してください');
+  if (submitBtn) {
+    submitBtn.textContent = '注文送信 >';
+    submitBtn.setAttribute('aria-busy', 'false');
+    submitBtn.disabled = false;
+  }
+  disabledEls.forEach(el => el.disabled = false);
+  submitting = false;
+  return;
+}
 
 const items = cart.map(it => {
   const raw = it.productId ?? it.id ?? null;        // ここに slug が来てる
@@ -597,6 +619,8 @@ const items = cart.map(it => {
     const addOptText    = sanitize((checkout && checkout.addOptText) || '');
     const paymentMethod = (checkout && checkout.paymentMethod) || 'bank_transfer';
     const total         = (checkout && checkout.total) || (subtotal + baseShipping + addOpt);
+
+const idemKey = crypto.randomUUID();
 
     const payload = {
       customer,
@@ -639,17 +663,20 @@ const items = cart.map(it => {
       alert(`エラー：${err.message}\n\n送信先: ${API}`);
       console.error('order error', err);
     } finally {
-      // 送信中UIの復帰（成功・失敗どちらでも必ず実行）
-      const submitBtn = document.getElementById('submitBtn');
-      if (submitBtn) {
-        submitBtn.textContent = '注文送信 >';
-        submitBtn.setAttribute('aria-busy', 'false');
-        submitBtn.disabled = false;
-      }
-      // 無効化していた入力を元に戻す
-      form.querySelectorAll('input, textarea, button, select').forEach(el => { el.disabled = false; });
-      submitting = false;
-    }
+  const submitBtn = document.getElementById('submitBtn');
+  if (submitBtn) {
+    submitBtn.textContent = '注文送信 >';
+    submitBtn.setAttribute('aria-busy', 'false');
+    submitBtn.disabled = false;
+  }
+  form.querySelectorAll('input, textarea, button, select').forEach(el => { el.disabled = false; });
+
+  // ★エラー時だけ submitting=false に戻す
+  // （成功時はtrueのまま → このページでは再送不可にする）
+  if (err) {
+    submitting = false;
+  }
+}
   });
 })();
 </script>
