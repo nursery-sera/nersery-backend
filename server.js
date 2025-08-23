@@ -195,30 +195,36 @@ app.post("/api/orders", async (req, res) => {
     `;
 
     for (const it of items) {
-      const rawPid = it.productId ?? null;
-      const pid = /^\d+$/.test(String(rawPid)) ? Number(rawPid) : null;
+  const rawPid = it.productId ?? null;
+  const pid = /^\d+$/.test(String(rawPid)) ? Number(rawPid) : null;
 
-      const params = [
-        customer.lastName || "", customer.firstName || "",
-        customer.lastKana || "", customer.firstKana || "",
-        customer.zipcode || "", customer.prefecture || "",
-        customer.city || "", (customer.address || ""), (customer.building || ""),
-        customer.email || "",
-        name, addressFull,
-        note || null, subtotal, shipping, shippingOptionAdd, total, paymentMethod,
-        orderToken,
-        pid,
-        String(it.productName || ""),
-        Number(it.unitPrice || 0),
-        Number(it.quantity || 1),
-        (it.productSlug || null),
-        (it.image || null),
-        (it.category || null),
-        (it.variety || null),
-        JSON.stringify(req.body || {})
-      ];
-      await client.query(sql, params);
-    }
+  // サーバ側で productName を合成（カテゴリ＋バリエティーを優先。無いときは来ている値を順に採用）
+  const clean = (s) => String(s || "").trim().replace(/\s+/g, " ");
+const productName =
+  (it?.category && it?.variety) ? `${clean(it.category)} ${clean(it.variety)}` :
+  clean(it?.productName) || clean(it?.variety) || clean(it?.category);
+
+  const params = [
+    customer.lastName || "", customer.firstName || "",
+    customer.lastKana || "", customer.firstKana || "",
+    customer.zipcode || "", customer.prefecture || "",
+    customer.city || "", (customer.address || ""), (customer.building || ""),
+    customer.email || "",
+    name, addressFull,
+    note || null, subtotal, shipping, shippingOptionAdd, total, paymentMethod,
+    orderToken,
+    pid,
+    productName,
+    Number(it.unitPrice || 0),
+    Number(it.quantity || 1),
+    (it.productSlug || null),
+    (it.image || null),
+    (it.category || null),
+    (it.variety || null),
+    JSON.stringify(req.body || {})
+  ];
+  await client.query(sql, params);
+}
 
     await client.query("COMMIT");
 
