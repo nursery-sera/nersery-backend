@@ -72,10 +72,10 @@ position:relative;
     }
 
 .cart-badge{
-  position:absolute; right:21px; top:47px;font-weight: 700;
+  position:absolute; right:15px; top:47px;font-weight: 700;
   min-width:50px; height:50px; padding:0 6px;
   border-radius:25px;
-  background:#F564A9; color:#fff; 
+  background:#FF4F9A; color:#fff; 
   font-size:24px; line-height:28px; text-align:center;
   display:none;           /* 0個のときは非表示 */
   align-items:center;     /* 将来flexにしても中央寄せされるように保険 */
@@ -166,7 +166,7 @@ font-family: 'Noto Serif JP', serif;
       flex:0 0 auto;
       font-size:38px;
       padding:15px 80px;
-      background:#F564A9;
+      background:#F8C6DC;
       border:px solid #999;
       border-radius:60px;
       font-weight:500;
@@ -217,11 +217,11 @@ margin-top:-10px;
     .price{font-size:38px;font-weight:400;margin-top:20px; position: relative;
   top: 30px;  font-family: 'DM Serif Text', serif;}
 
-    .info-btn{margin-top:-100px;width:48px;height:48px;border-radius:50%;border:2px solid #cfcfcf;background:#fff0f5;color:#7a7a7a;font-size:22px;font-weight:bold;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+    
 
     .bottom-row{margin-top:30px;display:flex;align-items:center;gap:40px;flex-wrap:nowrap}
  .like-btn{width:66px;height:66px;border-radius:50%;border:2px solid #e91e63;background:none;color:#e91e63none;font-size:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:0 0 auto}
-    .like-btn.liked{background:#F564A9;color:#fff}
+    .like-btn.liked{background:#F8C6DC;color:#fff}
 
     /* --- 数量（ネイティブselectは保持するが非表示） --- */
     .qty-wrap{flex:0 0 auto; position:relative;}
@@ -255,10 +255,10 @@ margin-top:-10px;
       padding:0 50px !important;
       border:px solid #999;
       border-radius:28px;
-      background:#F564A9;
-      color:#fff;
+      background:#FFD814;
+      color:#0F1111;
 opacity:;
-      font-weight:500;
+      font-weight:300;
       font-size:30px !important;
       line-height:65px;
       white-space:nowrap;
@@ -356,7 +356,7 @@ text-align:center;
   font-size:36px;
   color:#2e7d32; /* 深めのグリーン */
   margin-left:12px;
-transform: translateY(22px);
+transform: translateY(33px);
 font-weight: 200;
 }
 
@@ -437,9 +437,30 @@ font-weight: 200;
   font-family:'Lustria','Noto Serif JP',serif;
   font-size:32px; color:#000; cursor:pointer; padding:14px 0;
   border-bottom:1px solid rgba(0,0,0,.08);
+opacity: 0.7;
 }
 .sort-panel .sort-item:hover{ color:#c2185b; transform:translateX(2px); }
 
+
+/* === カテゴリーのタグ行（最初の商品カードの前に出す小さな帯） === */
+.cat-tag-row{
+  display: block;
+  margin: 200px 0 8px;
+  padding-left: 20px;         /* 商品リスト左寄せに合わせるだけ（見た目崩さない） */
+}
+
+.cat-tag{
+  display: inline-block;
+  font-family: 'Lustria','Noto Serif JP',serif;
+  font-size: 63px;
+  line-height: 1;
+  padding: 10px 18px;
+  color: #000;
+  user-select: none;
+  white-space: nowrap;
+border-bottom: 2px solid #00000050;
+opacity:0.6;
+}
 
   </style>
 
@@ -556,19 +577,7 @@ font-weight: 200;
 
   <!-- フッター -->
   <footer>
-<div class="footer-icons">
-  <a href="https://www.instagram.com/nursery_sera?igsh=cWx2cTZ3cWNicGlz&utm_source=" target="_blank">
-    <img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png" alt="Instagram" loading="lazy" decoding="async" width="42" height="42">
-  </a>
 
-  <a href="https://lin.ee/mFSu5FS" target="_blank">
-    <img src="https://upload.wikimedia.org/wikipedia/commons/4/41/LINE_logo.svg" alt="LINE" loading="lazy" decoding="async" width="42" height="42">
-  </a>
-
-  <a href="https://www.threads.net/@nursery_sera?igshid=NTc4MTIwNjQ2YQ==" target="_blank">
-    <img src="https://cdn.simpleicons.org/threads/000000" alt="Threads" loading="lazy" decoding="async" width="42" height="42">
-  </a>
-</div>
     <div class="footer-links">
       <a href="<?= url ?>?page=form"></a>
       <a href="/?page=policy">お問い合わせ</a>
@@ -777,31 +786,53 @@ window.addEventListener("scroll", () => {
   }
 
   // ===== カテゴリフィルタ（.category-name の文字で判定） =====
-  function filterCategory(category){
-    const likes = JSON.parse(localStorage.getItem('likes') || '{}');
-    const target = String(category || '').toLowerCase();
+ function filterCategory(category){
+  const likes = JSON.parse(localStorage.getItem('likes') || '{}');
+  const target = String(category || '').toLowerCase();
 
-    document.querySelectorAll('.product-item').forEach(item=>{
-      // .category-name のテキストを使ってカテゴリ判定
-      const cnameEl = item.querySelector('.category-name');
-      const itemCategory = (cnameEl?.textContent || '').trim().toLowerCase();
+  // ▼ 商品カードの表示制御（既存ロジック）
+  document.querySelectorAll('.product-item').forEach(item=>{
+    const cnameEl = item.querySelector('.category-name');
+    const itemCategory = (cnameEl?.textContent || '').trim().toLowerCase();
 
-      // like用のID（data-id が無ければボタンIDから取得）
-      let itemId = item.getAttribute('data-id');
-      if (!itemId) {
-        const likeBtn = item.querySelector('.like-btn[id^="like-"]');
-        if (likeBtn) itemId = likeBtn.id.replace('like-','');
-      }
+    let itemId = item.getAttribute('data-id');
+    if (!itemId) {
+      const likeBtn = item.querySelector('.like-btn[id^="like-"]');
+      if (likeBtn) itemId = likeBtn.id.replace('like-','');
+    }
 
-      if (target === 'all') {
-        item.style.display = 'flex';
-      } else if (target === 'liked') {
-        item.style.display = (itemId && likes[itemId]) ? 'flex' : 'none';
-      } else {
-        item.style.display = (itemCategory === target) ? 'flex' : 'none';
-      }
-    });
+    if (target === 'all') {
+      item.style.display = 'flex';
+    } else if (target === 'liked') {
+      item.style.display = (itemId && likes[itemId]) ? 'flex' : 'none';
+    } else {
+      item.style.display = (itemCategory === target) ? 'flex' : 'none';
+    }
+  });
+
+  // ▼ カテゴリー“タグ行”の表示制御を追加
+  document.querySelectorAll('.cat-tag-row').forEach(tagRow=>{
+    const rowCat = (tagRow.getAttribute('data-category') || '').toLowerCase();
+    if (target === 'all') {
+      // そのカテゴリに該当する商品が一つも表示されていなければタグも隠す
+      const hasVisible = !!document.querySelector(`.product-item[data-category="${rowCat}"]`)
+        && Array.from(document.querySelectorAll(`.product-item[data-category="${rowCat}"]`))
+             .some(el => el.style.display !== 'none');
+      tagRow.style.display = hasVisible ? 'block' : 'none';
+    } else if (target === 'liked') {
+      // like表示では全タグをいったん非表示（必要なら後で拡張可）
+      tagRow.style.display = 'none';
+    } else {
+      // 対象カテゴリのタグだけ表示
+      tagRow.style.display = (rowCat === target) ? 'block' : 'none';
+    }
+  });
+
+  // ★追加：Allのときは「タグ→同カテゴリの商品」になるようにDOMを再グルーピング
+  if (target === 'all') {
+    regroupAll();
   }
+}
   window.filterCategory = filterCategory; // HTMLから呼べるように公開
 
   function filterLiked(){
@@ -1318,10 +1349,66 @@ React.createElement('div', { className: 'mid' },
 }
 
   function ProductList({ items }) {
-    return React.createElement(React.Fragment, null,
-      items.map(({ id, data }) => React.createElement(ProductCard, { key: id, id, d: data }))
+  // ▼ 並べたい順序（英字キー）と日本語ラベル
+  const order = ['monstera','anthurium','philodendron','alocasia'];
+  const labelMap = {
+    monstera: 'モンステラ',
+    anthurium: 'アンスリウム',
+    philodendron: 'フィロデンドロン',
+    alocasia: 'アロカシア'
+  };
+
+  // ▼ カテゴリごとにグループ化
+  const groups = {};
+  items.forEach(({ id, data }) => {
+    const key = String(data.categoryName || '').trim().toLowerCase();
+    (groups[key] ||= []).push({ id, data });
+  });
+
+  const out = [];
+
+  // ▼ 指定順で描画（各カテゴリの“最初”にタグ行を差し込み）
+  order.forEach(key => {
+    const arr = groups[key] || [];
+    if (!arr.length) return;
+
+    // タグ行（この直後から同カテゴリの1商品目が来る）
+    out.push(
+      React.createElement('div', {
+        key: `tag-${key}`,
+        className: 'cat-tag-row',
+        'data-category': key
+      }, React.createElement('span', { className: 'cat-tag' }, labelMap[key] || key))
     );
-  }
+
+    // 商品
+    arr.forEach(({ id, data }) => {
+      out.push(React.createElement(ProductCard, { key: id, id, d: data }));
+    });
+  });
+
+  // ▼ 指定外のカテゴリ（万一あれば最後にまとめて表示）
+  Object.keys(groups)
+    .filter(k => !order.includes(k))
+    .forEach(key => {
+      const arr = groups[key];
+      if (!arr?.length) return;
+
+      out.push(
+        React.createElement('div', {
+          key: `tag-${key}`,
+          className: 'cat-tag-row',
+          'data-category': key
+        }, React.createElement('span', { className: 'cat-tag' }, key))
+      );
+
+      arr.forEach(({ id, data }) => {
+        out.push(React.createElement(ProductCard, { key: id, id, d: data }));
+      });
+    });
+
+  return React.createElement(React.Fragment, null, out);
+}
 
 async function renderProducts() {
   const mount = document.getElementById('product-root');
@@ -1476,9 +1563,11 @@ function applySort(mode){
   const byPriceAsc  = (a,b) => getCardPrice(a) - getCardPrice(b);
   const byPriceDesc = (a,b) => getCardPrice(b) - getCardPrice(a);
 
-  // ▼ 品種順（＝初期描画の順）に戻す
+   // ▼ 品種順（＝初期の「タグ→同カテゴリの商品…」構成）に戻す
   if (mode === 'original' || mode === '') {
-    cards.sort(byOriginal).forEach(c => root.appendChild(c));
+    markOriginalOrder(); // 念のため（ねんのため：元順記録の再確認）
+    regroupAll();        // 再グルーピング（さいぐるーぴんぐ：カテゴリごとに並べ直し）
+    return;              // 以降の処理は不要
   }
 
   if (mode === 'price-asc' || mode === 'price-desc') {
@@ -1610,13 +1699,85 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('resize',  reposition);
 });
 
-/* Reactで商品が出た合図：初期は未適用（表示は「並び替え」）だが
-   “元の順序”記録のために一度 applySort('') を呼んでおく */
-document.addEventListener('products-rendered', () => {
-  applySort(''); // data-original-order を確定させる
-});
+  // DOM を動かさず“元の順序”だけ記録する関数
+  function markOriginalOrder(){
+    const root = document.getElementById('product-root');
+    if (!root) return;
+    const cards = Array.from(root.querySelectorAll('.product-item'));
+    cards.forEach((c,i)=>{
+      if (!c.dataset.originalOrder) c.dataset.originalOrder = String(i);
+    });
+  }
 
+  // 初回は並べ替えを実行しない（DOM順＝「タグ→同カテゴリ商品」を維持）
+  document.addEventListener('products-rendered', () => {
+    markOriginalOrder();
+  });
 
+/* === 新規：All押下時に「タグ→同カテゴリの商品…」へ並び替え直す ===
+   DOM（どむ：画面要素の木構造）を動かすだけで、データは一切変更しません（べき等：何度実行しても同じ結果） */
+function regroupAll(){
+  const root = document.getElementById('product-root');
+  if (!root) return;
+
+  // 既定のカテゴリ順（初期描画と同じ並び）
+  const order = ['monstera','anthurium','philodendron','alocasia'];
+
+  // 既存のタグ行を拾う（後で再配置）
+  const tagRows = {};
+  root.querySelectorAll('.cat-tag-row').forEach(tr=>{
+    const key = (tr.getAttribute('data-category') || '').toLowerCase();
+    tagRows[key] = tr;
+  });
+
+  // 商品カードをカテゴリごとに収集
+  const itemsByCat = {};
+  root.querySelectorAll('.product-item').forEach(card=>{
+    const key = (card.getAttribute('data-category') || '').toLowerCase();
+    (itemsByCat[key] ||= []).push(card);
+  });
+
+  // 各カテゴリ内は「元の順番（originalOrder）」で安定ソート（すてーぶる：同点で崩れない）
+  Object.keys(itemsByCat).forEach(k=>{
+    itemsByCat[k].sort((a,b)=>
+      (Number(a.dataset.originalOrder)||0) - (Number(b.dataset.originalOrder)||0)
+    );
+  });
+
+  // DocumentFragment（どきゅめんとふらぐめんと：まとめて差し替える一時入れ物）で一括再配置
+  const frag = document.createDocumentFragment();
+
+   // 既定カテゴリの順に「タグ→商品…」で並べる
+  order.forEach(k=>{
+    const tag   = tagRows[k];
+    const cards = itemsByCat[k] || [];
+    if (!tag || cards.length === 0) return; // そのカテゴリに商品が無ければスキップ
+
+    // ☆ポイント：可視カードが1枚以上ある時だけタグを表示
+    const hasVisible = cards.some(c => (c.style.display || '') !== 'none');
+    tag.style.display = hasVisible ? 'block' : 'none';
+    frag.appendChild(tag);
+
+    // ☆ポイント：カードの display は“変更しない”（フィルタ状態を維持）
+    cards.forEach(c=>{ frag.appendChild(c); });
+  });
+
+  // 想定外カテゴリ（もしあれば最後にまとめる）
+  Object.keys(itemsByCat).filter(k=>!order.includes(k)).forEach(k=>{
+    const tag   = tagRows[k];
+    const cards = itemsByCat[k] || [];
+
+    if (tag) {
+      const hasVisible = cards.some(c => (c.style.display || '') !== 'none');
+      tag.style.display = hasVisible ? 'block' : 'none';
+      frag.appendChild(tag);
+    }
+    cards.forEach(c=>{ /* displayは維持 */ frag.appendChild(c); });
+  });
+
+  // ここで一気に置き換え（reflow最小化：りふろー最小で描画の無駄を抑える）
+  root.appendChild(frag);
+}
 
 </script>
 </body>
