@@ -166,7 +166,7 @@ font-family: 'Noto Serif JP', serif;
       flex:0 0 auto;
       font-size:38px;
       padding:15px 80px;
-      background:#F8C6DC;
+      background:#FF4F9A;
       border:px solid #999;
       border-radius:60px;
       font-weight:500;
@@ -1576,17 +1576,30 @@ function applySort(mode){
   }
 
   if (mode === 'in-stock') {
-    cards.forEach(c => {
-      const soldout = !isAvailable(c);
-      if (soldout) {
-        // いまの display をメモしてから非表示化（復帰用）
-        c.dataset.prevDisplay = c.style.display || '';
-        c.style.display = 'none';
-        c.dataset.hiddenByStock = '1';
-      }
-    });
-    // 並び順は崩さず（元の順を維持）。必要なら byOriginal で固定化してもOK。
-  }
+  // Sold Out を隠す
+  cards.forEach(c => {
+    const soldout = !isAvailable(c);
+    if (soldout) {
+      c.dataset.prevDisplay = c.style.display || '';
+      c.style.display = 'none';
+      c.dataset.hiddenByStock = '1';
+    }
+  });
+  // ★ここがポイント！
+  regroupAll(); // タグ → 同カテゴリの商品カード… の順に並べ直す
+  return;
+}
+
+if (mode === 'price-asc' || mode === 'price-desc') {
+  hideAllTags(); // ★タグを全部消す
+
+  const sorter = (mode === 'price-asc')
+    ? (a,b)=> getCardPrice(a) - getCardPrice(b)
+    : (a,b)=> getCardPrice(b) - getCardPrice(a);
+
+  cards.sort(sorter).forEach(c => root.appendChild(c));
+  return;
+}
 }
 
 // 既存：toggleMenu/closeMenu/overlay はそのまま使用
@@ -1777,6 +1790,13 @@ function regroupAll(){
 
   // ここで一気に置き換え（reflow最小化：りふろー最小で描画の無駄を抑える）
   root.appendChild(frag);
+}
+
+/** タグ行を全部隠す（価格ソート時に使用） */
+function hideAllTags(){
+  document.querySelectorAll('.cat-tag-row').forEach(tr=>{
+    tr.style.display = 'none';
+  });
 }
 
 </script>
