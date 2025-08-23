@@ -251,7 +251,8 @@
   /* 合計エリアの行 */
   .sum-row{
     display:flex; align-items:flex-start; justify-content:space-between;
-    gap:20px; font-size:22px; font-weight:normal; margin:10px 0;
+    gap:20px; font-size:22px; font-weight:normal; margin:22px 0;
+
   }
   .sum-row.total{ font-weight:bold; font-size:24px; }
   .sum-hr{ height:1px; background:#ccc; margin:14px 0; }
@@ -398,6 +399,17 @@ padding-bottom: 10px;
     text-overflow: clip;
     display: block;
   }
+
+.sum-row.total span:first-child{  /* 左側の「注文合計金額」ラベルだけ */
+  transform: translateX(-20px);  /* ← 左へ10pxずらす */
+}
+.sum-row.total span:last-child{   /* 右側の合計金額だけ */
+  transform: translateX(20px);   /* ← 右へ10pxずらす */
+}
+
+/* 未選択エラー時の軽い強調（きょうちょう） */
+.option-select.invalid { border-bottom: 1px solid #c00; }
+
 </style>
 </head>
 <body>
@@ -450,19 +462,7 @@ padding-bottom: 10px;
   </div>
 
   <footer>
-    <div class="footer-icons">
-       <a href="https://www.instagram.com/nursery_sera?igsh=cWx2cTZ3cWNicGlz&utm_source=" target="_blank">
-    <img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png" alt="Instagram">
-  </a>
-
-  <a href="https://lin.ee/mFSu5FS" target="_blank">
-    <img src="https://upload.wikimedia.org/wikipedia/commons/4/41/LINE_logo.svg" alt="LINE">
-  </a>
-
-  <a href="https://www.threads.net/@nursery_sera?igshid=NTc4MTIwNjQ2YQ==" target="_blank">
-    <img src="https://cdn.simpleicons.org/threads/000000" alt="Threads">
-  </a>
-    </div>
+    
     <div class="footer-links">
       <a href="<?= url ?>?page=policy">各種ポリシー</a>
       <a href="<?= url ?>?page=policy">利用規約</a>
@@ -587,40 +587,43 @@ const imgHTML = imgSrc
       totalEl.innerHTML = `
         <div class="sum-row"><span>小計</span><span id="sum-subtotal">¥0</span></div>
 
-        <div class="sum-row" style="align-items:center;">
-          <div class="option-inline" style="white-space:nowrap; position:relative;">
-            <label>配送オプション</label>
-            <span id="opt-measure" class="opt-measure"></span>
-            <select id="opt-select" class="option-select">
-              <option value="0">選択なし</option>
-              <option value="300">ヤマト運輸 +300円</option>
-              <option value="160">第四種郵便+特定記録(追跡番号付き) +160円</option>
-            </select>
-            <span class="option-caret" aria-hidden="true">∨</span>
-          </div>
-          <span id="opt-cost" style="min-width:6em; text-align:right;">¥0</span>
-        </div>
+    
 
-        <div class="sum-row">
-          <span>送料</span>
-          <span id="sum-shipping">¥0</span>
-        </div>
+<div class="sum-row" style="align-items:center;">
+  <div class="option-inline" style="white-space:nowrap; position:relative;">
+    <label>配送方法</label>
+    <span id="opt-measure" class="opt-measure"></span>
+    <select id="opt-select" class="option-select">
+      <!-- 選択肢は JS が数量・小計に応じて動的生成（どうてき せいせい：自動で作る） -->
+      <option value="">を選択</option>
+    </select>
+    <span class="option-caret" aria-hidden="true">∨</span>
+  </div>
+  <!-- 右側に「送料¥〇〇」を表示 -->
+  <span id="sum-shipping" style="min-width:8em; text-align:right;">¥0</span>
+</div>
 
-        <div class="sum-hr"></div>
+<div class="sum-hr"></div>
 
-        <div class="sum-row total">
-          <span>注文合計金額</span>
-          <span id="sum-total">¥0</span>
-        </div>
+<div class="sum-row total">
+  <span>注文合計金額</span>
+  <span id="sum-total">¥0</span>
+</div>
 
-        <div style="text-align:left; font-size:20px; line-height:1.7; font-weight:200; margin-top:14px;">
-          <div>※発送方法：第四種郵便 速達 特定記録（追跡番号付き）</div>
-          <div>※お支払い方法：銀行振込（PayPay銀行）</div>
-          <div>※注文金額が10,000円以上で送料無料</div>
-          <div>※5,000円以上で送料半額</div>
-          <div>※通常送料：700円</div>
-          <div>※局留め希望の方は、配送先入力フォームの備考欄に「〇〇郵便局 局留め」と記載してください。</div>
-        </div>
+<div style="text-align:left; font-size:20px; line-height:1.7; font-weight:200; margin-top:14px;">
+
+ <div>・お支払い方法：銀行振込（PayPay銀行）</div>
+<div>・通常時：速達550円／特定記録770円／ヤマト1100円</div>
+<div>・数量3株以上：速達無料／特定記録220円／ヤマト550円</div>
+<div>・数量5株以上：速達無料／特定記録無料／ヤマト330円</div>
+<div>・局留め希望の方は、配送先入力の備考欄に「〇〇郵便局 局留め」と記載してください。</div>
+<div>・発送は〇〇月〇〇頃を予定しております。</div>
+<div>・発送株は組織培養株のため、購入後は順化作業が必要となります。</div>
+<div>・輸入後に品質確認を行い、品質が悪い場合や植物に痛みが確認された場合には</div>
+<div style="padding-left:1em;">返金対応をさせていただきます。なお、輸入の特性上、株を選んでお届けすることはできず発送する株はランダムとなりますので、あらかじめご了承ください。</div>
+
+</div>
+
       `;
 
       // 初期反映（しょきはんえい：最初の表示に数値を反映）
@@ -629,14 +632,12 @@ const imgHTML = imgSrc
 
       // 変更イベント（へんこういべんと：プルダウン変更時に再計算＋再フィット）
       const sel = document.getElementById('opt-select');
-      sel && sel.addEventListener('change', () => {
-        sizeOption();
-        updateSummaryNumbers(subtotal);
-
-        // 描画直後の最適なタイミングで実行（requestAnimationFrame：りくえすと・あにめーしょん・ふれーむ）
-        // 長い商品名の自動縮小（__fitCartNames：ふぃっと・かーと・ねーむず）
-        requestAnimationFrame(() => window.__fitCartNames?.());
-      });
+sel && sel.addEventListener('change', () => {
+  sel.classList.remove('invalid');             // ★未選択エラー見た目を解除
+  sizeOption();
+  updateSummaryNumbers(subtotal);
+  requestAnimationFrame(() => window.__fitCartNames?.());
+});
 
       // 描画が終わったフレームで1回だけフィット（はみ出す前に調整）
       requestAnimationFrame(() => window.__fitCartNames?.());
@@ -649,28 +650,80 @@ const imgHTML = imgSrc
     }
 
     // 送料の基本計算（小計で変化）
-    function calcBaseShipping(subtotal){
-      if (subtotal >= 10000) return 0;
-      if (subtotal >= 5000)  return 350;
-      return 700;
-    }
+// ★配送金額テーブル（てーぶる：表）を返す
+function calcShippingOptions(subtotal, totalQty){
+  // 10株以上 or 3万円以上 → 全部0円
+  if (totalQty >= 8 || subtotal >= 25000){
+    return {
+      "第四種郵便速達": 0,
+      "第四種速達＋特定記録（追跡番号付き）": 0,
+      "ヤマト運輸60サイズ": 0
+    };
+  }
+  // 5株以上
+  if (totalQty >= 5){
+    return {
+      "第四種郵便速達": 0,
+      "第四種郵便速達＋特定記録（追跡番号）": 0,
+      "ヤマト運輸60サイズ": 330
+    };
+  }
+  // 3株以上
+  if (totalQty >= 3){
+    return {
+      "第四種郵便速達": 0,
+      "第四種郵便速達＋特定記録（追跡番号）": 220,
+      "ヤマト運輸60サイズ": 550
+    };
+  }
+  // 通常
+  return {
+    "第四種郵便速達": 550,
+    "第四種郵便速達＋特定記録（追跡番号）": 770,
+    "ヤマト運輸60サイズ": 1100
+  };
+}
     function yen(n){ return '¥' + Number(n||0).toLocaleString(); }
 
-    function updateSummaryNumbers(subtotal){
-      const sel = document.getElementById('opt-select');
-      const addOpt = sel ? Number(sel.value) : 0;
-      const shipping = calcBaseShipping(subtotal);
+function updateSummaryNumbers(subtotal){
+  const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+  const totalQty = cart.reduce((s,it)=> s + Number(it.quantity||0), 0);
 
-      const sumSubtotal = document.getElementById('sum-subtotal');
-      const sumShipping = document.getElementById('sum-shipping');
-      const sumTotal    = document.getElementById('sum-total');
+  // 条件ごとの送料一覧（いちらん）を取得
+  const options = calcShippingOptions(subtotal, totalQty);
+  const sel = document.getElementById('opt-select');
 
-      if(sumSubtotal) sumSubtotal.textContent = yen(subtotal);
-      if(sumShipping) sumShipping.textContent = yen(shipping);
-      if(sumTotal)    sumTotal.textContent    = yen(subtotal + shipping + addOpt);
-      const optCost = document.getElementById('opt-cost');
-      if (optCost) optCost.textContent = yen(addOpt);
+  // プルダウンを毎回作り直し（在庫や数量の変化に追随）
+  if (sel){
+    const currentName = sel.value || "";
+    sel.innerHTML = '<option value="">を選択</option>';
+    Object.entries(options).forEach(([name,cost])=>{
+      const opt = document.createElement('option');
+      opt.value = name;                     // ← DB保存は「名前」
+      opt.dataset.cost = String(cost);      // ← 表示計算用に金額を持たせる
+      opt.textContent = `${name}　送料¥${cost.toLocaleString()}`;
+      sel.appendChild(opt);
+    });
+    // 直前の選択を可能なら維持
+    if (currentName){
+      const found = Array.from(sel.options).find(o=>o.value===currentName);
+      if (found) sel.value = currentName;
     }
+  }
+
+  // 選択値の取得
+  const selected = sel ? sel.options[sel.selectedIndex] : null;
+  const shippingCost = selected ? Number(selected.dataset.cost||0) : 0;
+
+  // 数字を反映
+  const sumSubtotal = document.getElementById('sum-subtotal');
+  const sumShipping = document.getElementById('sum-shipping');
+  const sumTotal    = document.getElementById('sum-total');
+
+  if(sumSubtotal) sumSubtotal.textContent = yen(subtotal);
+  if(sumShipping) sumShipping.textContent = yen(shippingCost);
+  if(sumTotal)    sumTotal.textContent    = yen(subtotal + shippingCost);
+}
 
     // 選択中テキスト幅に応じて select を縮め、直後の「∨」を常に真横に配置
     function sizeOption(){
@@ -714,42 +767,49 @@ function getCartSubtotal(){
 }
 
     // 注文ボタン：遷移直前に「合計情報のスナップショット」を保存してから order へ
-    function goToOrder() {
-      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-      if (cart.length === 0) {
-        alert("カートが空です");
-        return;
-      }
-        const normalized = cart.map(it => ({
+function goToOrder() {
+  const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+  if (cart.length === 0) {
+    alert("カートが空です");
+    return;
+  }
+  const normalized = cart.map(it => ({
     ...it,
     productId: it.productId ?? it.id ?? null,
-    productName: it.productName ?? it.variety ?? it.name ?? ''  // 品種名優先→name→空文字
+    productName: it.productName ?? it.variety ?? it.name ?? ''
   }));
   localStorage.setItem('cart', JSON.stringify(normalized));
- 
-      // 小計を計算（画面表示と同じ計算）
-      const subtotal = cart.reduce((s, it) => s + Number(it.price || 0) * Number(it.quantity || 1), 0);
-      // 送料の基本（画面と同じロジック）
-      const baseShipping = calcBaseShipping(subtotal);
-      // 追加オプション（セレクトの値）
-      const sel = document.getElementById('opt-select');
-      const addOpt = sel ? Number(sel.value || 0) : 0;
-      // 合計
-      const total = subtotal + baseShipping + addOpt;
-      // 画面で選ばれた配送オプションの文言（送信用メモ）
-      const addOptText = sel ? sel.options[sel.selectedIndex].text : '';
-      // 支払い方法（固定メモ：銀行振込）
-      const paymentMethod = 'bank_transfer'; // （ばんく・とらんすふぁー：銀行振込）
-      // 保存（order.html で読み出してAPIへPOST）
-      const checkout = {
-        subtotal, baseShipping, addOpt, total,
-        addOptText,
-        paymentMethod
-      };
-      localStorage.setItem('checkout', JSON.stringify(checkout));
-      // そのまま order へ（同一タブ）
-      window.top.location.href = '<?= url ?>?page=order';
-    }
+
+  const subtotal = cart.reduce((s, it) => s + Number(it.price || 0) * Number(it.quantity || 1), 0);
+  const sel = document.getElementById('opt-select');
+  const selected = sel ? sel.options[sel.selectedIndex] : null;
+
+  // ★必須チェック（ひっすちぇっく）：未選択なら止める
+  if (!sel || !sel.value) {
+    sel?.classList.add('invalid');                         // 見た目で分かるようにする
+    alert("配送方法を選択してください");
+    try {
+      sel?.focus();
+      sel?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } catch(e) {}
+    return;                                                // ここで終了（進ませない）
+  }
+
+  const shippingName = selected ? selected.value : "";
+  const shippingCost = selected ? Number(selected.dataset.cost || 0) : 0;
+
+  const total = subtotal + shippingCost;
+
+  const checkout = {
+    subtotal,
+    shippingCost,
+    total,
+    shippingName,
+    paymentMethod: 'bank_transfer'
+  };
+  localStorage.setItem('checkout', JSON.stringify(checkout));
+  window.top.location.href = '<?= url ?>?page=order';
+}
     function goToindex() {
       window.top.location.href = '<?= url ?>?page=index';
     }
