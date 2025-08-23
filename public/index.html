@@ -404,7 +404,7 @@ font-weight: 200;
 .sort-trigger{
   appearance:none; background:none; border:none; padding:8px 0;
   font-family:'Playfair Display SC','Lustria','Noto Serif JP',serif;
-  font-weight:300; font-size:38px; color:#333; cursor:pointer;margin-left:33px;
+  font-weight:400; font-size:38px; color:#333; cursor:pointer;margin-left:33px;
 }
 .sort-trigger .chev{
   display:inline-block; margin-left:6px; transform:translateY(-1px) rotate(0deg);
@@ -445,7 +445,7 @@ opacity: 0.7;
 /* === カテゴリーのタグ行（最初の商品カードの前に出す小さな帯） === */
 .cat-tag-row{
   display: block;
-  margin: 200px 0 8px;
+  margin: 99px 0 8px;
   padding-left: 20px;         /* 商品リスト左寄せに合わせるだけ（見た目崩さない） */
 }
 
@@ -460,6 +460,46 @@ opacity: 0.7;
   white-space: nowrap;
 border-bottom: 2px solid #00000050;
 opacity:0.6;
+}
+
+
+
+.accordion {
+  margin: 100px 0;
+  border-top: 1px solid #ccc;
+}
+.accordion-item {
+  border-bottom: 1px solid #ccc;
+}
+.accordion-title {
+  width: 100%;
+  background: #fff;
+  border: none;
+  outline: none;
+  text-align: left;
+  padding: 15px;
+  font-size: 36px;
+  cursor: pointer;
+  position: relative;
+color:#000;
+opacity:0.6;
+}
+.accordion-title::after {
+  content: "+";
+  position: absolute;
+  right: 20px;
+}
+.accordion-title.active::after {
+  content: "−"; /* 開いたときマイナスに */
+}
+.accordion-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+  padding: 0 15px;
+}
+.accordion-content p {
+  margin: 10px 0;
 }
 
   </style>
@@ -519,13 +559,14 @@ opacity:0.6;
   <li><a href="https://www.instagram.com/nursery_sera?igsh=cWx2cTZ3cWNicGlz&utm_source=" target="_blank">Instagram</a></li>
   <li><a href="https://lin.ee/mFSu5FS" target="_blank">LINE</a></li>
   <li><a href="https://www.threads.net/@nursery_sera?igshid=NTc4MTIwNjQ2YQ==" target="_blank">Threads</a></li>
+  <li><a href="/?page=policy">よくある質問</a></li>
   <li><a href="/?page=policy">お問い合わせ</a></li>
 </ul>
   </div>
   <div class="overlay" id="overlay" onclick="closeMenu()"></div>
 
   <main>
-    <p class="subtitle1">plant list</p>
+    <p class="subtitle1">tissue culture plant</p>
 
     <!-- 上部ボタン & カテゴリ -->
     <section class="container top-row">
@@ -551,15 +592,14 @@ opacity:0.6;
 
 <div id="sortPanel" class="sort-panel" role="listbox" aria-label="並び替えメニュー">
   <div class="sort-item" role="option" data-value="original">品種順</div>
-  <div class="sort-item" role="option" data-value="price-asc">価格の安い順</div>
   <div class="sort-item" role="option" data-value="price-desc">価格の高い順</div>
+  <div class="sort-item" role="option" data-value="price-asc">価格の安い順</div>
   <div class="sort-item" role="option" data-value="in-stock">在庫あり</div>
 </div>
 
     <div class="sort-info">
-      画像をタップすると拡大表示されます。<br>画像1枚目は参考親株、2枚目は参考TC株です。
-<br>
-      組織培養株のため、購入後は順化作業が必要となります。
+      組織培養株のため、購入後は順化作業が必要となります。<br>画像1枚目は参考親株、2枚目は参考TC株です。<br>
+画像をタップすると拡大表示されます。
     </div>
   </div>
 </section>
@@ -574,6 +614,31 @@ opacity:0.6;
     <!-- 画像拡大モーダル -->
     <div id="modal" onclick="this.style.display='none'"><img id="modal-img" src=""></div>
   </main>
+
+<!-- アコーディオン全体 -->
+<div class="accordion">
+  <div class="accordion-item">
+    <button class="accordion-title">配送方法・送料</button>
+    <div class="accordion-content">
+      <p>配送方法<br>
+      北海道 1,500円～、本州・四国 1,200円～、九州 1,500円～ など。</p>
+    </div>
+  </div>
+
+  <div class="accordion-item">
+    <button class="accordion-title">お支払い方法</button>
+    <div class="accordion-content">
+      <p>銀行振込(PayPay銀行)</p>
+    </div>
+  </div>
+
+  <div class="accordion-item">
+    <button class="accordion-title">返品・交換</button>
+    <div class="accordion-content">
+      <p>商品到着後〇日以内にご連絡いただいた場合に限り対応いたします。</p>
+    </div>
+  </div>
+</div>
 
   <!-- フッター -->
   <footer>
@@ -1799,6 +1864,18 @@ function hideAllTags(){
   });
 }
 
+
+document.querySelectorAll(".accordion-title").forEach(btn => {
+  btn.addEventListener("click", function () {
+    this.classList.toggle("active");
+    let content = this.nextElementSibling;
+    if (content.style.maxHeight) {
+      content.style.maxHeight = null;
+    } else {
+      content.style.maxHeight = content.scrollHeight + "px";
+    }
+  });
+});
 </script>
 </body>
 </html>
