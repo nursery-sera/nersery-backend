@@ -156,10 +156,9 @@ app.post("/api/orders", async (req, res) => {
     (customer.address || "");
 
   // 金額
-  const subtotal = items.reduce((s, it) => s + Number(it.unitPrice || 0) * Number(it.quantity || 1), 0);
+    const subtotal = items.reduce((s, it) => s + Number(it.unitPrice || 0) * Number(it.quantity || 1), 0);
   const shipping = Number(summary?.shipping ?? 0);
-  const shippingOptionAdd = Number(summary?.shippingOptionAdd ?? 0);
-  const total = Number(summary?.total ?? (subtotal + shipping + shippingOptionAdd));
+  const total = Number(summary?.total ?? (subtotal + shipping));
   const paymentMethod = String(summary?.paymentMethod || "bank_transfer");
 
   // 注文トークン
@@ -176,7 +175,7 @@ app.post("/api/orders", async (req, res) => {
         last_name, first_name, last_kana, first_kana,
         zipcode, prefecture, city, address, building, email,
         name, address_full,
-        note, subtotal, shipping, shipping_option_add, total, payment_method,
+        note, subtotal, shipping, shipping_option_text, total, payment_method,
         is_paid, status, order_token,
         product_id, product_name, unit_price, quantity,
         product_slug, image, category, variety,
@@ -204,14 +203,19 @@ const productName =
   (it?.category && it?.variety) ? `${clean(it.category)} ${clean(it.variety)}` :
   clean(it?.productName) || clean(it?.variety) || clean(it?.category);
 
-  const params = [
+    const params = [
     customer.lastName || "", customer.firstName || "",
     customer.lastKana || "", customer.firstKana || "",
     customer.zipcode || "", customer.prefecture || "",
     customer.city || "", (customer.address || ""), (customer.building || ""),
     customer.email || "",
     name, addressFull,
-    note || null, subtotal, shipping, shippingOptionAdd, total, paymentMethod,
+    note || null,
+    subtotal,
+    shipping,
+    String(summary?.shippingOptionText ?? '') || null, // ★配送方法（文字）
+    total,
+    paymentMethod,
     orderToken,
     pid,
     productName,
