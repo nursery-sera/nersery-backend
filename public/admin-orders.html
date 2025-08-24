@@ -301,7 +301,7 @@ function renderRows(rows, columns){
   const tbody = document.querySelector('#grid tbody');
   const keyword = (q.value || '').trim().toLowerCase();
 
-  thead.innerHTML = '<tr>' + columns.map(c => `<th>${escapeHtml(c)}</th>`).join('') + '</tr>';
+thead.innerHTML = '<tr>' + columns.map(c => `<th>${escapeHtml(labelOf(c))}</th>`).join('') + '</tr>';
 
   let filtered = rows;
   if (keyword) filtered = rows.filter(r => JSON.stringify(r).toLowerCase().includes(keyword));
@@ -356,7 +356,44 @@ function renderRows(rows, columns){
     }).join('') + '</tr>';
   }).join('');
 }
+// ===== 列ラベルの日本語化（英名カラム→表示名） =====
+const COL_JA = {
+  order_token: 'トークン',
+  name: '氏名',
+  address_full: '住所',
+  shipping_option_text: '配送方法',
+  shipping: '送料',
+  products: '商品',
+  order_total: '注文合計',
+  note: '備考',
+  email: 'メール',
+  is_paid: '支払い',
+  created_at: '注文日時',
 
+  // 画面で使っている関連カラムも念のため対応
+  last_kana: 'セイ',
+  first_kana: 'メイ',
+  product_name: '商品名',
+  paid_qty: '支払済数量',
+  paid_amount: '支払済金額',
+  total_qty: '合計数量',
+  total_amount: '合計金額',
+  paid_items_qty: '支払済合計注文数',
+  paid_items_amount: '支払済合計金額',
+  all_items_qty: '合計注文数',
+  all_items_amount: '合計金額',
+  zipcode: '郵便番号',
+  prefecture: '都道府県',
+  city: '市区町村',
+  address: '町名・番地',
+  building: '建物名・部屋番号',
+  product: '商品',
+  quantity_paid: '支払済数量',
+  picked: '確認',
+  first_order_at: '初回注文日',
+  unit_id: 'ユニットID'
+};
+function labelOf(col){ return COL_JA[col] || col; }
 // ユーティリティ
 function escapeHtml(v){
   if (v === null || v === undefined) return '';
