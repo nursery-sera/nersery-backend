@@ -251,10 +251,10 @@
   /* 合計エリアの行 */
   .sum-row{
     display:flex; align-items:flex-start; justify-content:space-between;
-    gap:20px; font-size:22px; font-weight:normal; margin:22px 0;
+    gap:20px; font-size:25px; font-weight:normal; margin:22px 0;
 
   }
-  .sum-row.total{ font-weight:bold; font-size:24px; }
+  .sum-row.total{ font-weight:bold; font-size:25px; }
   .sum-hr{ height:1px; background:#ccc; margin:14px 0; }
 
   .cart-actions {
@@ -410,6 +410,68 @@ padding-bottom: 10px;
 /* 未選択エラー時の軽い強調（きょうちょう） */
 .option-select.invalid { border-bottom: 1px solid #c00; }
 
+
+/* --- カルーセル用（横スライド＋ドット） --- */
+/* スライダー本体（ほんたい） */
+.thumb-slider{
+  position: relative;
+  width: 100%;
+  height: 100%;           /* 親の .cart-thumb が正方形なので、その中で100%にフィット */
+}
+
+/* 横スクロールするトラック（なかみの横並びレーン） */
+.thumb-track{
+  display: flex;
+  width: 100%;
+  height: 100%;
+  overflow-x: auto;                /* 指で左右（さゆう）にスクロール */
+  scroll-snap-type: x mandatory;   /* スナップで1枚ずつ止まる */
+  -webkit-overflow-scrolling: touch;
+  gap: 0;
+  /* スクロールバー非表示（ひひょうじ） */
+  scrollbar-width: none;
+}
+.thumb-track::-webkit-scrollbar{ display: none; }
+
+/* 1枚ぶんのスライド */
+.thumb-slide{
+  flex: 0 0 100%;                  /* 常に枠の幅ちょうど */
+  height: 100%;
+  scroll-snap-align: center;       /* 真ん中で止まる */
+  position: relative;
+  cursor: zoom-in;                 /* 既存の拡大モーダルに合わせる */
+}
+.thumb-slide img{
+  width: 100%; height: 100%;
+  object-fit: cover; display: block;
+}
+
+/* 下部（かぶ）に並ぶドット */
+.thumb-dots{
+  position: absolute;
+  left: 0; right: 0; bottom: 8px;
+  display: flex; justify-content: center; gap: 6px;
+  pointer-events: auto;
+}
+/* --- ドットを正円に強制 --- */
+.thumb-dot {
+  width: 8px !important;
+  height: 8px !important;
+  border-radius: 50% !important;   /* 完全な円 */
+  background: #ccc !important;
+  opacity: .7 !important;
+  border: none !important;
+  box-shadow: none !important;
+
+  padding: 0 !important;          /* 余白を消す */
+  line-height: 0 !important;      /* テキスト高さを消す */
+  display: inline-block !important; /* flexによる縦伸び防止 */
+}
+
+.thumb-dot.active {
+  background: #333 !important;     /* 選択中だけ濃い */
+  opacity: 1 !important;
+}
 </style>
 </head>
 <body>
@@ -554,12 +616,43 @@ padding-bottom: 10px;
   // 小計に加算（NaNを避ける）
   subtotal += (isFinite(unit) ? unit : 0) * (isFinite(quantity) ? quantity : 1);
 
-  // 画像が空なら <img> 自体を描画しない（レイアウト崩れ防止・見た目は既存と同じ幅感）
-const imgHTML = imgSrc
-  ? `<div class="cart-thumb" onclick="openImageModal('${imgSrc}')">
-       <img src="${imgSrc}" alt="">
-     </div>`
-  : "";
+   // 画像が複数ある場合はカルーセル（item.images が配列）。なければ単画像。
+  const images = Array.isArray(item.images) && item.images.length
+    ? item.images
+    : (imgSrc ? [imgSrc] : []);
+
+  let imgHTML = "";
+  if (images.length === 0) {
+    imgHTML = "";
+  } else if (images.length === 1) {
+    // 従来どおりの単画像（見た目とサイズは同じ）
+    imgHTML = `
+      <div class="cart-thumb" onclick="openImageModal('${images[0]}')">
+        <img src="${images[0]}" alt="">
+      </div>`;
+  } else {
+    // 複数画像 → カルーセル（横スライド＋ドット）
+    const slides = images.map(u => `
+      <div class="thumb-slide" onclick="openImageModal('${u}')">
+        <img src="${u}" alt="">
+      </div>`).join("");
+
+    const dots = images.map((_,j) => `
+      <button class="thumb-dot ${j===0?'active':''}" type="button"
+              onclick="thumbGo(this, ${j})" aria-label="${j+1}枚目"></button>`).join("");
+
+    imgHTML = `
+      <div class="cart-thumb">
+        <div class="thumb-slider">
+          <div class="thumb-track" onscroll="onThumbScroll(this)">
+            ${slides}
+          </div>
+          <div class="thumb-dots">
+            ${dots}
+          </div>
+        </div>
+      </div>`;
+  }
 
   div.innerHTML = `
     ${imgHTML}
@@ -612,15 +705,15 @@ const imgHTML = imgSrc
 
 <div style="text-align:left; font-size:20px; line-height:1.7; font-weight:200; margin-top:14px;">
 
- <div>・お支払い方法：銀行振込（PayPay銀行）</div>
-<div>・通常時：速達550円／特定記録770円／ヤマト1100円</div>
-<div>・数量3株以上：速達無料／特定記録220円／ヤマト550円</div>
-<div>・数量5株以上：速達無料／特定記録無料／ヤマト330円</div>
-<div>・局留め希望の方は、配送先入力の備考欄に「〇〇郵便局 局留め」と記載してください。</div>
+
+<div>・通常時：速達550円／特定記録(追跡番号付き)770円／ヤマト運輸1100円</div>
+<div>・数量3株以上：速達無料／特定記録(追跡番号付き)220円／ヤマト運輸550円</div>
+<div>・数量5株以上：速達無料／特定記録(追跡番号付き)無料／ヤマト運輸330円</div>
+ <div>・北海道・沖縄・離島の方は第四種郵便のみになります。</div>
 <div>・発送は〇〇月〇〇頃を予定しております。</div>
-<div>・発送株は組織培養株のため、購入後は順化作業が必要となります。</div>
+<div>・組織培養株のため、ご購入後に順化作業が必要となります。</div>
 <div>・輸入後に品質確認を行い、品質が悪い場合や植物に痛みが確認された場合には</div>
-<div style="padding-left:1em;">返金対応をさせていただきます。なお、輸入の特性上、株を選んでお届けすることはできず発送する株はランダムとなりますので、あらかじめご了承ください。</div>
+<div style="padding-left:1em;">迅速に返金対応をさせていただきます。なお、輸入の特性上、株を選んでお届けすることはできず発送する株はランダムとなりますので、あらかじめご了承ください。</div>
 
 </div>
 
@@ -647,6 +740,8 @@ sel && sel.addEventListener('change', () => {
         window.addEventListener('resize', () => window.__fitCartNames?.(), { passive:true });
         window.__cartFitBound = true;
       }
+ initAllThumbs();
+
     }
 
     // 送料の基本計算（小計で変化）
@@ -656,31 +751,31 @@ function calcShippingOptions(subtotal, totalQty){
   if (totalQty >= 8 || subtotal >= 25000){
     return {
       "第四種郵便速達": 0,
-      "第四種速達＋特定記録（追跡番号付き）": 0,
-      "ヤマト運輸60サイズ": 0
+      "第四種速達＋特定記録": 0,
+      "ヤマト運輸": 0
     };
   }
   // 5株以上
   if (totalQty >= 5){
     return {
       "第四種郵便速達": 0,
-      "第四種郵便速達＋特定記録（追跡番号）": 0,
-      "ヤマト運輸60サイズ": 330
+      "第四種郵便速達＋特定記録": 0,
+      "ヤマト運輸": 330
     };
   }
   // 3株以上
   if (totalQty >= 3){
     return {
       "第四種郵便速達": 0,
-      "第四種郵便速達＋特定記録（追跡番号）": 220,
-      "ヤマト運輸60サイズ": 550
+      "第四種郵便速達＋特定記録": 220,
+      "ヤマト運輸": 550
     };
   }
   // 通常
   return {
     "第四種郵便速達": 550,
-    "第四種郵便速達＋特定記録（追跡番号）": 770,
-    "ヤマト運輸60サイズ": 1100
+    "第四種郵便速達＋特定記録": 770,
+    "ヤマト運輸": 1100
   };
 }
     function yen(n){ return '¥' + Number(n||0).toLocaleString(); }
@@ -838,6 +933,37 @@ function goToOrder() {
       titleBar.style.top = diff < 0 ? "-50px" : "-200px";
       lastScrollY = currentScrollY;
     });
+
+// --- カルーセル制御（せいぎょ） ---
+function thumbGo(dotBtn, slideIndex){
+  const slider = dotBtn.closest('.thumb-slider');
+  if (!slider) return;
+  const track = slider.querySelector('.thumb-track');
+  if (!track) return;
+  track.scrollTo({ left: track.clientWidth * slideIndex, behavior: 'smooth' });
+
+  // ドットのアクティブ更新
+  const dots = slider.querySelectorAll('.thumb-dot');
+  dots.forEach((d,k)=> d.classList.toggle('active', k===slideIndex));
+}
+
+function onThumbScroll(track){
+  // いま見えているスライド番号を丸めて算出
+  const idx = Math.round(track.scrollLeft / Math.max(1, track.clientWidth));
+  const slider = track.closest('.thumb-slider');
+  if (!slider) return;
+  const dots = slider.querySelectorAll('.thumb-dot');
+  dots.forEach((d,k)=> d.classList.toggle('active', k===idx));
+}
+
+// 初期（しょき）に一度だけ、表示状態に合わせてドットを整える
+function initAllThumbs(){
+  document.querySelectorAll('.thumb-slider').forEach(slider=>{
+    const track = slider.querySelector('.thumb-track');
+    if (!track) return;
+    onThumbScroll(track);
+  });
+}
   </script>
 </body>
 </html>
