@@ -227,7 +227,16 @@ const productName =
     (it.variety || null),
     JSON.stringify(req.body || {})
   ];
-  await client.query(sql, params);
+    const r = await client.query(sql, params);
+  const ordersAllId = r.rows[0].id;
+
+  // ★ 受け取った id を使って単株を quantity 分作成
+  await client.query(
+    `INSERT INTO order_units (orders_all_id, order_token, unit_no, is_paid)
+       SELECT $1, $2, gs, FALSE
+         FROM generate_series(1, $3) AS gs`,
+    [ordersAllId, orderToken, Number(it.quantity || 1)]
+  );
 }
 
     await client.query("COMMIT");
