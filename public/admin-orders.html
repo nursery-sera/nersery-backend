@@ -239,7 +239,12 @@ async function loadView() {
 // 列選択
 function autoColumnsFor(view, rows){
   if (view === 'v_orders_summary') {
-    const pref = ['order_token','name','address_full','products','order_total','note','email','is_paid','created_at'];
+    // ★配送方法の文字と送料（あれば表示）を優先して拾う
+    const pref = [
+      'order_token','name','address_full',
+      'shipping_option_text','shipping', // ← 追加（新列）
+      'products','order_total','note','email','is_paid','created_at'
+    ];
     return pickColumns(rows, pref);
   }
   if (view === 'v_payment_check') {
@@ -264,8 +269,13 @@ if (view === 'v_shipping_picklist_by_person') {
     const pref = ['order_token','name','zipcode','prefecture','city','address','building','is_paid','created_at'];
     return pickColumns(rows, pref);
   }
-  if (view === 'v_shipping_picklist_each_unit') {
-    const pref = ['name','address_full','product','quantity','is_paid','first_order_at'];
+  if (view === 'v_shipping_picklist_by_person') {
+    // ★旧: 'shipping option add' → 新: 'shipping_option_text'（互換のため両方入れて pick）
+    const pref = [
+      'name','product','quantity_paid','picked',
+      'shipping_option_text','shipping',      // ← 新列（文字＋金額）
+      'is_paid','first_order_at'
+    ];
     return pickColumns(rows, pref);
   }
   return rows.length ? Object.keys(rows[0]) : [];
