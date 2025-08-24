@@ -74,10 +74,10 @@ position:relative;
     }
 
 .cart-badge{
-  position:absolute; right:15px; top:47px;font-weight: 700;
+  position:absolute; right:21px; top:47px;font-weight: 700;
   min-width:50px; height:50px; padding:0 6px;
   border-radius:25px;
-  background:#F8C6DC; color:#fff; 
+  background:#f8c6dc; color:#fff; 
   font-size:24px; line-height:28px; text-align:center;
   display:none;           /* 0個のときは非表示 */
   align-items:center;     /* 将来flexにしても中央寄せされるように保険 */
@@ -187,17 +187,16 @@ opacity:;
 
 .product-name{
 
-  font-family: 'Roboto', 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif;
+font-family: 'Playfair Display', serif;
   font-size: 48px;
-  font-weight: 300; /* 300はiOSで丸っぽく見えるので400を推奨 */
+  font-weight: 400; /* 300はiOSで丸っぽく見えるので400を推奨 */
   color: #333;
-  -webkit-font-smoothing: antialiased; /* iPhone・Macでシャープに */
-  -moz-osx-font-smoothing: grayscale;  /* Mac Firefox用 */
+
   display:flex;
   flex-direction:column;
   width:100%;
   position: relative;
-  top: 44px;
+  top: 44px;opacity:0.9;
 }
 
    /* カテゴリーネーム（属名など） */
@@ -400,6 +399,7 @@ font-weight: 200;
 
 
 .sort-info {
+z-index: 1;
   margin-left: auto;     /* ← 右端まで押し出す */
   text-align: right;     /* ← 行頭も右揃え */
   max-width: 80%;        /* ← 横に広がりすぎないように半分に制限 */
@@ -414,6 +414,7 @@ transform: translate(0px, 0px);
   border-bottom: 2px solid #F564A970;
   margin-bottom: 16px;
   padding-top: 66px;
+position: relative; 
 
 }
 
@@ -422,7 +423,10 @@ transform: translate(0px, 0px);
 /* ▼ 新：並べ替えトリガー（枠なし） */
 .sort-trigger{
   appearance:none; background:none; border:none; padding:8px 0;
-  font-weight:400; font-size:38px; color:#333; cursor:pointer;margin-left:33px;
+  font-weight:400; font-size:38px; color:#333; cursor:pointer;margin-left:33px;opacity:0.8;
+position: absolute; 
+z-index: 3; 
+transform: translate(0px, 20px);
 }
 .sort-trigger .chev{
   display:inline-block; margin-left:6px; transform:translateY(-1px) rotate(0deg);
@@ -471,7 +475,7 @@ opacity: 0.7;
 
 /* タグ本体：“逆コの字”＝右・上・下に線、左は開放 */
 .cat-tag{
- font-family: 'Roboto', 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif;
+ font-family: 'Playfair Display', serif;
   display: inline-block;
   position: relative;
   font-size: 55px;
@@ -484,7 +488,7 @@ opacity:1;
   
 
   /* ▼ 右・上・下の3辺だけ線（border：ぼーだー） */
- 
+ opacity:0.7;
   border-bottom: 2px solid #00000050;
 border-top: 2px solid #00000050;
 border-right: 2px solid #00000050;
@@ -652,7 +656,7 @@ opacity:0.8;
 </div>
 
     <div class="sort-info">
-      TC株のため、購入後は順化作業が必要となります。<br>画像1枚目は参考親株、2枚目は参考TC株です。<br>
+      販売している植物は全て組織培養株（TC株)になります。<br>画像1枚目は参考親株、2枚目は参考TC株です。<br>
 画像をタップすると拡大表示されます。
     </div>
   </div>
