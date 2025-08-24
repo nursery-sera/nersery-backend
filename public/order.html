@@ -611,14 +611,14 @@ const items = cart.map(it => {
   };
 });
 
-    const checkout = JSON.parse(localStorage.getItem('checkout') || 'null');
+        const checkout = JSON.parse(localStorage.getItem('checkout') || 'null');
     const subtotal = items.reduce((s, it) => s + it.unitPrice * it.quantity, 0);
-    const calcBaseShipping = n => (n >= 10000 ? 0 : n >= 5000 ? 350 : 700);
-    const baseShipping  = (checkout && typeof checkout.baseShipping !== 'undefined') ? checkout.baseShipping : calcBaseShipping(subtotal);
-    const addOpt        = (checkout && checkout.addOpt) || 0;
-    const addOptText    = sanitize((checkout && checkout.addOptText) || '');
-    const paymentMethod = (checkout && checkout.paymentMethod) || 'bank_transfer';
-    const total         = (checkout && checkout.total) || (subtotal + baseShipping + addOpt);
+
+    // ★カートで保存済みの値をそのまま使う
+    const shipping           = Number(checkout?.shippingCost ?? 0);        // 送料（数値）
+    const shippingOptionText = sanitize(checkout?.shippingName || '');     // 配送方法（文字）
+    const paymentMethod      = (checkout && checkout.paymentMethod) || 'bank_transfer';
+    const total              = Number(checkout?.total ?? (subtotal + shipping));
 
 const idemKey = crypto.randomUUID();
 
@@ -628,10 +628,9 @@ const idemKey = crypto.randomUUID();
       items,
       summary: {
         subtotal,
-        shipping: baseShipping,
-        shippingOptionAdd: addOpt,
+        shipping,                 // ← 金額だけ
+        shippingOptionText,       // ← 名称だけ
         total,
-        shippingOptionText: addOptText,
         paymentMethod
       }
     };
