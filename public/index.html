@@ -1045,15 +1045,27 @@ function addToCart(id, name, price){
     // 既にあるなら加算
     cart[idx].quantity = (Number(cart[idx].quantity) || 0) + q;
   } else {
-    cart.push({
-      id,
-      name    : variety || name || '',
-      price   : Number(price) || 0,
-      quantity: q,
-      image   : img,
-      category,
-      variety
-    });
+    // data-images 属性から配列を取得（なければ代表画像だけ配列化）
+let images = [];
+const dataImages = card?.getAttribute('data-images');
+if (dataImages) {
+  try {
+    const arr = JSON.parse(dataImages);
+    if (Array.isArray(arr) && arr.length) images = arr.map(String);
+  } catch(e){}
+}
+if (!images.length && img) images = [img];
+
+cart.push({
+  id,
+  name    : variety || name || '',
+  price   : Number(price) || 0,
+  quantity: q,
+  image   : img,
+  images, // ← ここを追加
+  category,
+  variety
+});
   }
   localStorage.setItem('cart', JSON.stringify(cart));
 
@@ -1452,8 +1464,15 @@ function ProductCard({ d, id }) {
     };
   }, [id]);
 
-  return React.createElement('article',
-    { className: 'product-item', 'data-category': (d.categoryName || '').toLowerCase(), 'data-id': id },
+  return React.createElement(
+  'article',
+  {
+    className: 'product-item',
+    'data-category': (d.categoryName || '').toLowerCase(),
+    'data-id': id,
+    'data-images': JSON.stringify(d.images || [])
+  },
+
 
     // 画像
     React.createElement('div', { className: 'img-wrapper' },
