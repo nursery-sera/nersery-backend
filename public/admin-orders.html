@@ -251,16 +251,20 @@ function autoColumnsFor(view, rows){
   if (view === 'v_orders_summary') {
   // ★ 指定順：氏名 / 住所 / 商品 / 配送方法 / サブトータル / 送料 / 注文合計 / 備考 / メール / 支払い / 注文日時 / トークン
   const pref = [
+    'note',                // 備考
     'name',                // 氏名
-    'address_full',        // 住所
     'products',            // 商品
     'shipping_option_text',// 配送方法（文字）
     'order_subtotal',      // サブトータル（小計：フロント計算）
     'shipping',            // 送料
     'order_total',         // 注文合計
-    'note',                // 備考
     'email',               // メール
-    'is_paid',             // 支払い
+    'is_paid',
+    'zipcode',
+    'prefecture',
+    'city',
+    'address',
+    'building',
     'created_at',          // 注文日時
     'order_token'          // トークン
   ];
