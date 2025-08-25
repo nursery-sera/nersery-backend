@@ -376,11 +376,41 @@ function closeMenu() {
       lastScrollY = currentScrollY;
     });
 
-    document.getElementById("contact-form").addEventListener("submit", function (e) {
-      e.preventDefault();
-      document.getElementById("result").innerText = "ありがとうございました。お問い合わせを受け付けました。";
-      this.reset();
+   document.getElementById("contact-form").addEventListener("submit", async function (e) {
+  e.preventDefault();
+  const form = e.currentTarget;
+  const btn  = form.querySelector("button[type=submit]");
+  const name = form.elements["name"].value.trim();
+  const email = form.elements["email"].value.trim();
+  const message = form.elements["message"].value.trim();
+  const resultEl = document.getElementById("result");
+
+  if (!name || !email || !message) {
+    resultEl.textContent = "未入力の項目があります。";
+    return;
+  }
+
+  btn.disabled = true;
+  resultEl.textContent = "送信中…";
+
+  try {
+    const res = await fetch("/api/contact", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      body: JSON.stringify({ name, email, message })
     });
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.error || "送信に失敗しました。");
+
+    resultEl.textContent = "ありがとうございました。お問い合わせを受け付けました。";
+    form.reset();
+  } catch (err) {
+    console.error(err);
+    resultEl.textContent = "送信に失敗しました。時間をおいて再度お試しください。";
+  } finally {
+    btn.disabled = false;
+  }
+});
   </script>
 </body>
 </html>
