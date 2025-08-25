@@ -325,7 +325,7 @@ res.json({ orderToken, total, emailSent, brevo: brevoInfo }); // ← 詳細を�
     client.release();
   }
 });
-// ★追加：お問い合わせ送信（Brevoを使わず SMTP で直送）
+// ★修正：お問い合わせ送信（Brevoで直送、自動返信なし・あなた宛てだけ）
 app.post("/api/contact", async (req, res) => {
   try {
     const { name, email, message } = req.body || {};
@@ -336,25 +336,40 @@ app.post("/api/contact", async (req, res) => {
     // 宛先（あなたに届く先）
     const to = process.env.CONTACT_TO || process.env.MAIL_FROM;
 
-    // メール内容（reply-to をお客様に）
-    const mail = {
-      from: process.env.MAIL_FROM,                               // 送信元表示（ドメインのメール）
-      to,
-      replyTo: `"${name}" <${email}>`,                           // 返信時に相手（お客様）へ返る
+    // Brevo 送信ペイロード
+    const payload = {
+      sender: { email: process.env.MAIL_FROM, name: process.env.MAIL_NAME || "nursery sera" },
+      to: [{ email: to }],                        // ← あなた宛だけ
       subject: `【お問い合わせ】${name} 様`,
-      text:
-`以下の内容でお問い合わせを受け付けました。
-
-お名前：${name}
+      textContent:
+`お名前：${name}
 メール：${email}
 
 本文：
 ${message}
 `,
+      replyTo: { email, name }                    // ← 返信時はユーザーに返る
     };
 
-    const info = await transporter.sendMail(mail);               // 送信実行
-    console.log("contact mail sent:", info.messageId || info);
+    const resp = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        "api-key": process.env.BREVO_API_KEY,
+        "Content-Type": "application/json",
+        "accept": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const bodyText = await resp.text();
+    let bodyJson; try { bodyJson = bodyText ? JSON.parse(bodyText) : null; } catch { bodyJson = { raw: bodyText }; }
+
+    if (!resp.ok) {
+      console.error("Brevo contact error:", resp.status, bodyJson);
+      return res.status(500).json({ ok: false, error: "mail send failed" });
+    }
+
+    console.log("Brevo contact sent:", bodyJson);
     return res.json({ ok: true });
   } catch (e) {
     console.error("contact error", e);
