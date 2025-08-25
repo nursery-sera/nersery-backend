@@ -360,6 +360,16 @@ thead.innerHTML = '<tr>' + columns.map(c => `<th>${escapeHtml(labelOf(c))}</th>`
             <div><input type="checkbox" ${checked} onchange="toggleUnitPaid('${escapeAttr(unitId)}', this.checked)"></div>
           </td>`;
         }
+        
+          if (currentView === 'v_shipping_picklist_by_person') {
+    const q  = Number(row.quantity ?? row.qty ?? 0);
+    const qp = Number(row.quantity_paid ?? 0);
+    const fully = q > 0 ? (qp >= q) : !!v; // 数量が取れないときは元の値でフォールバック
+    if (paidOnly.checked && !fully) return `<td style="display:none"></td>`;
+    return `<td><label class="badge ${fully ? 'paid':'unpaid'}">${fully ? '支払い済み':'未払い'}</label></td>`;
+  }
+
+
 
         // 2) 注文ヘッダ行（基本情報/入金確認/宛名）：トークンが全株支払い済みならON
         const token = tokenForRow(row);
