@@ -1,5 +1,3 @@
-これでいい？
-
 // server.js — public優先 + API（orders_all 1テーブル方式）
 import express from "express";
 import cors from "cors";
