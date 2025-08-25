@@ -295,12 +295,14 @@ if (view === 'v_shipping_picklist_by_person') {
   ];
   return pickColumns(rows, pref, ['picked']); // ← 仮想 picked を強制表示
 }
-  if (view === 'v_shipping_labels') {
-    const pref = ['order_token','name','zipcode','prefecture','city','address','building','is_paid','created_at'];
-    return pickColumns(rows, pref);
-  }
+ if (view === 'v_shipping_labels') {
+  const pref = ['order_token','name','zipcode','prefecture','city','address','building','is_paid','created_at'];
+  return pickColumns(rows, pref);
+}
 
-function pickColumns(rows, pref, virtual = []){
+// ★どの条件にも当てはまらない場合は元のキー順を返す
+return rows.length ? Object.keys(rows[0]) : [];
+} // ← autoColumnsFor をここで閉じる
   const has = rows.length ? Object.keys(rows[0]) : [];
   // データに無くても virtual に入っているキーは残す
   const ordered = pref.filter(k => has.includes(k) || virtual.includes(k));
