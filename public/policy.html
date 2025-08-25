@@ -85,75 +85,49 @@
   display: block;
 }
 
- .category-menu {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 66vw;
-  height: 55vh;
-  background-color: rgba(255, 255, 255, 0.7); /* 明るい透明白 */
-  backdrop-filter: blur(8px);                /* ← すりガラス加工はこっち */
-  z-index: 3000;
-  border: 2px solid rgba(0, 0, 0, 0.1);       /* 枠線 */
-  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.2);
-  transform: translateX(-100%);
-  opacity: 0;
-  transition: transform 0.4s ease, opacity 0.4s ease;
-  pointer-events: none;
-  padding: 30px;
-}
+ .category-menu{
+      position:fixed; top:0; left:0;
+      width:55vw; height:100vh;
+      background-color:rgba(255,255,255,.7);
+      backdrop-filter:blur(8px);
+      z-index:3000;
+      border:2px solid rgba(0,0,0,.1);
+      box-shadow:4px 0 20px rgba(0,0,0,.2);
+      transform:translateX(-100%); opacity:0; pointer-events:none;
+      transition:transform .4s ease, opacity .4s ease;
+      padding:30px;
+    }
+    .category-menu.show{
+      transform:translateX(0); opacity:1; pointer-events:auto;
+    }
 
+    .category-header{
+      font-family:'Cinzel', serif;
+      font-size:80px; margin-bottom:40px; letter-spacing:3px; color:#000;
+      text-align:center;
+    }
+    .category-menu ul{ list-style:none; padding:0; margin:0; }
+    .category-menu li{opacity: 0.8;
+font-family: 'Noto Serif JP', serif;
+      font-size:36px; margin:20px 0; padding-bottom:10px; position:relative;
+      border-bottom:1px solid rgba(0,0,0,.1);
+      transition:transform .2s ease, color .2s ease;
+      cursor:pointer; font-weight:400; color:#000; text-align:left; padding-right:20px;
+    }
+    .category-menu li:hover{ color:#c2185b; transform:scale(1.05); }
+    .category-menu li::after{
+      content:"＞"; position:absolute; right:0; top:2px; color:#bbb; font-size:20px;
+    }
 
-
-.category-menu.show {
-  transform: translateX(0);
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.category-header {
-  font-family: 'Cinzel', serif;
-  font-size: 60px;
-  margin-bottom: 40px;
-  letter-spacing: 3px;
-  color: #000;
-  align-items: center;
-  text-align: center;
-}
-
-
-.category-menu ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.category-menu li {
-  font-size: 26px;
-  margin: 20px 0;
+.category-subtitle {
+  font-size: 48px;
+  font-family: 'Playfair Display SC', serif;
+  margin: 66px 0 10px;
+  color: #000000;
+  font-weight: 400;
   border-bottom: 1px solid rgba(0,0,0,0.1);
-  padding-bottom: 10px;
-  transition: transform 0.2s ease, color 0.2s ease;
-  cursor: pointer;
-  font-weight: bold;
-  color: #000;
-  position: relative;
-  text-align: left;
-  padding-right: 20px;
-}
-
-.category-menu li:hover {
-  color: #c2185b;
-  transform: scale(1.05);
-}
-
-.category-menu li::after {
-  content: "＞";
-  position: absolute;
-  right: 0;
-  color: #bbb;
-  font-size: 20px;
-  top: 2px;
+  padding-bottom: 4px;
+text-align:center;
 }
 
 
@@ -264,6 +238,49 @@
       margin-top: 48px;
       font-size: 48px;
     }
+
+.accordion {
+  margin: -80px 0;
+  border-top: 1px solid #ccc;
+}
+.accordion-item {
+  border-bottom: 1px solid #ccc;
+}
+.accordion-title {
+  width: 100%;
+  background: #fff0f5;
+  border: none;
+  outline: none;
+  text-align: left;
+  padding: 33px;
+  font-size: 36px;
+  cursor: pointer;
+  position: relative;
+color:#000;
+opacity:0.8;
+}
+.accordion-title::after {
+  content: "+";
+  position: absolute;
+  right: 20px;
+}
+.accordion-title.active::after {
+  content: "−"; /* 開いたときマイナスに */
+}
+.accordion-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+  padding: 0 15px;
+font-size: 28px;
+opacity:0.9;
+
+
+
+}
+.accordion-content p {
+  margin: 10px 0;
+}
   </style>
 </head>
 <body>
@@ -275,16 +292,25 @@
     <div class="main-title" onclick="window.top.location.href='<?= url ?>?page=index'">nursery sera</div>
     <button class="cart-button" onclick="window.top.location.href='<?= url ?>?page=cart'"></button>
   </div>
- <div class="category-menu" id="categoryMenu">
-  <h1 class="category-header">MENU</h1>
-  <ul>
-     <li onclick="window.top.location.href='<?= url ?>?page=index'">商品ページ</li>
-    <li onclick="window.top.location.href='<?= url ?>?page=cart'">カート</li>
-    <li onclick="window.top.location.href='<?= url ?>?page=order'">注文フォーム</li>
-    <li onclick="window.top.location.href='<?= url ?>?page=policy'">ポリシー</li>
-    <li onclick="window.top.location.href='<?= url ?>?page=form'">お問い合わせ</li>
-  </ul>
-</div>
+  <div class="category-menu" id="categoryMenu">
+    <h1 class="category-header">MENU</h1>
+<h2 class="category-subtitle">Category</h2>
+    <ul>
+      <li onclick="go('/?page=index')">All</li>
+      <li onclick="go('/?page=index&liked=1')">like♡</li>
+      <li onclick="go('/?page=index&cat=monstera')">Monstera</li>
+      <li onclick="go('/?page=index&cat=alocasia')">Alocasia</li>
+      <li onclick="go('/?page=index&cat=anthurium')">Anthurium</li>
+      <li onclick="go('/?page=index&cat=philodendron')">Philodendron</li>
+</ul>
+<h2 class="category-subtitle">Contact</h2>
+<ul class="contact-links">
+  <li><a href="https://www.instagram.com/nursery_sera?igsh=cWx2cTZ3cWNicGlz&utm_source=" target="_blank">Instagram</a></li>
+  <li><a href="https://lin.ee/mFSu5FS" target="_blank">LINE</a></li>
+  <li><a href="https://www.threads.net/@nursery_sera?igshid=NTc4MTIwNjQ2YQ==" target="_blank">Threads</a></li>
+  <li><a href="/?page=policy">お問い合わせ</a></li>
+</ul>
+  </div>
   <div class="overlay" id="overlay" onclick="closeMenu()"></div>
 
 
@@ -298,6 +324,82 @@
     <a href="<?= url ?>?page=terms">利用規約</a>
     <a href="<?= url ?>?page=law">特定商取引法に基づく表記</a>
   </div>
+
+<!-- アコーディオン全体 -->
+<div class="accordion">
+
+  <!-- 配送方法・送料 -->
+  <div class="accordion-item">
+    <button class="accordion-title">配送方法・送料</button>
+    <div class="accordion-content">
+      <p>以下の中からお選びいただけます：</p>
+      <ul>
+        <li>第四種郵便速達 <span class="pricee">550円</span></li>
+        <li>第四種郵便速達＋特定記録（追跡番号付き）<span class="pricee">770円</span></li>
+        <li>ヤマト運輸 60サイズ <span class="pricee">1,100円</span></li>
+      </ul>
+      <p class="highlight">
+        数量3株以上で第四種郵便速達 無料<br>
+        数量5株以上で第四種郵便速達＋特定記録 無料
+      </p>
+      <p class="note">※北海道・沖縄・離島の方は第四種郵便のみとなります。</p>
+      <p class="note">配送不可・住所不備・受取辞退等による返送送料・再発送送料はお客様ご負担となります。</p>
+    </div>
+  </div>
+
+  <!-- 予約受付期間・発送予定 -->
+  <div class="accordion-item">
+    <button class="accordion-title">予約受付期間・発送予定</button>
+    <div class="accordion-content">
+      <p>【予約受付期間】<br>◯月◯日〜◯日を予定しております。</p>
+      <p>【発送予定】<br>〇〇月中旬から下旬にかけて順次発送予定。</p>
+    </div>
+  </div>
+
+  <!-- お支払い方法 -->
+  <div class="accordion-item">
+    <button class="accordion-title">お支払い方法</button>
+    <div class="accordion-content">
+      <p>銀行振込（PayPay銀行）</p>
+    </div>
+  </div>
+
+  <!-- 組織培養植物について -->
+  <div class="accordion-item">
+    <button class="accordion-title">組織培養植物について</button>
+    <div class="accordion-content">
+      
+<p><strong>順化</strong></p>
+<p>販売している植物は組織培養株のため、順化作業が必要になります。</p>
+<p>順化作業が不安な方は、nursery sera所有のグロースチャンバー（温度・湿度・光量を誤差±1〜2%で管理可能）を使用し、別途購入金額の10%で順化代行も承っておりますのでお気軽にお問い合わせください。<br>
+      ※一度に順化できる数が限られているため、定員に達し次第締め切らせていただきます。</p><p><strong>輸入</strong></p>
+      <p>航空便で輸入し、到着した当日に税関で直接受け取り、翌日発送することにより植物を元気な状態でお届けすることに努めております。</p>
+  
+    </div>
+  </div>
+
+  <!-- キャンセルについて -->
+  <div class="accordion-item">
+    <button class="accordion-title">キャンセルについて</button>
+    <div class="accordion-content">
+      <p>■ <strong>お支払い前のキャンセル</strong><br>
+      お支払い前であれば、いつでもキャンセルを承ります。</p>
+      <p>■ <strong>お支払い後のキャンセル</strong><br>
+      お支払いが完了した時点で輸入手続きに入るため、原則としてキャンセルはお受けできません。何卒ご了承ください。</p>
+    </div>
+  </div>
+
+  <!-- 返品・返金について -->
+  <div class="accordion-item">
+    <button class="accordion-title">返品・返金</button>
+    <div class="accordion-content">
+      <p>到着後に問題があった場合は、<strong>開封前から動画を撮影</strong>していただき、そちらの確認ができた場合のみ返品対応させていただきます。</p>
+      <p>輸入後に品質確認を行い、品質が悪い場合や植物に痛みが確認された場合には、返金対応をさせていただきます。<br>
+      なお、輸入の特性上、株を選んでお届けすることはできず、発送する株はランダムとなりますので、あらかじめご了承ください。</p>
+    </div>
+  </div>
+
+</div>
 
   <h2 id="contact" class="subtitle-x">お問い合わせ</h2>
   <form id="contact-form" style="padding: 0 5vw;">
@@ -318,17 +420,7 @@
   </form>
 
   <footer>
-    <div class="footer-icons">
-      <a href="https://www.instagram.com/" target="_blank">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png" alt="Instagram">
-      </a>
-      <a href="https://line.me/ja/" target="_blank">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/4/41/LINE_logo.svg" alt="LINE">
-      </a>
-      <a href="https://www.threads.net/" target="_blank">
-        <img src="https://cdn.simpleicons.org/threads/000000" alt="Threads">
-      </a>
-    </div>
+    
     <div class="footer-links">
       <a href="<?= url ?>?page=policy">ポリシー</a>
       <a href="<?= url ?>?page=terms">利用規約</a>
@@ -376,7 +468,7 @@ function closeMenu() {
       lastScrollY = currentScrollY;
     });
 
-   document.getElementById("contact-form").addEventListener("submit", async function (e) {
+    document.getElementById("contact-form").addEventListener("submit", async function (e) {
   e.preventDefault();
   const form = e.currentTarget;
   const btn  = form.querySelector("button[type=submit]");
@@ -385,8 +477,13 @@ function closeMenu() {
   const message = form.elements["message"].value.trim();
   const resultEl = document.getElementById("result");
 
+  // 軽いバリデーション
   if (!name || !email || !message) {
     resultEl.textContent = "未入力の項目があります。";
+    return;
+  }
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    resultEl.textContent = "メールアドレスの形式が正しくありません。";
     return;
   }
 
@@ -411,6 +508,57 @@ function closeMenu() {
     btn.disabled = false;
   }
 });
+
+// ===== アコーディオン（開閉の動き）=====
+// 用語メモ：
+// ・DOM（どむ）：ページの部品を木のように表したもの
+// ・イベントリスナー：クリック等の合図を受け取って動く関数
+// ・scrollHeight：中身の実際の高さ
+// ・max-height：CSSで高さの上限（アニメ向き）。0にすると隠れる
+(function setupAccordion(){
+  const titles = document.querySelectorAll('.accordion-title');
+
+  // 1つ開いたら他は閉じる
+  function closeAll(){
+    titles.forEach(t => {
+      t.classList.remove('active');
+      t.setAttribute('aria-expanded', 'false');
+      const c = t.nextElementSibling;
+      if (c) c.style.maxHeight = null;
+    });
+  }
+
+  titles.forEach(title => {
+    // アクセシビリティ（あくせしびりてぃ：支援技術向けの情報）
+    title.setAttribute('aria-expanded', 'false');
+    title.setAttribute('aria-controls', (title.textContent || '').trim());
+ title.addEventListener('click', () => {
+  const content = title.nextElementSibling;
+  const isOpen = title.classList.contains('active');
+
+  if (isOpen) {
+    // すでに開いているなら閉じる
+    title.classList.remove('active');
+    title.setAttribute('aria-expanded', 'false');
+    content.style.maxHeight = null;
+  } else {
+    // 閉じていたなら開く（他はそのまま）
+    title.classList.add('active');
+    title.setAttribute('aria-expanded', 'true');
+    content.style.maxHeight = content.scrollHeight + 'px';
+  }
+});
+  });
+
+  // ウィンドウサイズが変わったら、開いている項目の高さを再計算
+  window.addEventListener('resize', () => {
+    const active = document.querySelector('.accordion-title.active');
+    if (active) {
+      const c = active.nextElementSibling;
+      if (c) c.style.maxHeight = c.scrollHeight + 'px';
+    }
+  });
+})();
   </script>
 </body>
 </html>
