@@ -72,7 +72,7 @@ app.use(cors({
 // ★SMTPトランスポート（SMTP接続設定）
 const transporter = nodemailer.createTransport({
   host  : process.env.SMTP_HOST,                 // 例: mail1024.onamae.ne.jp
-  port  : Number(process.env.SMTP_PORT || 587),  // お名前.comなら 465 が多い
+  port  : Number(process.env.SMTP_PORT || 465),  // お名前.comなら 465 が多い
   secure: process.env.SMTP_SECURE === "true" || Number(process.env.SMTP_PORT) === 465,
   auth  : {
     user: process.env.SMTP_USER,                 // 例: info@nurserysera.com
