@@ -303,6 +303,7 @@ if (view === 'v_shipping_picklist_by_person') {
 // ★どの条件にも当てはまらない場合は元のキー順を返す
 return rows.length ? Object.keys(rows[0]) : [];
 } // ← autoColumnsFor をここで閉じる
+function pickColumns(rows, pref, virtual = []){
   const has = rows.length ? Object.keys(rows[0]) : [];
   // データに無くても virtual に入っているキーは残す
   const ordered = pref.filter(k => has.includes(k) || virtual.includes(k));
