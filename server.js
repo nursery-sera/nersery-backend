@@ -4,7 +4,7 @@ import cors from "cors";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-
+import nodemailer from "nodemailer";
 // ★追加：古い Node でも fetch を使えるよう保険
 if (typeof fetch !== 'function') {
   globalThis.fetch = async (...args) => {
@@ -69,7 +69,16 @@ app.use(cors({
   origin: ["https://www.nurserysera.com"],
   credentials: true
 }));
-
+// ★SMTPトランスポート（SMTP接続設定）
+const transporter = nodemailer.createTransport({
+  host  : process.env.SMTP_HOST,                 // 例: mail1024.onamae.ne.jp
+  port  : Number(process.env.SMTP_PORT || 587),  // お名前.comなら 465 が多い
+  secure: process.env.SMTP_SECURE === "true" || Number(process.env.SMTP_PORT) === 465,
+  auth  : {
+    user: process.env.SMTP_USER,                 // 例: info@nurserysera.com
+    pass: process.env.SMTP_PASS                  // メール(アプリ)パスワード
+  }
+});
 // ====== HTML 配信（public優先）。GASタグ置換もここで実施 ======
 function candidateFiles(page) {
   return [
@@ -316,7 +325,42 @@ res.json({ orderToken, total, emailSent, brevo: brevoInfo }); // ← 詳細を�
     client.release();
   }
 });
+// ★追加：お問い合わせ送信（Brevoを使わず SMTP で直送）
+app.post("/api/contact", async (req, res) => {
+  try {
+    const { name, email, message } = req.body || {};
+    if (!name || !email || !message) {
+      return res.status(400).json({ error: "name, email, message are required" });
+    }
 
+    // 宛先（あなたに届く先）
+    const to = process.env.CONTACT_TO || process.env.MAIL_FROM;
+
+    // メール内容（reply-to をお客様に）
+    const mail = {
+      from: process.env.MAIL_FROM,                               // 送信元表示（ドメインのメール）
+      to,
+      replyTo: `"${name}" <${email}>`,                           // 返信時に相手（お客様）へ返る
+      subject: `【お問い合わせ】${name} 様`,
+      text:
+`以下の内容でお問い合わせを受け付けました。
+
+お名前：${name}
+メール：${email}
+
+本文：
+${message}
+`,
+    };
+
+    const info = await transporter.sendMail(mail);               // 送信実行
+    console.log("contact mail sent:", info.messageId || info);
+    return res.json({ ok: true });
+  } catch (e) {
+    console.error("contact error", e);
+    return res.status(500).json({ ok: false, error: "mail send failed" });
+  }
+});
 // 入金反映（トークンで全行更新）→ order_units も一括更新に拡張
 app.put("/api/orders/:token/paid", async (req, res) => {
   if (!pool) return res.status(500).json({ error: "DB not available" });
