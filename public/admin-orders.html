@@ -280,46 +280,31 @@ function autoColumnsFor(view, rows){
     const prefAll  = ['all_items_qty','all_items_amount','paid_items_qty','paid_items_amount'];
     return pickColumns(rows, paidOnly.checked ? prefPaid : prefAll);
   }
-// ★ 発送仕分け（人別）：指定順に表示
-//  トークン / 氏名 / 商品 / ピックど（確認） / 数量 / 支払い済み数量 / 支払い / 配送方法 / 初回注文日
+// ★ 発送仕分け（人別）：指定順＋ picked は仮想カラムとして表示
 if (view === 'v_shipping_picklist_by_person') {
   const pref = [
     'order_token',          // トークン
     'name',                 // 氏名
     'product',              // 商品
-    'picked',               // ピックど（確認）
-    'quantity',             // 数量（存在する場合）
+    'picked',               // ピック（確認） ← 仮想
+    'quantity',             // 数量（あれば）
     'quantity_paid',        // 支払い済み数量
     'is_paid',              // 支払い（unit_id があれば1株単位で反映）
-    'shipping_option_text', // 配送方法（文字）
+    'shipping_option_text', // 配送方法
     'first_order_at'        // 初回注文日
   ];
-  return pickColumns(rows, pref);
+  return pickColumns(rows, pref, ['picked']); // ← 仮想 picked を強制表示
 }
   if (view === 'v_shipping_labels') {
     const pref = ['order_token','name','zipcode','prefecture','city','address','building','is_paid','created_at'];
     return pickColumns(rows, pref);
   }
- if (view === 'v_shipping_picklist_by_person') {
-  const pref = [
-    'order_token',          // トークン
-    'name',                 // 氏名
-    'product',              // 商品
-    'picked',               // ピックど（確認）
-    'quantity',             // 数量（存在する場合）
-    'quantity_paid',        // 支払い済み数量
-    'is_paid',              // 支払い（unit_id があれば1株単位で反映）
-    'shipping_option_text', // 配送方法（文字）
-    'first_order_at'        // 初回注文日
-  ];
-  return pickColumns(rows, pref);
-}
-  return rows.length ? Object.keys(rows[0]) : [];
-}
-function pickColumns(rows, pref){
+
+function pickColumns(rows, pref, virtual = []){
   const has = rows.length ? Object.keys(rows[0]) : [];
-  const ordered = pref.filter(k => has.includes(k));
-  const others = has.filter(k => !ordered.includes(k));
+  // データに無くても virtual に入っているキーは残す
+  const ordered = pref.filter(k => has.includes(k) || virtual.includes(k));
+  const others  = has.filter(k => !ordered.includes(k));
   return [...ordered, ...others];
 }
 
