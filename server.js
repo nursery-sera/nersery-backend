@@ -70,17 +70,16 @@ app.use(cors({
   credentials: true
 }));
 // ★SMTPトランスポート（SMTP接続設定）— 465/SSLあり想定
+// 代替: 587/STARTTLS
 const transporter = nodemailer.createTransport({
-  host  : process.env.SMTP_HOST,              // mail1024.onamae.ne.jp
-  port  : Number(process.env.SMTP_PORT || 465),
-  secure: true,                               // ← 465なら true 固定
-  auth  : {
-    user: process.env.SMTP_USER,              // 例: info@nurserysera.com
-    pass: process.env.SMTP_PASS               // そのメールのパスワード
-  },
-  connectionTimeout: 10000,                   // ← 追加: 接続タイムアウト
-  greetingTimeout:   10000,                   // ← 追加: GREETING待ち
-  socketTimeout:     20000                    // ← 追加: 送受信の全体タイムアウト
+  host  : process.env.SMTP_HOST,
+  port  : 587,
+  secure: false,                    // ← 587は false
+  auth  : { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+  requireTLS: true,                 // ← STARTTLSを必須化
+  connectionTimeout: 10000,
+  greetingTimeout:   10000,
+  socketTimeout:     20000
 });
 
 // 起動時に接続チェック（一度だけ）
