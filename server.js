@@ -5,6 +5,14 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
+// ★追加：古い Node でも fetch を使えるよう保険
+if (typeof fetch !== 'function') {
+  globalThis.fetch = async (...args) => {
+    const { default: nodeFetch } = await import('node-fetch');
+    return nodeFetch(...args);
+  };
+}
+
 // ===== pg 接続（Railway/環境変数対応） =====
 import pkg from "pg";
 const { Pool } = pkg;
@@ -241,43 +249,55 @@ const productName =
 
     await client.query("COMMIT");
 
-    // ----- Brevo 自動返信（任意） -----
-    if (process.env.BREVO_API_KEY && customer.email) {
-      const baseUrl = getBaseUrl(req);
-      const subject = `ご注文ありがとうございます（#${orderToken}）`;
-      const html = `
-        <p>${name} 様</p>
-        <p>ご注文（#${orderToken}）を受け付けました。</p>
-        <p><strong>合計：¥${total.toLocaleString()}</strong></p>
-        <p>お支払い方法：銀行振込</p>
-        <p>※ご入金確認後に発送いたします。</p>
-        <p><a href="${baseUrl}">nursery sera</a></p>
-      `;
-      try {
-        const resp = await fetch("https://api.brevo.com/v3/smtp/email", {
-          method: "POST",
-          headers: {
-            "api-key": process.env.BREVO_API_KEY,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            sender: {
-              email: process.env.MAIL_FROM || "info@example.com",
-              name : process.env.MAIL_NAME || "nursery sera"
-            },
-            to: [{ email: customer.email, name }],
-            subject,
-            htmlContent: html
-          })
-        });
-        if (!resp.ok) console.error("Brevo error:", await resp.text());
-      } catch (e) {
-        console.error("Brevo error:", e);
-      }
-    }
-    // -----------------------------------
+ // ----- Brevo 自動返信（任意） -----
+console.log(
+  "BREVO?", !!process.env.BREVO_API_KEY,
+  "MAIL_FROM?", !!process.env.MAIL_FROM,
+  "customer.email?", !!customer.email
+);
 
-    res.json({ orderToken, total });
+let emailSent = false;
+if (process.env.BREVO_API_KEY && customer.email) {
+  const baseUrl = getBaseUrl(req);
+  const subject = `ご注文ありがとうございます（#${orderToken}）`;
+  const html = `
+    <p>${name} 様</p>
+    <p>ご注文（#${orderToken}）を受け付けました。</p>
+    <p><strong>合計：¥${total.toLocaleString()}</strong></p>
+    <p>お支払い方法：銀行振込</p>
+    <p>※ご入金確認後に発送いたします。</p>
+    <p><a href="${baseUrl}">nursery sera</a></p>
+  `;
+  try {
+    const resp = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        "api-key": process.env.BREVO_API_KEY,
+        "Content-Type": "application/json",
+        "accept": "application/json"
+      },
+      body: JSON.stringify({
+        sender: {
+          email: process.env.MAIL_FROM,              // 認証済みドメインを必須で使う
+          name : process.env.MAIL_NAME || "nursery sera"
+        },
+        to: [{ email: customer.email, name }],
+        subject,
+        htmlContent: html,
+        textContent: `${name} 様\nご注文（#${orderToken}）を受け付けました。\n合計：¥${total.toLocaleString()}\nお支払い方法：銀行振込\n※ご入金確認後に発送いたします。\n${baseUrl}`
+      })
+    });
+    const respText = await resp.text();
+    if (!resp.ok) {
+      console.error("Brevo error:", resp.status, respText);
+    } else {
+      emailSent = true;
+    }
+  } catch (e) {
+    console.error("Brevo error:", e);
+  }
+}
+res.json({ orderToken, total, emailSent }); // ← 成否を返す
   } catch (e) {
     await client.query("ROLLBACK");
     console.error(e);
