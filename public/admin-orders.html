@@ -247,6 +247,14 @@ if (currentView === 'v_orders_summary') {
       }
     }
 
+
+// ★ 行のソート（全ビュー共通：新しい順）
+rows.sort((a,b)=>{
+  const ta = getSortTime(a);
+  const tb = getSortTime(b);
+  return NEW_FIRST ? (tb - ta) : (ta - tb);
+});
+
     let columns = autoColumnsFor(currentView, rows);
     currentRows = rows;
     currentColumns = columns;
@@ -431,6 +439,22 @@ function escapeHtml(v){
   return String(v).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
 }
 function escapeAttr(v){ return String(v).replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+// ===== 共通ソートユーティリティ =====
+const NEW_FIRST = true; // ★ 新しい順（上に来る）
+
+function toTime(v){
+  if (!v) return 0;
+  // "YYYY-MM-DD HH:mm:ss" でも安全に Date.parse できるように
+  const t = Date.parse(String(v).replace(' ', 'T'));
+  return Number.isNaN(t) ? 0 : t;
+}
+
+function getSortTime(row){
+  // 並びの優先キー（存在するものを使用）
+  // created_at → first_order_at → paid_at → updated_at の順
+  return toTime(row.created_at || row.first_order_at || row.paid_at || row.updated_at);
+}
+
 function formatDate(v){
   try{ const d = new Date(v); if (isNaN(d)) return v;
     const z = n => String(n).padStart(2,'0');
