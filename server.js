@@ -1,3 +1,5 @@
+これでいい？
+
 // server.js — public優先 + API（orders_all 1テーブル方式）
 import express from "express";
 import cors from "cors";
@@ -69,23 +71,16 @@ app.use(cors({
   origin: ["https://www.nurserysera.com"],
   credentials: true
 }));
-// ★SMTPトランスポート（SMTP接続設定）— 465/SSLあり想定
-// 代替: 587/STARTTLS
+// ★SMTPトランスポート（SMTP接続設定）
 const transporter = nodemailer.createTransport({
-  host  : process.env.SMTP_HOST,
-  port  : 587,
-  secure: false,                    // ← 587は false
-  auth  : { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-  requireTLS: true,                 // ← STARTTLSを必須化
-  connectionTimeout: 10000,
-  greetingTimeout:   10000,
-  socketTimeout:     20000
+  host  : process.env.SMTP_HOST,                 // 例: mail1024.onamae.ne.jp
+  port  : Number(process.env.SMTP_PORT || 587),  // お名前.comなら 465 が多い
+  secure: process.env.SMTP_SECURE === "true" || Number(process.env.SMTP_PORT) === 465,
+  auth  : {
+    user: process.env.SMTP_USER,                 // 例: info@nurserysera.com
+    pass: process.env.SMTP_PASS                  // メール(アプリ)パスワード
+  }
 });
-
-// 起動時に接続チェック（一度だけ）
-transporter.verify()
-  .then(() => console.log("SMTP verify: OK"))
-  .catch(err => console.error("SMTP verify: NG", err));
 // ====== HTML 配信（public優先）。GASタグ置換もここで実施 ======
 function candidateFiles(page) {
   return [
