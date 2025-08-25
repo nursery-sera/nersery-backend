@@ -491,11 +491,11 @@ function closeMenu() {
   resultEl.textContent = "送信中…";
 
   try {
-    const res = await fetch("/api/contact", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Accept": "application/json" },
-      body: JSON.stringify({ name, email, message })
-    });
+    const res = await fetch("https://www.nurserysera.com/api/contact", {
+  method: "POST",
+  headers: { "Content-Type": "application/json", "Accept": "application/json" },
+  body: JSON.stringify({ name, email, message })
+});
     const data = await res.json();
     if (!res.ok || !data.ok) throw new Error(data.error || "送信に失敗しました。");
 
