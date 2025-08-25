@@ -300,15 +300,20 @@ if (view === 'v_shipping_picklist_by_person') {
     const pref = ['order_token','name','zipcode','prefecture','city','address','building','is_paid','created_at'];
     return pickColumns(rows, pref);
   }
-  if (view === 'v_shipping_picklist_by_person') {
-    // ★旧: 'shipping option add' → 新: 'shipping_option_text'（互換のため両方入れて pick）
-    const pref = [
-      'name','product','quantity_paid','picked',
-      'shipping_option_text','shipping',      // ← 新列（文字＋金額）
-      'is_paid','first_order_at'
-    ];
-    return pickColumns(rows, pref);
-  }
+ if (view === 'v_shipping_picklist_by_person') {
+  const pref = [
+    'order_token',          // トークン
+    'name',                 // 氏名
+    'product',              // 商品
+    'picked',               // ピックど（確認）
+    'quantity',             // 数量（存在する場合）
+    'quantity_paid',        // 支払い済み数量
+    'is_paid',              // 支払い（unit_id があれば1株単位で反映）
+    'shipping_option_text', // 配送方法（文字）
+    'first_order_at'        // 初回注文日
+  ];
+  return pickColumns(rows, pref);
+}
   return rows.length ? Object.keys(rows[0]) : [];
 }
 function pickColumns(rows, pref){
