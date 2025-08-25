@@ -249,28 +249,7 @@ if (currentView === 'v_orders_summary') {
 
 // 列選択
 function autoColumnsFor(view, rows){
-  if (view === 'v_orders_summary') {
-  // ★ 指定順：氏名 / 住所 / 商品 / 配送方法 / サブトータル / 送料 / 注文合計 / 備考 / メール / 支払い / 注文日時 / トークン
-  const pref = [
-    'note',                // 備考
-    'name',                // 氏名
-    'products',            // 商品
-    'shipping_option_text',// 配送方法（文字）
-    'order_subtotal',      // サブトータル（小計：フロント計算）
-    'shipping',            // 送料
-    'order_total',         // 注文合計
-    'email',               // メール
-    'is_paid',
-    'zipcode',
-    'prefecture',
-    'city',
-    'address',
-    'building',
-    'created_at',          // 注文日時
-    'order_token'          // トークン
-  ];
-  return pickColumns(rows, pref);
-}
+  
   if (view === 'v_payment_check') {
     const pref = ['order_token','last_kana','first_kana','order_total','is_paid','created_at'];
     return pickColumns(rows, pref);
@@ -390,7 +369,8 @@ thead.innerHTML = '<tr>' + columns.map(c => `<th>${escapeHtml(labelOf(c))}</th>`
         if (v) v = formatDate(v);
       }
 
-      const nowrap = (col === 'note' || col.includes('address')) ? 'style="white-space:normal; max-width:280px;"' : '';
+      const nowrap = (col.includes('address'))
+  ? 'style="white-space:normal; max-width:280px;"' : '';
       return `<td ${nowrap}>${escapeHtml(v)}</td>`;
     }).join('') + '</tr>';
   }).join('');
