@@ -70,20 +70,14 @@ app.use(cors({
   credentials: true
 }));
 // ★SMTPトランスポート（SMTP接続設定）
-// ★SMTPトランスポート（Brevo: 2525/STARTTLS）
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,   // 例: smtp-relay.brevo.com
-  port: 2525,                    // ← 固定で 2525
-  secure: false,                 // ← STARTTLS を使うので false
-  requireTLS: true,              // ← STARTTLS を必須化（推奨）
-  auth: {
-    user: process.env.SMTP_USER, // Brevo のSMTPユーザ（アカウント or SMTP用ユーザ）
-    pass: process.env.SMTP_PASS  // Brevo で発行した SMTPキー/パス
-  },
-  connectionTimeout: 8000,
-  greetingTimeout: 8000,
-  socketTimeout: 10000,
-  tls: { minVersion: 'TLSv1.2' } // 相手の要求が厳しい場合の保険
+  host  : process.env.SMTP_HOST,                 // 例: mail1024.onamae.ne.jp
+  port  : Number(process.env.SMTP_PORT || 587),  // お名前.comなら 465 が多い
+  secure: process.env.SMTP_SECURE === "true" || Number(process.env.SMTP_PORT) === 465,
+  auth  : {
+    user: process.env.SMTP_USER,                 // 例: info@nurserysera.com
+    pass: process.env.SMTP_PASS                  // メール(アプリ)パスワード
+  }
 });
 // ====== HTML 配信（public優先）。GASタグ置換もここで実施 ======
 function candidateFiles(page) {
