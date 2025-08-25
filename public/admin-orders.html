@@ -138,11 +138,12 @@ async function ensureRealTokenIndex(){
 }
 function isMd5Token(t){ return /^[a-f0-9]{32}$/i.test(t||''); }
 function tokenForRow(row){
-  if (row.order_token || row.orderToken) {
-    const t = row.order_token || row.orderToken;
-    if (!isMd5Token(t)) return t;
-  }
-  const key = `${(row.name||'')}||${(row.address_full||'')}`;
+  // ★ order_token が来ているならそれを“そのまま”使う（address_full に依存しない）
+  if (row.order_token) return row.order_token;
+  if (row.orderToken) return row.orderToken;
+
+  // ★ フォールバック：name + 住所（address_full が無い場合は address を使う）で索引
+  const key = `${(row.name||'')}||${(row.address_full || row.address || '')}`;
   return (tokenIndex[key] && tokenIndex[key].token) || '';
 }
 
