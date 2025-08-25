@@ -198,16 +198,26 @@ async function loadView() {
     }
 
     const paidParam = paidOnly.checked ? '?paid=1' : '';
-    const data = await callApi(`/view/${currentView}${paidParam}`);
+   const data = await callApi(`/view/${currentView}${paidParam}`);
 const rows = Array.isArray(data) ? data : [data];
+
+// ★ 基本情報ビュー用：商品名×個数を仮想カラムに補完
+if (currentView === 'v_orders_summary') {
+  for (const r of rows) {
+    if (!r.products && r.product_name) {
+      const q = r.quantity ?? r.total_qty ?? r.qty ?? '';
+      r.products = (q !== '' && q != null) ? `${r.product_name} × ${q}` : `${r.product_name}`;
+    }
+  }
+}
 
 // ★ 基本情報ビュー用：サブトータル（小計）をフロントで計算して埋め込む
 if (currentView === 'v_orders_summary') {
   for (const r of rows) {
-    const total    = Number(r.order_total ?? r.total ?? 0); // 念のため予備キーも考慮
+    const total    = Number(r.order_total ?? r.total ?? 0);
     const shipping = Number(r.shipping ?? 0);
     const subtotal = (isFinite(total) ? total : 0) - (isFinite(shipping) ? shipping : 0);
-    r.order_subtotal = subtotal; // ← 新しい“仮想カラム”を追加
+    r.order_subtotal = subtotal;
   }
 }
 
