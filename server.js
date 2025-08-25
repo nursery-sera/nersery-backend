@@ -69,16 +69,24 @@ app.use(cors({
   origin: ["https://www.nurserysera.com"],
   credentials: true
 }));
-// ★SMTPトランスポート（SMTP接続設定）
+// ★SMTPトランスポート（SMTP接続設定）— 465/SSLあり想定
 const transporter = nodemailer.createTransport({
-  host  : process.env.SMTP_HOST,                 // 例: mail1024.onamae.ne.jp
-  port  : Number(process.env.SMTP_PORT || 465),  // お名前.comなら 465 が多い
-  secure: process.env.SMTP_SECURE === "true" || Number(process.env.SMTP_PORT) === 465,
+  host  : process.env.SMTP_HOST,              // mail1024.onamae.ne.jp
+  port  : Number(process.env.SMTP_PORT || 465),
+  secure: true,                               // ← 465なら true 固定
   auth  : {
-    user: process.env.SMTP_USER,                 // 例: info@nurserysera.com
-    pass: process.env.SMTP_PASS                  // メール(アプリ)パスワード
-  }
+    user: process.env.SMTP_USER,              // 例: info@nurserysera.com
+    pass: process.env.SMTP_PASS               // そのメールのパスワード
+  },
+  connectionTimeout: 10000,                   // ← 追加: 接続タイムアウト
+  greetingTimeout:   10000,                   // ← 追加: GREETING待ち
+  socketTimeout:     20000                    // ← 追加: 送受信の全体タイムアウト
 });
+
+// 起動時に接続チェック（一度だけ）
+transporter.verify()
+  .then(() => console.log("SMTP verify: OK"))
+  .catch(err => console.error("SMTP verify: NG", err));
 // ====== HTML 配信（public優先）。GASタグ置換もここで実施 ======
 function candidateFiles(page) {
   return [
