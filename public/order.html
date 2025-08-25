@@ -559,7 +559,10 @@ if (!cart.length) {
   return;
 }
     // 文字列を念のため安全化（不可視制御文字などを除去）
-    const customer = {
+const emailRaw = sanitize(fd.get('email'));
+const emailOk  = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailRaw); // 簡易チェック
+
+const customer = {
   lastName   : sanitize(fd.get('lastName')),
   firstName  : sanitize(fd.get('firstName')),
   lastKana   : sanitize(fd.get('lastKana')),
@@ -569,9 +572,8 @@ if (!cart.length) {
   city       : sanitize(fd.get('city')),
   address    : sanitize(fd.get('address')),
   building   : sanitize(fd.get('building')),
-  email      : sanitize(fd.get('email')),
+  email      : emailRaw,
   payment    : sanitize(fd.get('payment') || '銀行振込（PayPay銀行）'),
-  // ★ サーバーが必要とする結合済みフィールドも明示で入れる
   name    : (sanitize(fd.get('lastName')) + ' ' + sanitize(fd.get('firstName'))).trim(),
   addressFull : (
     sanitize(fd.get('prefecture')) +
@@ -580,6 +582,18 @@ if (!cart.length) {
     sanitize(fd.get('building'))
   ).trim()
 };
+
+if (!emailRaw || !emailOk) {
+  alert('メールアドレスの形式が正しくありません');
+  if (submitBtn) {
+    submitBtn.textContent = '注文送信 >';
+    submitBtn.setAttribute('aria-busy', 'false');
+    submitBtn.disabled = false;
+  }
+  disabledEls.forEach(el => el.disabled = false);
+  submitting = false;
+  return;
+}
 
 if (!customer.lastName || !customer.firstName) {
   alert('お名前（姓・名）を入力してください');
@@ -652,11 +666,12 @@ const idemKey = crypto.randomUUID();
       }
 
       const data = r.data || {};
-      alert(`ありがとうございました。ご注文番号 #${data.orderToken || '-'}（合計 ¥${Number(data.total ?? total).toLocaleString()}）を受け付けました。`);
+window.__orderSubmitSucceeded__ = true; // ← 追加
+alert(`ありがとうございました。ご注文番号 #${data.orderToken || '-'}（合計 ¥${Number(data.total ?? total).toLocaleString()}）を受け付けました。`);
 
-            localStorage.removeItem('cart');
-      localStorage.removeItem('checkout');
-      e.target.reset();
+localStorage.removeItem('cart');
+localStorage.removeItem('checkout');
+e.target.reset();
 
     }catch(err){
       alert(`エラー：${err.message}\n\n送信先: ${API}`);
@@ -670,9 +685,8 @@ const idemKey = crypto.randomUUID();
   }
   form.querySelectorAll('input, textarea, button, select').forEach(el => { el.disabled = false; });
 
-  // ★エラー時だけ submitting=false に戻す
-  // （成功時はtrueのまま → このページでは再送不可にする）
-  if (err) {
+  // 成功フラグが立っていないときだけ submitting を戻す
+  if (!window.__orderSubmitSucceeded__) {
     submitting = false;
   }
 }
