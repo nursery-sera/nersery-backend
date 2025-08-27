@@ -155,7 +155,12 @@
     font-size: 28px;   /* 好きなサイズに変更 */
     line-height: 1.4;  /* 行間を少し広げると読みやすい */
   }
-
+.container p a, 
+.container p {
+  color: #333 !important;      /* 青リンク防止 */
+  text-decoration: none !important; /* 下線も消す */
+  pointer-events: none;         /* クリックできないようにする */
+}
   </style>
 </head>
 <body>
