@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <base target="_top">
+  <meta name="viewport" content="width=950, user-scalable=no">
+  <title>nursery sera - Policy</title>
+
+  <!-- preconnect（元コードのまま） -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://unpkg.com">
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://firestore.googleapis.com">
+  <link rel="preconnect" href="https://firebasestorage.googleapis.com">
+  <link rel="preconnect" href="https://gist.githubusercontent.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bayon&family=Tangerine:wght@700&family=Italianno&family=Noto+Serif+JP&display=swap" rel="stylesheet">
+
+  <style>
+    /* ===== ベース（元コードの数値そのまま） ===== */
+    html,body{
+      margin:0;padding:0;font-size:20px;-webkit-text-size-adjust:100%;
+      font-family:Arial,sans-serif;background:#fff;color:#333;box-sizing:border-box
+    }
+    *,*:before,*:after{box-sizing:inherit}
+    .container{max-width:1100px;margin:0 auto;padding:0 16px}
+
+    /* ▼ 追加：縦フレックスで“底に吸いつく”（元コードのまま） */
+    html, body { height:100%; }
+    body { min-height:100vh; display:flex; flex-direction:column; }
+    main { flex:1 0 auto; }
+
+    /* ===== ヘッダー（元コードのまま） ===== */
+    .header-bar{
+      position:fixed; top:0; left:0; right:0; width:100%;
+      margin-top:-50px; z-index:1000;
+      background:transparent;
+      display:flex; align-items:center; justify-content:space-between;
+      padding:20px; transition:transform .5s ease;
+      border:none; 
+      box-shadow:none;
+      opacity:1;
+      transition: opacity 0.2s ease;
+      will-change: opacity;
+    }
+    .header-bar.is-hidden{
+      opacity: 0;
+      pointer-events: none;
+    }
+    .menu-icon{
+      display:flex; flex-direction:column; justify-content:space-between;
+      width:48px; height:40px; cursor:pointer; background:none; border:none;
+      padding:0; margin:0; transform:translateX(20px);
+    }
+    .menu-icon span{
+      display:block; height:3px; width:100%; background:#333; border-radius:2px;
+    }
+    .main-title{
+      font-family:'Bayon', cursive;
+      font-size:109px; margin:0; white-space:nowrap; transform:translateX(20px);
+      cursor:pointer;
+      opacity:1;color:#333
+    }
+    .cart-button{
+      background-image:url('https://gist.githubusercontent.com/nursery-sera/3bfad5863718f7147d193844bdaca462/raw/d7f9244ea2cbbaf4c13a67c30831022e37076b17/plantcart-icon.svg');
+      background-size:contain; background-repeat:no-repeat;
+      width:100px; height:100px; border:none; background-color:transparent; cursor:pointer;
+      position:relative;
+    }
+    .cart-badge{
+      position:absolute; right:21px; top:47px;font-weight: 700;
+      min-width:50px; height:50px; padding:0 6px;
+      border-radius:25px;
+      background:#f8c6dc; color:#fff; 
+      font-size:24px; line-height:28px; text-align:center;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      box-shadow:0 2px 6px rgba(0,0,0,.2);
+    }
+
+    /* ===== メニュー（元コードのまま） ===== */
+    .overlay{
+      position:fixed; inset:0;
+      background:rgba(0,0,0,.3); z-index:2000; display:none;
+    }
+    .overlay.show{ display:block; }
+
+    .category-menu{
+      position:fixed; top:0; left:0;
+      width:55vw; height:100vh;
+      background-color:rgba(255,255,255,.7);
+      z-index:3000;
+      border:2px solid rgba(0,0,0,.1);
+      box-shadow:4px 0 20px rgba(0,0,0,.2);
+      transform:translateX(-100%); opacity:0; pointer-events:none;
+      transition:transform .4s ease, opacity .4s ease;
+      padding:30px;
+    }
+    .category-menu.show{
+      transform:translateX(0); opacity:1; pointer-events:auto;
+      backdrop-filter:blur(8px);
+    }
+
+    .category-header{
+      font-family:'Cinzel', serif;
+      font-size:80px; margin-bottom:40px; letter-spacing:3px; color:#000;
+      text-align:center;
+    }
+    .category-menu ul{ list-style:none; padding:0; margin:0; }
+    .category-menu li{
+      opacity: 0.8;
+      font-family: 'Noto Serif JP', serif;
+      font-size:36px; margin:20px 0; padding-bottom:10px; position:relative;
+      border-bottom:1px solid rgba(0,0,0,.1);
+      transition:transform .2s ease, color .2s ease;
+      cursor:pointer; font-weight:400; color:#000; text-align:left; padding-right:20px;
+    }
+    .category-menu li:hover{ color:#c2185b; transform:scale(1.05); }
+    .category-menu li::after{
+      content:"＞"; position:absolute; right:0; top:2px; color:#bbb; font-size:20px;
+    }
+    .category-subtitle {
+      font-size: 48px;
+      font-family: 'Playfair Display SC', serif;
+      margin: 66px 0 10px;
+      color: #000000;
+      font-weight: 400;
+      border-bottom: 1px solid rgba(0,0,0,0.1);
+      padding-bottom: 4px;
+      text-align:center;
+    }
+    .contact-links a {
+      color: #000;
+      text-decoration: none;
+    }
+
+    /* ===== フッター（元コードのまま） ===== */
+    footer{
+      margin-top:auto;
+      padding:30px 20px; background:#fff; text-align:center;
+    }
+    .footer-icons{
+      display:flex; justify-content:center; gap:60px; margin-bottom:16px;
+    }
+    .footer-icons img{ width:42px; height:42px; }
+    .footer-links a{
+      display:inline-block; margin:0 20px; color:#444; font-size:24px; text-decoration:none;
+    }
+    .footer-links a:hover{ text-decoration:underline; }
+
+  .container p {
+    font-size: 28px;   /* 好きなサイズに変更 */
+    line-height: 1.4;  /* 行間を少し広げると読みやすい */
+  }
+
+  </style>
+</head>
+<body>
+  <!-- ヘッダー（元コードのまま） -->
+  <div class="header-bar" id="titleBar">
+    <button class="menu-icon" onclick="toggleMenu(event)">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="main-title" onclick="window.top.location.href='<?= url ?>?page=index'">nursery sera</div>
+    <button class="cart-button" onclick="go('/?page=cart')">
+      <span id="cartBadge" class="cart-badge">0</span>
+    </button>
+  </div>
+
+  <!-- スライドメニュー（元コードのまま） -->
+  <div class="category-menu" id="categoryMenu">
+    <h1 class="category-header">MENU</h1>
+    <h2 class="category-subtitle">Category</h2>
+    <ul>
+      <li onclick="go('/?page=index')">All</li>
+      <li onclick="go('/?page=index&liked=1')">like♡</li>
+      <li onclick="go('/?page=index&cat=monstera')">Monstera</li>
+      <li onclick="go('/?page=index&cat=alocasia')">Alocasia</li>
+      <li onclick="go('/?page=index&cat=anthurium')">Anthurium</li>
+      <li onclick="go('/?page=index&cat=philodendron')">Philodendron</li>
+    </ul>
+    <h2 class="category-subtitle">Contact</h2>
+    <ul class="contact-links">
+      <li><a href="https://www.instagram.com/nursery_sera?igsh=cWx2cTZ3cWNicGlz&utm_source=" target="_blank">Instagram</a></li>
+      <li><a href="https://lin.ee/mFSu5FS" target="_blank">LINE</a></li>
+      <li><a href="https://www.threads.net/@nursery_sera?igshid=NTc4MTIwNjQ2YQ==" target="_blank">Threads</a></li>
+      <li><a href="/?page=policy">お問い合わせ</a></li>
+    </ul>
+  </div>
+  <div class="overlay" id="overlay" onclick="closeMenu()"></div>
+
+  <!-- ここにだけ本文を入れてください（必要なら .container を使って中央寄せ） -->
+  <main>
+  <div class="container" style="margin-top:250px;">
+    <!-- ▼ ポリシー本文 ▼ -->
+    <h1>プライバシーポリシー</h1>
+
+    <p>
+      nursery sera（以下、「当店」といいます）は、お客様に当店をご利用いただく際に、
+      氏名、住所、電話番号、電子メールアドレス等のお取引やご連絡に必要な情報
+      （以下「個人情報」といいます）を開示していただきます。
+      当店は、個人情報保護法の趣旨に基づき、このプライバシーポリシーに則って
+      個人情報を適切に取り扱います。
+    </p>
+
+    <h2>1. 個人情報の利用目的</h2>
+    <p>
+      当店は個人情報を以下の目的で利用いたします。<br>
+      1）商品の発送および代金の請求のため<br>
+      2）ご注文内容や配送方法の確認のため<br>
+      3）お問い合わせへの回答のため<br>
+      4）サービス改善や新商品・キャンペーンのご案内のため
+    </p>
+
+    <h2>2. 個人情報の管理</h2>
+    <p>
+      当店は以下の体制で個人情報を管理します。<br>
+      1）個人情報保護法に基づき、適切な管理体制を整備します。<br>
+      2）個人情報の利用を業務上必要な範囲に制限し、媒体の保管管理を徹底します。<br>
+      3）データはパスワード管理された環境で保管し、漏洩防止を図ります。<br>
+      4）必要なページにはSSL暗号化通信を導入します。<br>
+      5）不要となった個人情報は適切に削除します。
+    </p>
+
+    <h2>3. 第三者提供について</h2>
+    <p>
+      当店は原則としてお客様の同意なく個人情報を第三者に提供しません。<br>
+      ただし、次の場合は除きます。<br>
+      ・決済処理や配送業務を外部委託する場合<br>
+      ・法令に基づく場合<br>
+      ・人命や財産保護のため緊急に必要な場合<br>
+      ・法令や利用規約違反行為への対応が必要な場合
+    </p>
+
+    <h2>4. 個人情報の開示・訂正・削除について</h2>
+    <p>
+      お客様からご自身の個人情報について開示・訂正・削除のご請求があった場合、
+      本人確認を行ったうえで、速やかに対応いたします。
+    </p>
+    <!-- ▲ ここまで本文 ▲ -->
+  </div>
+</main>
+  <!-- フッター（元コードのまま） -->
+  <footer>
+    <div class="footer-links">
+      <a href="<?= url ?>?page=form"></a>
+      <a href="/?page=policy">お問い合わせ</a>
+      <a href="/?page=policy">各種ポリシー</a>
+      <a href="/?page=policy">利用規約</a>
+      <a href="/?page=policy">特定商取引法に基づく表記</a>
+    </div>
+  </footer>
+
+  <script>
+    /* ===== 元のJS（ヘッダー/フッターに必要なものだけ） ===== */
+    const BASE = window.location.origin;
+    function go(path){
+      window.location.href = new URL(path, BASE).toString();
+    }
+
+    function toggleMenu(event){
+      const menu = document.getElementById("categoryMenu");
+      const overlay = document.getElementById("overlay");
+      const isVisible = menu.classList.contains("show");
+      document.body.style.overflow = isVisible ? "" : "hidden";
+      menu.classList.toggle("show", !isVisible);
+      overlay.classList.toggle("show", !isVisible);
+    }
+    function closeMenu(){
+      document.getElementById("categoryMenu").classList.remove("show");
+      document.getElementById("overlay").classList.remove("show");
+      document.body.style.overflow = "";
+    }
+
+    let lastScrollY = window.scrollY;
+    const titleBar  = document.getElementById("titleBar");
+    const threshold = 10;
+
+    // 初期表示位置は0に固定
+    titleBar.style.transform = "translateY(0)";
+
+    /* ===== トップ付近の許容幅 ===== */
+    let HEADER_SHOW_OFFSET = 0;
+    function updateHeaderOffset() {
+      const h = titleBar?.getBoundingClientRect().height || 0;
+      const EXTRA = 20; // ← 本来の位置より下で表示させたい余白(px)
+      HEADER_SHOW_OFFSET = h + EXTRA;
+    }
+    document.addEventListener('DOMContentLoaded', updateHeaderOffset);
+    window.addEventListener('resize', updateHeaderOffset);
+
+    /* ===== フェード時間（調整可能） ===== */
+    const SHOW_FADE_MS = 1000; // フェードイン(ms)
+    const HIDE_FADE_MS = 200;  // フェードアウト(ms)
+
+    /* ===== タッチ・慣性状態 ===== */
+    let isTouching   = false;
+    let inertiaMode  = false;
+    let inertiaUpPx  = 0;
+    const INERTIA_MIN_UP_PX = 1;
+
+    /* ===== 慣性検出（初速に依存しない / rAF 監視） ===== */
+    let inertiaWatchOn = false;
+    let lastRAFScrollY = window.scrollY;
+    let stableFrames   = 0;
+    const STABLE_FRAMES_TO_STOP = 4;
+    const MOVE_EPSILON = 1;
+
+    function startInertiaWatch(){
+      if (inertiaWatchOn) return;
+      inertiaWatchOn = true;
+      lastRAFScrollY = window.scrollY;
+      stableFrames = 0;
+
+      (function loop(){
+        if (!inertiaWatchOn) return;
+
+        const y  = window.scrollY;
+        const dy = y - lastRAFScrollY;
+
+        if (isTouching) {
+          inertiaMode    = false;
+          inertiaWatchOn = false;
+          return;
+        }
+
+        if (Math.abs(dy) > MOVE_EPSILON) {
+          inertiaMode  = true;
+          stableFrames = 0;
+        } else {
+          stableFrames++;
+          if (stableFrames >= STABLE_FRAMES_TO_STOP) {
+            inertiaMode    = false;
+            inertiaWatchOn = false;
+            return;
+          }
+        }
+
+        lastRAFScrollY = y;
+        requestAnimationFrame(loop);
+      })();
+    }
+
+    document.addEventListener('touchstart', () => {
+      isTouching     = true;
+      inertiaMode    = false;
+      inertiaUpPx    = 0;
+      inertiaWatchOn = false;
+      lastScrollY    = window.scrollY;
+    }, { capture:true, passive:true });
+
+    document.addEventListener('touchmove', () => {
+      isTouching = true;
+    }, { capture:true, passive:true });
+
+    document.addEventListener('touchend', () => {
+      isTouching  = false;
+      inertiaMode = false;
+      inertiaUpPx = 0;
+      startInertiaWatch();
+    }, { capture:true, passive:true });
+
+    document.addEventListener('touchcancel', () => {
+      isTouching  = false;
+      inertiaMode = false;
+      inertiaUpPx = 0;
+      startInertiaWatch();
+    }, { capture:true, passive:true });
+
+    document.addEventListener('wheel', (e) => {
+      if (e.deltaY < 0) {
+        titleBar.style.transitionDuration = `${SHOW_FADE_MS}ms`;
+        titleBar.classList.remove('is-hidden');
+      } else if (e.deltaY > 0) {
+        titleBar.style.transitionDuration = `${HIDE_FADE_MS}ms`;
+        titleBar.classList.add('is-hidden');
+      }
+    }, { passive:true });
+
+    document.addEventListener('keydown', (e) => {
+      const showKeys = ['ArrowUp', 'PageUp', 'Home'];
+      const hideKeys = ['ArrowDown', 'PageDown', 'End', ' '];
+      if (showKeys.includes(e.key)) {
+        titleBar.style.transitionDuration = `${SHOW_FADE_MS}ms`;
+        titleBar.classList.remove('is-hidden');
+      } else if (hideKeys.includes(e.key)) {
+        titleBar.style.transitionDuration = `${HIDE_FADE_MS}ms`;
+        titleBar.classList.add('is-hidden');
+      }
+    });
+
+    window.addEventListener("scroll", () => {
+      const current = window.scrollY;
+      const diff    = current - lastScrollY;
+      if (Math.abs(diff) < threshold) { lastScrollY = current; return; }
+
+      if (current <= HEADER_SHOW_OFFSET) {
+        titleBar.style.transitionDuration = `${SHOW_FADE_MS}ms`;
+        titleBar.classList.remove('is-hidden');
+        titleBar.style.transform = "translateY(0)";
+        inertiaUpPx = 0;
+        lastScrollY = current;
+        return;
+      }
+
+      if (diff > 0) {
+        titleBar.style.transitionDuration = `${HIDE_FADE_MS}ms`;
+        titleBar.classList.add('is-hidden');
+        if (inertiaMode) inertiaUpPx = 0;
+      } else {
+        if (isTouching) {
+          // 何もしない
+        } else if (inertiaMode) {
+          inertiaUpPx += Math.abs(diff);
+          if (inertiaUpPx >= INERTIA_MIN_UP_PX) {
+            titleBar.style.transitionDuration = `${SHOW_FADE_MS}ms`;
+            titleBar.classList.remove('is-hidden');
+            titleBar.style.transform = "translateY(0)";
+            inertiaUpPx = 0;
+          }
+        }
+      }
+      lastScrollY = current;
+    }, { passive:true });
+
+    /* ===== GAS依存を静的環境で吸収する“互換シム”（元コードのまま） ===== */
+    (function(){
+      const title = document.querySelector('.main-title');
+      if (title) {
+        title.addEventListener('click', function(ev){
+          ev.preventDefault();
+          try { go('/?page=index'); } catch(e){ window.location.href='/?page=index'; }
+        }, { once:true });
+      }
+
+      document.querySelectorAll('a[href*="<?= url ?>"]').forEach(a=>{
+        const href = a.getAttribute('href');
+        const m = href.match(/\?page=.*$/);
+        a.setAttribute('href', m ? m[0] : '/');
+      });
+
+      document.querySelectorAll('a[href^="<?= url ?>"]').forEach(a=>{
+        if (!a.textContent.trim()) {
+          a.setAttribute('tabindex','-1');
+          a.style.pointerEvents = 'none';
+        }
+      });
+
+      const base = document.querySelector('base');
+      if (base) base.setAttribute('target','_self');
+    })();
+
+    // カートバッジ（元コードの見た目復元ロジックだけ）
+    function getCartCount(){
+      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      return cart.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+    }
+    function updateCartBadge(){
+      const el = document.getElementById('cartBadge');
+      if (!el) return;
+      const count = getCartCount();
+      el.textContent = String(count);
+      el.style.display = count > 0 ? 'flex' : 'none';
+    }
+    document.addEventListener('DOMContentLoaded', updateCartBadge);
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'cart') updateCartBadge();
+    });
+  </script>
+</body>
+</html>
