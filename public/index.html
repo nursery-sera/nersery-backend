@@ -561,6 +561,12 @@ opacity:0.8;
   margin: 10px 0;
 }
 
+.product-name {
+  overflow: hidden;
+  text-overflow: ellipsis; /* はみ出しを一瞬でも隠す */
+  white-space: nowrap;
+}
+
   </style>
 
 
@@ -1145,38 +1151,89 @@ if (dsp) dsp.textContent = '1';
   });
 
 (function(){
-  const MIN_PX = 14;
-  function fitName(el){
-    let size = parseFloat(getComputedStyle(el).fontSize);
-    let guard = 60;
-    while (el.scrollWidth > el.clientWidth && size > MIN_PX && guard-- > 0){
-      size -= 1;
-      el.style.fontSize = size + 'px';
+  // ▼ 設定
+  const MIN_PX = 14;                       // 最小フォント
+  const EPS_W  = 1;                        // 幅の許容誤差(px)
+  const DEBOUNCE_MS = 120;                 // リサイズ用の待ち
+
+  // ▼ 前回計測キャッシュ（きゃっしゅ：無駄な再計算を避ける）
+  const lastWidth = new WeakMap();         // el -> 幅
+  const lastFont  = new WeakMap();         // el -> フォントサイズ
+
+  // ▼ はみ出し判定（はんてい）
+  const isOverflow = (el) => (el.scrollWidth - el.clientWidth) > 0.5;
+
+  // ▼ 高速フィット：二分探索（にぶんたんさく）
+  function fitNameBinary(el){
+    const cs  = getComputedStyle(el);
+    const base = parseFloat(cs.fontSize) || 16;
+
+    // 幅が同じならスキップ（高速化）
+    const w = el.clientWidth;
+    const prevW = lastWidth.get(el) || 0;
+    if (Math.abs(w - prevW) <= EPS_W) return;
+
+    // まずベースで試す（はみ出してなければ何もしない）
+    el.style.fontSize = base + 'px';
+    if (!isOverflow(el)) {
+      lastWidth.set(el, w);
+      lastFont.set(el, base);
+      return;
+    }
+
+    let lo = MIN_PX, hi = base, best = MIN_PX;
+    // 二分探索：O(log(base-MIN_PX))
+    while (lo <= hi) {
+      const mid = Math.floor((lo + hi) / 2);
+      el.style.fontSize = mid + 'px';
+      if (isOverflow(el)) {
+        hi = mid - 1;
+      } else {
+        best = mid;
+        lo = mid + 1;
+      }
+    }
+    el.style.fontSize = Math.max(MIN_PX, best) + 'px';
+
+    lastWidth.set(el, w);
+    lastFont.set(el, parseFloat(el.style.fontSize) || best);
+  }
+
+  // ▼ 全体フィット（非表示は除外）
+  function fitAll(){
+    const list = Array.from(document.querySelectorAll('.product-name'))
+      .filter(el => el.offsetParent !== null);
+    for (const el of list) {
+      // 一度リセットしてから測る
+      el.style.fontSize = '';
+      fitNameBinary(el);
     }
   }
-  function fitAll(){
-    document.querySelectorAll('.product-name').forEach(el=>{
-      el.style.fontSize = '';
-      fitName(el);
+
+  // ▼ 実行スケジューラ（すけじゅーら）
+  let pending = false;
+  function scheduleFit(){
+    if (pending) return;
+    pending = true;
+    requestAnimationFrame(() => {
+      pending = false;
+      fitAll();
     });
   }
-  document.addEventListener('DOMContentLoaded', fitAll);
-  window.addEventListener('load', fitAll);
-  // resize の呼びすぎを抑制（すろっとる + rAF）
+
+  // ✅ React 完了後だけ実行（DOM 構築中には走らせない）
+  document.addEventListener('products-rendered', scheduleFit);
+
+  // ✅ リサイズ時はデバウンス（よびすぎ防止）
   (function(){
-    let ticking = false;
-    let last = 0;
-    const MIN_INTERVAL = 150;
+    let t = null;
     window.addEventListener('resize', () => {
-      const now = Date.now();
-      if (ticking || (now - last) < MIN_INTERVAL) return;
-      ticking = true; last = now;
-      requestAnimationFrame(() => { fitAll(); ticking = false; });
-    }, { passive: true });
+      if (t) clearTimeout(t);
+      t = setTimeout(scheduleFit, DEBOUNCE_MS);
+    }, { passive:true });
   })();
 
-  // ★追加：React が商品を描画し終えた合図（カスタムイベント）でも実行
-  document.addEventListener('products-rendered', fitAll);
+  // ❌ DOMContentLoaded / load / MutationObserver / fonts.ready は使わない（重さ＆ループ源）
 })();
 
   /* ===== GAS依存を静的環境で吸収する“互換シム” ===== */
