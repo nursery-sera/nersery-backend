@@ -455,7 +455,12 @@ ${message}
     });
 
     const bodyText = await resp.text();
-    let bodyJson; try { bodyJson = bodyText ? JSON.parse(bodyText) : null; } catch { bodyJson = { raw: bodyText }; }
+let bodyJson;
+try {
+  bodyJson = bodyText ? JSON.parse(bodyText) : null;
+} catch (e) {
+  bodyJson = { raw: bodyText };
+}
 
     if (!resp.ok) {
       console.error("Brevo contact error:", resp.status, bodyJson);
@@ -711,7 +716,12 @@ app.post("/api/admin/test-email", adminAuth, async (req, res) => {
     });
 
     const bodyText = await resp.text();
-    let bodyJson; try { bodyJson = bodyText ? JSON.parse(bodyText) : null; } catch { bodyJson = { raw: bodyText }; }
+let bodyJson;
+try {
+  bodyJson = bodyText ? JSON.parse(bodyText) : null;
+} catch (e) {
+  bodyJson = { raw: bodyText };
+}
 
     return res.status(resp.status).json({ ok: resp.ok, status: resp.status, body: bodyJson });
   } catch (e) {
