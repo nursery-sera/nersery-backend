@@ -336,16 +336,16 @@ ${display.items.map(it =>
 
 ■ お支払い方法（銀行振込）
 銀行名：PayPay銀行
-支店名：${display.bank_branch}
+支店名：
 口座種別：（普通）
-口座番号：${display.bank_account_number}
-口座名義：${display.bank_account_holder}
-お振込期限：${display.payment_due_date}（期限までのご入金をお願いいたします）
+口座番号：
+口座名義：
+お振込期限：（期限までのご入金をお願いいたします）
 
 ■ 発送予定
-${display.estimated_ship_window || '月ごろ'}の発送を予定しております。
+月ごろの発送を予定しております。
 ※天候や輸入状況、植物到着時の検査などにより、発送時期が前後する場合がございます。
-詳細な日程が決まり次第、Nursery SeraよりメールまたはSNSにて随時ご連絡いたします。
+詳細な日程が決まり次第、Nursery SeraよりメールやSNSにて随時ご連絡いたします。
 
 ■ 商品特性とお願い
 ・本商品は組織培養株です。お受け取り後は順化（培養環境から育成環境へ慣らす作業）をお願いいたします。
