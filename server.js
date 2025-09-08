@@ -275,36 +275,47 @@ const yen = (n) => `¥${Number(n || 0).toLocaleString('ja-JP')}`;
 const esc = (s) => String(s ?? '')
   .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
-// 表示用の各値
+// 表示用の各値（★textBodyで使うキーは必ずここに用意）
 const display = {
   customer_name: name,
   customer_name_kana: [customer.lastKana, customer.firstKana].filter(Boolean).join(' '),
-  shipping_address: customer.addressFull
-    || [customer.prefecture, customer.city, customer.address, customer.building].filter(Boolean).join(''),
+  shipping_address:
+    (customer.addressFull && String(customer.addressFull)) ||
+    [customer.prefecture, customer.city, customer.address, customer.building]
+      .filter(Boolean).join(''),
   email: customer.email,
   order_id: orderToken,
-  // ざっくり現在時刻（必要ならJST整形に変更してOK）
   order_datetime: new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }),
   items: items.map(it => ({
     productName: it.productName,
-    quantity: it.quantity,
+    quantity: Number(it.quantity || 1),
     unit_price: yen(it.unitPrice),
-    line_total: yen(it.unitPrice * it.quantity),
+    line_total: yen(Number(it.unitPrice || 0) * Number(it.quantity || 1)),
   })),
   subtotal: yen(subtotal),
   shipping_name: String(summary?.shippingOptionText ?? ''),
   shipping_cost: yen(shipping),
   total: yen(total),
-  payment_due_date: new Date(Date.now() + 3*24*60*60*1000).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' }),
+
+  // ★口座情報（空でもキーは用意しておく）
+  bank_branch: process.env.BANK_BRANCH || '',
+  bank_account_number: process.env.BANK_ACCOUNT_NUMBER || '',
+  bank_account_holder: process.env.BANK_ACCOUNT_HOLDER || '',
+
+  // 期限・案内
+  payment_due_date: new Date(Date.now() + 3*24*60*60*1000)
+    .toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' }),
+  estimated_ship_window: process.env.ESTIMATED_SHIP_WINDOW || '',
+
   support_email: process.env.SUPPORT_EMAIL || process.env.MAIL_FROM || 'info@nurserysera.com',
 };
 
-// テキスト本文（そのまま textContent に入れる）
-const textBody = `
-${display.customer_name} 様
+// テキスト本文
+const textBody = (
+  `${display.customer_name} 様
 
 このたびは Nursery Sera にご注文いただき、誠にありがとうございます。
-以下の内容でご注文を受け付けました。お支払いの確認後、発送準備を進めさせていただきます。
+以下の内容でご注文を受け付けました。お支払いの確認後、輸入手続きを進めさせていただきます。
 
 ────────────────────────
 ■ ご注文情報
@@ -315,7 +326,9 @@ ${display.customer_name} 様
 ・メールアドレス：${display.email}
 
 ■ ご注文内容
-${display.items.map(it => `・${it.productName} × ${it.quantity}　＠${it.unit_price} = ${it.line_total}`).join('\n')}
+${display.items.map(it =>
+  `・${it.productName} × ${it.quantity}　＠${it.unit_price} = ${it.line_total}`
+).join('\n')}
 
 小計：${display.subtotal}
 配送方法：${display.shipping_name}（送料 ${display.shipping_cost}）
@@ -324,18 +337,16 @@ ${display.items.map(it => `・${it.productName} × ${it.quantity}　＠${it.unit
 
 ■ お支払い方法（銀行振込）
 銀行名：PayPay銀行
-支店名：${display.bank_branch}
+支店名：
 口座種別：（普通）
 口座番号：
 口座名義：
 お振込期限：（期限までのご入金をお願いいたします）
 
 ■ 発送予定
-ごろの発送を予定しております。
-※天候や輸入状況、植物到着時の検査などにより、
-発送時期が前後する場合がございます。
-詳細な日程が決まり次第、Nursery Seraより
-メールまたはSNSにて随時ご連絡いたします。
+月ごろの発送を予定しております。
+※天候や輸入状況、植物到着時の検査などにより、発送時期が前後する場合がございます。
+詳細な日程が決まり次第、Nursery SeraよりメールまたはSNSにて随時ご連絡いたします。
 
 ■ 商品特性とお願い
 ・本商品は組織培養株です。お受け取り後は順化（培養環境から育成環境へ慣らす作業）をお願いいたします。
@@ -346,36 +357,34 @@ ${display.items.map(it => `・${it.productName} × ${it.quantity}　＠${it.unit
 ■ お問い合わせ
 メール：${display.support_email}
 
-本メールは自動送信です。ご不明点や変更がある場合は、このメールにご返信いただくか、上記連絡先までご連絡ください。
-`.trim();
+本メールは自動送信です。ご不明点や変更がある場合は、このメールにご返信いただくか、上記連絡先までご連絡ください。`
+).trim();
 
-// HTML版は <pre> で見た目そのまま＋最低限エスケープ
-const htmlBody = `<pre style="white-space:pre-wrap; font:14px/1.8 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', Meiryo, Arial, sans-serif;">${esc(textBody)}</pre>`;
+// HTML版（<pre>で整形を保つ）
+const htmlBody =
+  `<pre style="white-space:pre-wrap; font:14px/1.8 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', Meiryo, Arial, sans-serif;">${esc(textBody)}</pre>`;
 
 // 件名
 const subject = `【Nursery Sera】ご注文受付のお知らせ（注文番号：${display.order_id}）`;
 
-// Brevo 送信ペイロード
+// Brevo 送信
 const payload = {
-  sender: {
-    email: process.env.MAIL_FROM,
-    name : process.env.MAIL_NAME || "nursery sera"
-  },
+  sender: { email: process.env.MAIL_FROM, name: process.env.MAIL_NAME || 'nursery sera' },
   to: [{ email: customer.email, name }],
   subject,
   htmlContent: htmlBody,
-  textContent: textBody
+  textContent: textBody,
 };
 
-console.log("Brevo req →", { to: customer.email, subject });
-const resp = await fetch("https://api.brevo.com/v3/smtp/email", {
-  method: "POST",
+console.log('Brevo req →', { to: customer.email, subject });
+const resp = await fetch('https://api.brevo.com/v3/smtp/email', {
+  method: 'POST',
   headers: {
-    "api-key": process.env.BREVO_API_KEY,
-    "Content-Type": "application/json",
-    "accept": "application/json"
+    'api-key': process.env.BREVO_API_KEY,
+    'Content-Type': 'application/json',
+    'accept': 'application/json',
   },
-  body: JSON.stringify(payload)
+  body: JSON.stringify(payload),
 });
 // ここまで差し替え
 
