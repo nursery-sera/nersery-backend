@@ -668,8 +668,13 @@ const idemKey = crypto.randomUUID();
 
       const data = r.data || {};
 window.__orderSubmitSucceeded__ = true; // ← 追加
-alert(`ありがとうございました。ご注文番号 #${data.orderToken || '-'}（合計 ¥${Number(data.total ?? total).toLocaleString()}）を受け付けました。`);
-
+alert(
+  `ご注文の送信が完了しました。\n\n` +
+  `Nursery Seraより自動返信メールをお送りしています。\n\n` +
+  `メールが届かない場合は、\n` +
+  `迷惑メールフォルダや受信拒否設定をご確認のうえ、\n` +
+  `info@nurserysera.com までお問い合わせください。`
+);
 localStorage.removeItem('cart');
 localStorage.removeItem('checkout');
 e.target.reset();
