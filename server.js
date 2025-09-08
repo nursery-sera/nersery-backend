@@ -295,11 +295,7 @@ const display = {
   shipping_name: String(summary?.shippingOptionText ?? ''),
   shipping_cost: yen(shipping),
   total: yen(total),
-  bank_branch: process.env.BANK_BRANCH || 'ビジネス営業部',
-  bank_account_number: process.env.BANK_ACCOUNT_NUMBER || '1234567',
-  bank_account_holder: process.env.BANK_ACCOUNT_HOLDER || 'ナ—サリ—セラ',
   payment_due_date: new Date(Date.now() + 3*24*60*60*1000).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' }),
-  estimated_ship_window: process.env.ESTIMATED_SHIP_WINDOW || '○月○日〜○日',
   support_email: process.env.SUPPORT_EMAIL || process.env.MAIL_FROM || 'info@nurserysera.com',
 };
 
@@ -330,9 +326,9 @@ ${display.items.map(it => `・${it.productName} × ${it.quantity}　＠${it.unit
 銀行名：PayPay銀行
 支店名：${display.bank_branch}
 口座種別：（普通）
-口座番号：${display.bank_account_number}
-口座名義：${display.bank_account_holder}（カナ）
-お振込期限：${display.payment_due_date}（期限までのご入金をお願いいたします）
+口座番号：
+口座名義：
+お振込期限：（期限までのご入金をお願いいたします）
 
 ■ 発送予定
 ${display.estimated_ship_window} ごろの発送を予定しております。
