@@ -267,38 +267,117 @@ console.log(
 
 let emailSent = false;
 if (process.env.BREVO_API_KEY && customer.email) {
-  const baseUrl = getBaseUrl(req);
-  const subject = `ご注文ありがとうございます（#${orderToken}）`;
-  const html = `
-    <p>${name} 様</p>
-    <p>ご注文（#${orderToken}）を受け付けました。</p>
-    <p><strong>合計：¥${total.toLocaleString()}</strong></p>
-    <p>お支払い方法：銀行振込</p>
-    <p>※ご入金確認後に発送いたします。</p>
-    <p><a href="${baseUrl}">nursery sera</a></p>
-  `;
-    try {
-    const payload = {
-      sender: {
-        email: process.env.MAIL_FROM,
-        name : process.env.MAIL_NAME || "nursery sera"
-      },
-      to: [{ email: customer.email, name }],
-      subject,
-      htmlContent: html,
-      textContent: `${name} 様\nご注文（#${orderToken}）を受け付けました。\n合計：¥${total.toLocaleString()}\nお支払い方法：銀行振込\n※ご入金確認後に発送いたします。\n${baseUrl}`
-    };
+// ここから差し替え
+const baseUrl = getBaseUrl(req);
 
-    console.log("Brevo req →", { to: customer.email, subject });
-    const resp = await fetch("https://api.brevo.com/v3/smtp/email", {
-      method: "POST",
-      headers: {
-        "api-key": process.env.BREVO_API_KEY,
-        "Content-Type": "application/json",
-        "accept": "application/json"
-      },
-      body: JSON.stringify(payload)
-    });
+// ユーティリティ
+const yen = (n) => `¥${Number(n || 0).toLocaleString('ja-JP')}`;
+const esc = (s) => String(s ?? '')
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+// 表示用の各値
+const display = {
+  customer_name: name,
+  customer_name_kana: [customer.lastKana, customer.firstKana].filter(Boolean).join(' '),
+  shipping_address: customer.addressFull
+    || [customer.prefecture, customer.city, customer.address, customer.building].filter(Boolean).join(''),
+  email: customer.email,
+  order_id: orderToken,
+  // ざっくり現在時刻（必要ならJST整形に変更してOK）
+  order_datetime: new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }),
+  items: items.map(it => ({
+    productName: it.productName,
+    quantity: it.quantity,
+    unit_price: yen(it.unitPrice),
+    line_total: yen(it.unitPrice * it.quantity),
+  })),
+  subtotal: yen(subtotal),
+  shipping_name: String(summary?.shippingOptionText ?? ''),
+  shipping_cost: yen(shipping),
+  total: yen(total),
+  bank_branch: process.env.BANK_BRANCH || 'ビジネス営業部',
+  bank_account_number: process.env.BANK_ACCOUNT_NUMBER || '1234567',
+  bank_account_holder: process.env.BANK_ACCOUNT_HOLDER || 'ナ—サリ—セラ',
+  payment_due_date: new Date(Date.now() + 3*24*60*60*1000).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' }),
+  estimated_ship_window: process.env.ESTIMATED_SHIP_WINDOW || '○月○日〜○日',
+  support_email: process.env.SUPPORT_EMAIL || process.env.MAIL_FROM || 'info@nurserysera.com',
+};
+
+// テキスト本文（そのまま textContent に入れる）
+const textBody = `
+${display.customer_name} 様
+
+このたびは Nursery Sera にご注文いただき、誠にありがとうございます。
+以下の内容でご注文を受け付けました。お支払いの確認後、発送準備を進めさせていただきます。
+
+────────────────────────
+■ ご注文情報
+・注文番号：${display.order_id}
+・ご注文日時：${display.order_datetime}
+・お名前（フリガナ）：${display.customer_name_kana}
+・お届け先住所：${display.shipping_address}
+・メールアドレス：${display.email}
+
+■ ご注文内容
+${display.items.map(it => `・${it.productName} × ${it.quantity}　＠${it.unit_price} = ${it.line_total}`).join('\n')}
+
+小計：${display.subtotal}
+配送方法：${display.shipping_name}（送料 ${display.shipping_cost}）
+合計：${display.total}
+────────────────────────
+
+■ お支払い方法（銀行振込）
+銀行名：PayPay銀行
+支店名：${display.bank_branch}
+口座種別：（普通）
+口座番号：${display.bank_account_number}
+口座名義：${display.bank_account_holder}（カナ）
+お振込期限：${display.payment_due_date}（期限までのご入金をお願いいたします）
+
+■ 発送予定
+${display.estimated_ship_window} ごろの発送を予定しております。
+
+■ 商品特性とお願い
+・本商品は組織培養株（そしきばいよう：無菌環境で増やした苗）です。お受け取り後は順化（じゅんか：室内環境から通常環境へ慣らす作業）をお願いいたします。
+・輸入後に当店で検品を行います。万一、著しい痛み等が確認された場合は迅速に返金対応いたします。
+・個体の選別はできず、発送株はランダムとなります。あらかじめご了承ください。
+・お届け先情報に誤りがあると配達できない場合があります。今一度ご確認ください。
+
+■ お問い合わせ
+メール：${display.support_email}
+
+本メールは自動送信です。ご不明点や変更がある場合は、このメールにご返信いただくか、上記連絡先までご連絡ください。
+`.trim();
+
+// HTML版は <pre> で見た目そのまま＋最低限エスケープ
+const htmlBody = `<pre style="white-space:pre-wrap; font:14px/1.8 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', Meiryo, Arial, sans-serif;">${esc(textBody)}</pre>`;
+
+// 件名
+const subject = `【Nursery Sera】ご注文受付のお知らせ（注文番号：${display.order_id}）`;
+
+// Brevo 送信ペイロード
+const payload = {
+  sender: {
+    email: process.env.MAIL_FROM,
+    name : process.env.MAIL_NAME || "nursery sera"
+  },
+  to: [{ email: customer.email, name }],
+  subject,
+  htmlContent: htmlBody,
+  textContent: textBody
+};
+
+console.log("Brevo req →", { to: customer.email, subject });
+const resp = await fetch("https://api.brevo.com/v3/smtp/email", {
+  method: "POST",
+  headers: {
+    "api-key": process.env.BREVO_API_KEY,
+    "Content-Type": "application/json",
+    "accept": "application/json"
+  },
+  body: JSON.stringify(payload)
+});
+// ここまで差し替え
 
     const text = await resp.text();
     let json; try { json = text ? JSON.parse(text) : null; } catch { json = { raw: text }; }
