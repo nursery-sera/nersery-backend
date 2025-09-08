@@ -389,7 +389,12 @@ const resp = await fetch('https://api.brevo.com/v3/smtp/email', {
 // ここまで差し替え
 
     const text = await resp.text();
-    let json; try { json = text ? JSON.parse(text) : null; } catch { json = { raw: text }; }
+    let json;
+try {
+  json = text ? JSON.parse(text) : null;
+} catch (e) {
+  json = { raw: text };
+}
     console.log("Brevo res ←", resp.status, json);
 
     if (resp.ok) {
