@@ -285,12 +285,20 @@ if (process.env.BREVO_API_KEY && customer.email) {
       email: customer.email,
       order_id: orderToken,
       order_datetime: new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }),
-      items: items.map(it => ({
-        productName: it.productName,
-        quantity: Number(it.quantity || 1),
-        unit_price: yen(it.unitPrice),
-        line_total: yen(Number(it.unitPrice || 0) * Number(it.quantity || 1)),
-      })),
+      items: items.map(it => {
+  const clean = (s) => String(s || "").trim(); // 空白除去
+  const productName =
+    (it?.category && it?.variety)
+      ? `${clean(it.category)} ${clean(it.variety)}`
+      : clean(it.productName) || clean(it.variety) || clean(it.category) || "商品";
+
+  return {
+    productName,  // ← カテゴリ＋バリエティに統一
+    quantity: Number(it.quantity || 1),
+    unit_price: yen(it.unitPrice),
+    line_total: yen(Number(it.unitPrice || 0) * Number(it.quantity || 1)),
+  };
+}),
       subtotal: yen(subtotal),
       shipping_name: String(summary?.shippingOptionText ?? ''),
       shipping_cost: yen(shipping),
@@ -326,7 +334,7 @@ if (process.env.BREVO_API_KEY && customer.email) {
 【ご注文内容】
 
 ${display.items.map(it =>
-  `・${it.category} ${it.variety}　${it.unit_price} 円 × ${it.quantity} = ${it.line_total} 円`
+  `・${it.productName}　${it.unit_price}  × ${it.quantity} = ${it.line_total} `
 ).join('\n')}
 
 小計：${display.subtotal}  
@@ -341,7 +349,7 @@ ${display.items.map(it =>
 口座種別：普通  
 口座番号：XXXXXXX  
 口座名義：ナセリーセラ  
-お振込期限：${display.payment_deadline}（期限までのご入金をお願いいたします）
+お振込期限：（期限までのご入金をお願いいたします）
 ────────────────────────
 
 
@@ -382,7 +390,7 @@ ${display.items.map(it =>
       `<pre style="white-space:pre-wrap; font:14px/1.8 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', Meiryo, Arial, sans-serif;">${esc(textBody)}</pre>`;
 
     // 件名
-    const subject = `【Nursery Sera】ご注文受付のお知らせ（注文番号：${display.order_id}）`;
+    const subject = `ご注文受付のお知らせ`;
 
     // Brevo 送信
     const payload = {
