@@ -314,43 +314,61 @@ if (process.env.BREVO_API_KEY && customer.email) {
 `${display.customer_name} 様
 
 このたびは Nursery Sera にご注文いただき、誠にありがとうございます。
-以下の内容でご注文を受け付けました。お支払いの確認後、輸入手続きを進めさせていただきます。
+以下の内容でご注文を受け付けいたしました。
+
+お手数ではございますが、下記のご案内に沿ってお振込のお手続きをお願いいたします。
+ご入金の確認が取れ次第、輸入の手続きを進めさせていただきます。
+
+なお、当店では毎日17時頃に入金確認を行っております。
+ご入金の確認ができましたら、改めてメールにてご案内させていただきます。
 
 ────────────────────────
-■ ご注文情報
-・注文番号：${display.order_id}
-・ご注文日時：${display.order_datetime}
-・お名前（フリガナ）：${display.customer_name_kana}
-・お届け先住所：${display.shipping_address}
-・メールアドレス：${display.email}
+【ご注文内容】
 
-■ ご注文内容
 ${display.items.map(it =>
-  `・${it.productName} × ${it.quantity}　＠${it.unit_price} = ${it.line_total}`
+  `・${it.category} ${it.variety}　${it.unit_price} 円 × ${it.quantity} = ${it.line_total} 円`
 ).join('\n')}
 
-小計：${display.subtotal}
-配送方法：${display.shipping_name}（送料 ${display.shipping_cost}）
+小計：${display.subtotal}  
+配送方法：${display.shipping_name}（送料 ${display.shipping_cost}）  
 合計：${display.total}
+
+────────────────────────
+【お振込先】
+
+銀行名：PayPay銀行  
+支店名：（例：ビジネス営業部）  
+口座種別：普通  
+口座番号：XXXXXXX  
+口座名義：ナセリーセラ  
+お振込期限：${display.payment_deadline}（期限までのご入金をお願いいたします）
 ────────────────────────
 
-■ お支払い方法（銀行振込）
-銀行名：PayPay銀行
-支店名：
-口座種別：（普通）
-口座番号：
-口座名義：
-お振込期限：（期限までのご入金をお願いいたします）
+
+■ ご注文情報
+・注文番号：${display.order_id}  
+・ご注文日時：${display.order_datetime}  
+・お名前：${display.customer_name} 様  
+・お名前（フリガナ）：${display.customer_name_kana} 様  
+・ご住所：${display.shipping_address}  
+・メールアドレス：${display.email}
+
+■ 配送先情報
+・お名前：${display.customer_name} 様  
+・ご住所：${display.shipping_address}
+
+■ お支払い方法
+銀行振込
 
 ■ 発送予定
-月ごろの発送を予定しております。
-※天候や輸入状況、植物到着時の検査などにより、発送時期が前後する場合がございます。
+○月ごろの発送を予定しております。  
+※天候や輸入状況、植物到着時の検査などにより、発送時期が前後する場合がございます。  
 詳細な日程が決まり次第、Nursery SeraよりメールやSNSにて随時ご連絡いたします。
 
 ■ 商品特性とお願い
-・本商品は組織培養株です。お受け取り後は順化（培養環境から育成環境へ慣らす作業）をお願いいたします。
-・輸入後に当店で検品を行います。万一、著しい痛み等が確認された場合は迅速に返金対応いたします。
-・個体の選別はできず、発送株はランダムとなります。あらかじめご了承ください。
+・本商品は組織培養株です。お受け取り後は順化（培養環境から育成環境へ慣らす作業）をお願いいたします。  
+・輸入後に当店で検品を行います。万一、著しい痛み等が確認された場合は迅速に返金対応いたします。  
+・個体の選別はできず、発送株はランダムとなります。あらかじめご了承ください。  
 ・お届け先情報に誤りがあると配達できない場合があります。今一度ご確認ください。
 
 ■ お問い合わせ
