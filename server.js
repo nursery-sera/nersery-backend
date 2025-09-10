@@ -187,28 +187,30 @@ app.post("/api/orders", async (req, res) => {
   try {
     await client.query("BEGIN");
 
-    const sql = `
-      INSERT INTO orders_all (
-        last_name, first_name, last_kana, first_kana,
-        zipcode, prefecture, city, address, building, email,
-        name, address_full,
-        note, subtotal, shipping, shipping_option_text, total, payment_method,
-        is_paid, status, order_token,
-        product_id, product_name, unit_price, quantity,
-        product_slug, image, category, variety,
-        source, raw_payload
-      )
-      VALUES (
-        $1,$2,$3,$4,
-        $5,$6,$7,$8,$9,$10,
-        $11,$12,
-        $13,$14,$15,$16,$17,$18,
-        FALSE,'pending',$19,
-        $20,$21,$22,$23,
-        $24,$25,$26,$27,
-        'web',$28
-      ) RETURNING id
-    `;
+   const sql = `
+  INSERT INTO orders_all (
+    last_name, first_name, last_kana, first_kana,
+    zipcode, prefecture, city, address, building, email,
+    phone,                             -- ★追加
+    name, address_full,
+    note, subtotal, shipping, shipping_option_text, total, payment_method,
+    is_paid, status, order_token,
+    product_id, product_name, unit_price, quantity,
+    product_slug, image, category, variety,
+    source, raw_payload
+  )
+  VALUES (
+    $1,$2,$3,$4,
+    $5,$6,$7,$8,$9,$10,
+    $11,                -- ★phone
+    $12,$13,
+    $14,$15,$16,$17,$18,$19,
+    FALSE,'pending',$20,
+    $21,$22,$23,$24,
+    $25,$26,$27,$28,
+    'web',$29
+  ) RETURNING id
+`;
 
     for (const it of items) {
   const rawPid = it.productId ?? null;
@@ -226,6 +228,7 @@ const productName =
     customer.zipcode || "", customer.prefecture || "",
     customer.city || "", (customer.address || ""), (customer.building || ""),
     customer.email || "",
+    customer.phone || "",
     name, addressFull,
     note || null,
     subtotal,
