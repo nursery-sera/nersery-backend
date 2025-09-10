@@ -252,6 +252,12 @@ margin-left: 37%;
       <label>建物名・部屋番号</label>
     </div>
 
+<div class="form-group">
+  <input type="tel" id="phone" name="phone" placeholder=" " required
+         autocomplete="tel" inputmode="tel" pattern="^[0-9+\-() ]{8,}$">
+  <label>電話番号</label>
+</div>
+
     <!-- メール -->
     <div class="form-group">
       <input type="email" id="email" name="email" placeholder=" " required autocomplete="email">
@@ -269,7 +275,7 @@ margin-left: 37%;
       <textarea id="memo" name="memo" placeholder=" "></textarea>
       <label>備考【任意】</label>
      <div style="text-align:left; font-size:20px; line-height:1.7; font-weight:200; margin-top:14px;">
-          <div>※発送方法：第四種郵便 速達 特定記録（追跡番号付き）</div>
+        
           <div>※お支払い方法：銀行振込（PayPay銀行）</div>
          
           <div>※局留め希望の方は備考欄に「〇〇郵便局 局留め」と記載してください。</div>
@@ -573,6 +579,7 @@ const customer = {
   city       : sanitize(fd.get('city')),
   address    : sanitize(fd.get('address')),
   building   : sanitize(fd.get('building')),
+  phone      : sanitize(fd.get('phone')),
   email      : emailRaw,
   payment    : sanitize(fd.get('payment') || '銀行振込（PayPay銀行）'),
   name    : (sanitize(fd.get('lastName')) + ' ' + sanitize(fd.get('firstName'))).trim(),
