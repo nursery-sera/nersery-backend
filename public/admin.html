@@ -100,6 +100,18 @@
     .seg .btn.active { color:#fff; }
     .seg .btn[data-val="available"].active { background:#2e7d32; }
     .seg .btn[data-val="soldout"].active  { background:#b00020; }
+
+/* ▼ Category nav (カテゴリナビ) */
+.catnav{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0 14px}
+.catbtn{
+  all:unset;cursor:pointer;padding:6px 12px;border:1px solid #ddd;border-radius:999px;
+  font-size:14px;background:#fff;-webkit-tap-highlight-color:transparent;
+}
+.catbtn.active{background:var(--pink);color:#333;border-color:transparent}
+
+/* ▼ Category heading (グループ見出し) */
+.catgroup{margin:18px 0 8px;font-weight:bold;font-size:16px;color:#333}
+
   </style>
 </head>
 <body>
@@ -120,7 +132,9 @@
     </div>
 
     <h2 style="margin-top:24px">現在の商品一覧</h2>
-    <div id="list"></div>
+<!-- ▼ Category filter (All / Alocasia / Anthurium / Monstera / Philodendron) -->
+<div id="catNav" class="catnav" aria-label="Category Filter"></div>
+<div id="list"></div>
   </div>
 
   <!-- 入力パネル（モード統合：最初から複数フォームのみ） -->
@@ -230,7 +244,10 @@ AlocasiaJacqueline38AnthuriumRedCrystallinum25 のように記入して商品自
     const cancelBtn = document.getElementById('cancelBtn');
     const lastRes   = document.getElementById('lastResult');
     const listEl    = document.getElementById('list');
-    const autoCalcBtn = document.getElementById('autoCalcBtn'); // ← 追加
+    const autoCalcBtn = document.getElementById('autoCalcBtn');
+const catNavEl  = document.getElementById('catNav');
+let docsCache = [];           // 全商品のキャッシュ
+let currentFilter = 'ALL';    // 'ALL' | 'Alocasia' | 'Anthurium' | 'Monstera' | 'Philodendron'
 
     // ====== パネル開閉 ======
     const openPanel  = ()=>{
@@ -631,66 +648,28 @@ AlocasiaJacqueline38AnthuriumRedCrystallinum25 のように記入して商品自
 
     // ====== 一覧の取得＆表示（既存のまま） ======
     async function loadList(){
-      listEl.innerHTML = '<div class="muted">読み込み中…</div>';
-      try{
-        let docs = [];
-        try{
-          const q = query(collection(db,'products'), orderBy('createdAt','desc'));
-          const snap = await getDocs(q);
-          docs = snap.docs;
-        }catch{
-          const snap = await getDocs(collection(db,'products'));
-          docs = snap.docs;
-        }
-
-        if (!docs.length){
-          listEl.innerHTML = '<div class="muted">商品はまだありません。</div>';
-          return;
-        }
-
-        listEl.innerHTML = '';
-        docs.forEach(d=>{
-          const data = d.data();
-          const id   = d.id;
-          const imgs = Array.isArray(data.images) ? data.images : [];
-
-          const el = document.createElement('div');
-          el.className = 'item';
-          el.innerHTML = `
-            <div class="imgs">
-              ${imgs.length ? imgs.map(u=>`<img src="${u}" alt="">`).join('') : '<span class="muted">（画像なし）</span>'}
-            </div>
-            <div class="body">
-              <div class="title">${escapeHtml(data.categoryName || '')}</div>
-              <div class="sub">${escapeHtml(data.varietyName || '')}</div>
-              <div class="sub">¥ ${Number(data.price||0).toLocaleString()}</div>
-              <div class="sub muted">ID: <code>${id}</code></div>
-              <div class="ops">
-                <button class="btn ghost"  data-edit="${id}">編集</button>
-                <button class="btn danger" data-del="${id}">削除</button>
-              </div>
-            </div>
-          `;
-          listEl.appendChild(el);
-
-          // ★ここで“その el のボタン”に紐づける（data を閉じ込める）
-          const editBtn = el.querySelector('[data-edit]');
-          editBtn?.addEventListener('click', ()=> openEdit(id, data));
-
-          const delBtn = el.querySelector('[data-del]');
-          delBtn?.addEventListener('click', async ()=>{
-            if (!confirm('この商品を削除しますか？（画像も削除）')) return;
-            await deleteProduct(id);
-            await loadList();
-          });
-        });
-
-
-      }catch(err){
-        console.error(err);
-        listEl.innerHTML = `<div class="err">読み込みエラー：${String(err && err.message || err)}</div>`;
-      }
+  listEl.innerHTML = '<div class="muted">読み込み中…</div>';
+  try{
+    let docs = [];
+    try{
+      const q = query(collection(db,'products'), orderBy('createdAt','desc'));
+      const snap = await getDocs(q);
+      docs = snap.docs;
+    }catch{
+      const snap = await getDocs(collection(db,'products'));
+      docs = snap.docs;
     }
+
+    // ▼ 変更点：キャッシュして描画関数へ
+    docsCache = docs;
+    renderNav();   // ナビ（All / Alocasia / Anthurium / Monstera / Philodendron）
+    renderList();  // 現在のフィルターに応じて描画
+
+  }catch(err){
+    console.error(err);
+    listEl.innerHTML = `<div class="err">読み込みエラー：${String(err && err.message || err)}</div>`;
+  }
+}
 
     async function deleteProduct(id){
       try{
@@ -713,6 +692,137 @@ AlocasiaJacqueline38AnthuriumRedCrystallinum25 のように記入して商品自
         lastRes.innerHTML = `<div class="err"><b>削除エラー：</b> ${String(err && err.message || err)}</div>`;
       }
     }
+
+// Group by category（カテゴリでまとめる）
+function groupByCategory(items){
+  const map = new Map();
+  items.forEach(d=>{
+    const data = d.data();
+    const cat = (data.categoryName || 'Uncategorized');
+    if(!map.has(cat)) map.set(cat, []);
+    map.get(cat).push(d);
+  });
+  // 表示順（固定）
+  const order = ['Alocasia','Anthurium','Monstera','Philodendron'];
+  return Array.from(map.entries()).sort((a,b)=>{
+    const ia = order.indexOf(a[0]); const ib = order.indexOf(b[0]);
+    if(ia === -1 && ib === -1) return a[0].localeCompare(b[0]);
+    if(ia === -1) return 1; if(ib === -1) return -1;
+    return ia - ib;
+  });
+}
+
+// Render category nav（カテゴリナビ生成）
+function renderNav(){
+  const cats = ['ALL','Alocasia','Anthurium','Monstera','Philodendron'];
+  if(!catNavEl) return;
+  catNavEl.innerHTML = '';
+  cats.forEach(c=>{
+    const b = document.createElement('button');
+    b.className = 'catbtn' + (currentFilter===c ? ' active':'');
+    b.textContent = (c==='ALL' ? 'All' : c);
+    b.addEventListener('click', ()=>{
+      currentFilter = c;
+      renderNav();
+      renderList();
+    });
+    catNavEl.appendChild(b);
+  });
+}
+
+// Render list（一覧描画：フィルターあり/なし）
+function renderList(){
+  if(!docsCache.length){
+    listEl.innerHTML = '<div class="muted">商品はまだありません。</div>';
+    return;
+  }
+  listEl.innerHTML = '';
+
+  // 単一カテゴリ フィルター
+  if(currentFilter !== 'ALL'){
+    const filtered = docsCache.filter(d => {
+      const data = d.data();
+      return (data.categoryName || 'Uncategorized') === currentFilter;
+    });
+    if(!filtered.length){
+      listEl.innerHTML = `<div class="muted">「${currentFilter}」には商品がありません。</div>`;
+      return;
+    }
+    filtered.forEach(d=>{
+      const data = d.data();
+      const id   = d.id;
+      const imgs = Array.isArray(data.images) ? data.images : [];
+      const el = document.createElement('div');
+      el.className = 'item';
+      el.innerHTML = `
+        <div class="imgs">
+          ${imgs.length ? imgs.map(u=>`<img src="${u}" alt="">`).join('') : '<span class="muted">（画像なし）</span>'}
+        </div>
+        <div class="body">
+          <div class="title">${escapeHtml(data.categoryName || '')}</div>
+          <div class="sub">${escapeHtml(data.varietyName || '')}</div>
+          <div class="sub">¥ ${Number(data.price||0).toLocaleString()}</div>
+          <div class="sub muted">ID: <code>${id}</code></div>
+          <div class="ops">
+            <button class="btn ghost"  data-edit="${id}">編集</button>
+            <button class="btn danger" data-del="${id}">削除</button>
+          </div>
+        </div>`;
+      listEl.appendChild(el);
+      el.querySelector('[data-edit]')?.addEventListener('click', ()=> openEdit(id, data));
+      el.querySelector('[data-del]')?.addEventListener('click', async ()=>{
+        if (!confirm('この商品を削除しますか？（画像も削除）')) return;
+        await deleteProduct(id);
+        await loadList();
+      });
+    });
+    return;
+  }
+
+  // ALL：カテゴリごとに見出し＋グリッドで表示
+  const groups = groupByCategory(docsCache);
+  groups.forEach(([cat, arr])=>{
+    const h = document.createElement('div');
+    h.className = 'catgroup';
+    h.textContent = cat;
+    listEl.appendChild(h);
+
+    const grid = document.createElement('div');
+    grid.style.display = 'grid';
+    grid.style.gridTemplateColumns = 'repeat(auto-fill,minmax(260px,1fr))';
+    grid.style.gap = '14px';
+    listEl.appendChild(grid);
+
+    arr.forEach(d=>{
+      const data = d.data();
+      const id   = d.id;
+      const imgs = Array.isArray(data.images) ? data.images : [];
+      const el = document.createElement('div');
+      el.className = 'item';
+      el.innerHTML = `
+        <div class="imgs">
+          ${imgs.length ? imgs.map(u=>`<img src="${u}" alt="">`).join('') : '<span class="muted">（画像なし）</span>'}
+        </div>
+        <div class="body">
+          <div class="title">${escapeHtml(data.categoryName || '')}</div>
+          <div class="sub">${escapeHtml(data.varietyName || '')}</div>
+          <div class="sub">¥ ${Number(data.price||0).toLocaleString()}</div>
+          <div class="sub muted">ID: <code>${id}</code></div>
+          <div class="ops">
+            <button class="btn ghost"  data-edit="${id}">編集</button>
+            <button class="btn danger" data-del="${id}">削除</button>
+          </div>
+        </div>`;
+      grid.appendChild(el);
+      el.querySelector('[data-edit]')?.addEventListener('click', ()=> openEdit(id, data));
+      el.querySelector('[data-del]')?.addEventListener('click', async ()=>{
+        if (!confirm('この商品を削除しますか？（画像も削除）')) return;
+        await deleteProduct(id);
+        await loadList();
+      });
+    });
+  });
+}
 
     function escapeHtml(s){
       return String(s).replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
