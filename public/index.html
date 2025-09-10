@@ -533,11 +533,11 @@ border-top: 2px solid #00000050;
   outline: none;
   text-align: left;
   padding: 33px;
-  font-size: 34px;
+  font-size: 39px;
   cursor: pointer;
   position: relative;
 color:#000;
-opacity:0.6;
+opacity:0.8;
 }
 .accordion-title::after {
   content: "+";
@@ -552,8 +552,8 @@ opacity:0.6;
   overflow: hidden;
   transition: max-height 0.3s ease;
   padding: 0 15px;
-font-size: 32p;
-opacity:0.8;
+font-size: 32px;
+opacity:0.9;
 
 
 }
@@ -689,10 +689,11 @@ opacity:0.8;
       <p>以下の中からお選びいただけます：</p>
       <ul>
         <li>第四種郵便速達 <span class="pricee">550円</span></li>
-        <li>ヤマト運輸  <span class="pricee">1,100円</span></li>
+       
+        <li>ヤマト運輸 <span class="pricee">1,100円</span></li>
       </ul>
       <p class="highlight">
-        数量3株以上で第四種郵便速達 無料
+        数量3株以上で第四種郵便速達 無料　
       </p>
       <p class="note">※北海道・沖縄・離島の方は第四種郵便のみとなります。</p>
       <p class="note">配送不可・住所不備・受取辞退等による返送送料・再発送送料はお客様ご負担となります。</p>
@@ -1694,7 +1695,8 @@ const want = (params.get('liked') === '1')
 
 document.addEventListener('products-rendered', () => {
   window.filterCategory?.(want);
-  document.getElementById('topCategories')?.scrollIntoView({
+  applySort('price-asc');
+document.getElementById('topCategories')?.scrollIntoView({
     behavior: 'instant',
     block: 'nearest'
   });
@@ -1775,6 +1777,53 @@ function isAvailable(card){
   return !card.querySelector('.sold-out-label');
 }
 
+
+/** タグ（.cat-tag-row）ごとに、その直後の .product-item 群だけを並べ替える */
+function sortWithinTags(compare){
+  const root = document.getElementById('product-root');
+  if (!root) return;
+
+  const nodes = Array.from(root.children);
+  const frag  = document.createDocumentFragment();
+
+  for (let i = 0; i < nodes.length; ) {
+    const n = nodes[i];
+
+    // タグ行だったら、その後ろの product-item をブロックとして拾う
+    if (n.classList && n.classList.contains('cat-tag-row')) {
+      const tag = n;
+      i++;
+
+      const items = [];
+      while (i < nodes.length && !(nodes[i].classList && nodes[i].classList.contains('cat-tag-row'))) {
+        if (nodes[i].classList && nodes[i].classList.contains('product-item')) {
+          // 安定ソート用に元の順番を記録（未設定なら）
+          if (!nodes[i].dataset.originalOrder) nodes[i].dataset.originalOrder = String(i);
+          items.push(nodes[i]);
+        }
+        i++;
+      }
+
+      // 価格等で比較。同値は originalOrder で安定化
+      items.sort((a, b) => {
+        const r = compare(a, b);
+        if (r !== 0) return r;
+        return (Number(a.dataset.originalOrder)||0) - (Number(b.dataset.originalOrder)||0);
+      });
+
+      frag.appendChild(tag);
+      items.forEach(el => frag.appendChild(el));
+    } else {
+      // タグ行の外にあるノードはそのまま
+      frag.appendChild(n);
+      i++;
+    }
+  }
+
+  root.appendChild(frag);
+}
+
+
 /** 並び替え本体
  * @param {'price-asc'|'price-desc'|'in-stock'|''} mode
  *
@@ -1789,65 +1838,53 @@ function applySort(mode){
 
   const cards = Array.from(root.querySelectorAll('.product-item'));
 
-  // 初回のみ“元の並び順”を記録（すてーぶる：同点の時に崩れない）
+  // 初回のみ“元の並び順”を記録（安定ソート用）
   cards.forEach((c,i)=>{
     if (!c.dataset.originalOrder) c.dataset.originalOrder = String(i);
   });
 
-  // ▼ いったん「在庫で隠したもの」を元に戻す（ほかのモード用）
+  // 以前「在庫あり」で一時非表示にしたものを元に戻す
   cards.forEach(c => {
     if (c.dataset.hiddenByStock === '1') {
-      // 以前の display を復元（空文字なら style指定なし）
       c.style.display = c.dataset.prevDisplay ?? '';
       delete c.dataset.prevDisplay;
       delete c.dataset.hiddenByStock;
     }
   });
 
-  // ▼ 並び順の決定（価格系のみ並び替え、在庫ありは“非表示化”だけ）
-  const byOriginal = (a,b) =>
-    Number(a.dataset.originalOrder) - Number(b.dataset.originalOrder);
-
   const byPriceAsc  = (a,b) => getCardPrice(a) - getCardPrice(b);
   const byPriceDesc = (a,b) => getCardPrice(b) - getCardPrice(a);
 
-   // ▼ 品種順（＝初期の「タグ→同カテゴリの商品…」構成）に戻す
+  // 品種順（初期の“タグ→カテゴリ内の元順”）に戻す
   if (mode === 'original' || mode === '') {
-    markOriginalOrder(); // 念のため（ねんのため：元順記録の再確認）
-    regroupAll();        // 再グルーピング（さいぐるーぴんぐ：カテゴリごとに並べ直し）
-    return;              // 以降の処理は不要
+    markOriginalOrder();
+    regroupAll();
+    return;
   }
 
-  if (mode === 'price-asc' || mode === 'price-desc') {
-    const sorter = (mode === 'price-asc') ? byPriceAsc : byPriceDesc;
-    cards.sort(sorter).forEach(c => root.appendChild(c));
-  }
-
+  // 在庫あり：Sold Out を一時的に非表示 → タグ構造を保ったまま昇順に
   if (mode === 'in-stock') {
-  // Sold Out を隠す
-  cards.forEach(c => {
-    const soldout = !isAvailable(c);
-    if (soldout) {
-      c.dataset.prevDisplay = c.style.display || '';
-      c.style.display = 'none';
-      c.dataset.hiddenByStock = '1';
-    }
-  });
-  // ★ここがポイント！
-  regroupAll(); // タグ → 同カテゴリの商品カード… の順に並べ直す
-  return;
-}
+    cards.forEach(c => {
+      const soldout = !isAvailable(c);
+      if (soldout) {
+        c.dataset.prevDisplay = c.style.display || '';
+        c.style.display = 'none';
+        c.dataset.hiddenByStock = '1';
+      }
+    });
+    sortWithinTags(byPriceAsc);
+    return;
+  }
 
-if (mode === 'price-asc' || mode === 'price-desc') {
-  hideAllTags(); // ★タグを全部消す
-
-  const sorter = (mode === 'price-asc')
-    ? (a,b)=> getCardPrice(a) - getCardPrice(b)
-    : (a,b)=> getCardPrice(b) - getCardPrice(a);
-
-  cards.sort(sorter).forEach(c => root.appendChild(c));
-  return;
-}
+  // 価格：各カットタグ“内だけ”を並べ替える（タグ自体は残す）
+  if (mode === 'price-asc') {
+    sortWithinTags(byPriceAsc);
+    return;
+  }
+  if (mode === 'price-desc') {
+    sortWithinTags(byPriceDesc);
+    return;
+  }
 }
 
 // 既存：toggleMenu/closeMenu/overlay はそのまま使用
