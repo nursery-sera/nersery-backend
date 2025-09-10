@@ -558,6 +558,14 @@ function closeMenu() {
     }
   });
 })();
+
+function go(path) {
+    // ハンバーガーメニューを閉じる
+    closeMenu();
+    // nurserysera.com のルートURLに移動
+    window.top.location.href = "<?= url ?>" + path;
+  }
+
   </script>
 </body>
 </html>
