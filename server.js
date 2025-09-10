@@ -286,6 +286,7 @@ if (process.env.BREVO_API_KEY && customer.email) {
         (customer.addressFull && String(customer.addressFull)) ||
         [customer.prefecture, customer.city, customer.address, customer.building].filter(Boolean).join(''),
       email: customer.email,
+      phone: customer.phone || '',
       order_id: orderToken,
       order_datetime: new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }),
       items: items.map(it => {
@@ -306,7 +307,7 @@ if (process.env.BREVO_API_KEY && customer.email) {
       shipping_name: String(summary?.shippingOptionText ?? ''),
       shipping_cost: yen(shipping),
       total: yen(total),
-
+      note: note || '',
       // 口座情報（環境変数が無い場合は空でOK）
       bank_branch: process.env.BANK_BRANCH || '',
       bank_account_number: process.env.BANK_ACCOUNT_NUMBER || '',
@@ -363,10 +364,13 @@ ${display.items.map(it =>
 ・お名前（フリガナ）：${display.customer_name_kana} 様  
 ・ご住所：${display.shipping_address}  
 ・メールアドレス：${display.email}
+${note && note.trim() ? `・備考：${note}` : ''}
+
 
 ■ 配送先情報
 ・お名前：${display.customer_name} 様  
 ・ご住所：${display.shipping_address}
+・電話番号：${display.phone}
 
 ■ お支払い方法
 銀行振込
