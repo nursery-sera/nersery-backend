@@ -135,6 +135,15 @@
 <!-- ▼ Category filter (All / Alocasia / Anthurium / Monstera / Philodendron) -->
 <div id="catNav" class="catnav" aria-label="Category Filter"></div>
 <div id="list"></div>
+<!-- ▼ 商品名のみの一覧（ボタンで開閉） -->
+<div id="namesBox" class="card" style="display:none">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+    <b>商品名（カンマ区切り）</b>
+    <button id="namesClose" class="btn ghost" style="min-width:auto;height:32px;padding:0 10px">閉じる</button>
+  </div>
+  <textarea id="namesArea" rows="3" readonly
+    style="width:100%;border:1px solid #ddd;border-radius:8px;margin-top:8px;padding:8px"></textarea>
+</div>
   </div>
 
   <!-- 入力パネル（モード統合：最初から複数フォームのみ） -->
@@ -246,6 +255,10 @@ AlocasiaJacqueline38AnthuriumRedCrystallinum25 のように記入して商品自
     const listEl    = document.getElementById('list');
     const autoCalcBtn = document.getElementById('autoCalcBtn');
 const catNavEl  = document.getElementById('catNav');
+const namesBox   = document.getElementById('namesBox');
+const namesArea  = document.getElementById('namesArea');
+const namesClose = document.getElementById('namesClose');
+namesClose?.addEventListener('click', ()=>{ if (namesBox) namesBox.style.display='none'; });
 let docsCache = [];           // 全商品のキャッシュ
 let currentFilter = 'ALL';    // 'ALL' | 'Alocasia' | 'Anthurium' | 'Monstera' | 'Philodendron'
 
@@ -725,9 +738,19 @@ function renderNav(){
       currentFilter = c;
       renderNav();
       renderList();
+      // カテゴリ切替時は“商品名だけ枠”を閉じる
+      if (namesBox) namesBox.style.display = 'none';
     });
     catNavEl.appendChild(b);
   });
+
+  // ▼ 追加：商品名だけ表示ボタン
+  const nb = document.createElement('button');
+  nb.className = 'catbtn';
+  nb.textContent = 'Names';
+  nb.title = '商品名だけを1枠に表示';
+  nb.addEventListener('click', showNamesBox);
+  catNavEl.appendChild(nb);
 }
 
 // Render list（一覧描画：フィルターあり/なし）
@@ -822,6 +845,41 @@ function renderList(){
       });
     });
   });
+}
+
+function showNamesBox(){
+  // 要素存在チェック（無ければ何もしない）
+  if (!namesBox || !namesArea) return;
+
+  // すでに表示中なら閉じる（トグル動作）
+  if (namesBox.style.display !== 'none') {
+    namesBox.style.display = 'none';
+    return;
+  }
+
+  // データが無い場合も空で開く（コピー用途）
+  const all = Array.isArray(docsCache) ? docsCache : [];
+
+  // 現在のフィルターを反映
+  const src = (currentFilter==='ALL')
+    ? all
+    : all.filter(d => (d.data().categoryName || 'Uncategorized') === currentFilter);
+
+  // "Category Variety" を "、" で連結
+  const names = src.map(d=>{
+    const data = d.data?.() || d.data(); // どちらでも動く保険
+    const c = (data?.categoryName || '').trim();
+    const v = (data?.varietyName  || '').trim();
+    return `${c}${c&&v?' ':''}${v}`.trim();
+  }).filter(Boolean);
+
+  namesArea.value = names.join('、 ');
+
+  // 表示して見える位置までスクロール＆選択状態に
+  namesBox.style.display = 'block';
+  namesBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  namesArea.focus();
+  namesArea.select();
 }
 
     function escapeHtml(s){
