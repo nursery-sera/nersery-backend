@@ -101,6 +101,10 @@ async function sendBrevoTemplate(templateId, to, params) {
   if (!resp.ok) throw new Error(`brevo:${resp.status} ${JSON.stringify(json)}`);
   return json?.messageId || null;
 }
+// ===== 改行→<br> に変換（メールHTML用） =====
+function toHtmlLines(s = '') {
+  return String(s).replace(/\r\n|\r|\n/g, '<br>');
+}
 
 // ===== 注文明細ブロック（メール本文に差し込む） =====
 function buildOrderDetailBlockFromRows(rows) {
@@ -633,11 +637,12 @@ app.put("/api/orders/:token/paid", async (req, res) => {
       if (headQ.rowCount) {
         const H = headQ.rows[0];
         const to = { email: H.email, name: H.customer_name || H.email };
-        const params = {
-          customer_name: to.name || "お客様",
-          support_email: process.env.SUPPORT_EMAIL || process.env.MAIL_FROM,
-          order_detail_block: buildOrderDetailBlockFromRows(rowsQ.rows)
-        };
+       const params = {
+  customer_name: to.name || "お客様",
+  support_email: process.env.SUPPORT_EMAIL || process.env.MAIL_FROM,
+  order_detail_block: buildOrderDetailBlockFromRows(rowsQ.rows),
+  order_detail_block_html: toHtmlLines(buildOrderDetailBlockFromRows(rowsQ.rows))
+};
         const mid = await sendBrevoTemplate(process.env.BREVO_TEMPLATE_PAID, to, params);
         await finishEmailOk(pool, eventId, mid);
       }
@@ -760,11 +765,13 @@ app.post("/api/admin/send/ship-date", adminAuth, async (req, res) => {
 
         const to = { email: H.email, name: H.customer_name || H.email };
         const params = {
-          customer_name: to.name || "お客様",
-          support_email: process.env.SUPPORT_EMAIL || process.env.MAIL_FROM,
-          order_detail_block: buildOrderDetailBlockFromRows(rowsQ.rows),
-          ship_date_text: shipDateText
-        };
+  customer_name: to.name || "お客様",
+  support_email: process.env.SUPPORT_EMAIL || process.env.MAIL_FROM,
+  order_detail_block: buildOrderDetailBlockFromRows(rowsQ.rows),
+  order_detail_block_html: toHtmlLines(buildOrderDetailBlockFromRows(rowsQ.rows)),
+  ship_date_text: shipDateText,
+  ship_date_text_html: toHtmlLines(shipDateText)
+};
         const mid = await sendBrevoTemplate(process.env.BREVO_TEMPLATE_SHIPDATE, to, params);
         await finishEmailOk(pool, eventId, mid);
         ok++;
@@ -821,11 +828,13 @@ ${shipMethod}
 
         const to = { email: H.email, name: H.customer_name || H.email };
         const params = {
-          customer_name: to.name || "お客様",
-          support_email: process.env.SUPPORT_EMAIL || process.env.MAIL_FROM,
-          order_detail_block: buildOrderDetailBlockFromRows(rowsQ.rows),
-          tracking_block
-        };
+  customer_name: to.name || "お客様",
+  support_email: process.env.SUPPORT_EMAIL || process.env.MAIL_FROM,
+  order_detail_block: buildOrderDetailBlockFromRows(rowsQ.rows),
+  order_detail_block_html: toHtmlLines(buildOrderDetailBlockFromRows(rowsQ.rows)),
+  tracking_block,
+  tracking_block_html: toHtmlLines(tracking_block)
+};
 
         const mid = await sendBrevoTemplate(process.env.BREVO_TEMPLATE_SHIPPED, to, params);
         await finishEmailOk(pool, eventId, mid);
