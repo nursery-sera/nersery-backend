@@ -650,7 +650,6 @@ app.put("/api/orders/:token/paid", async (req, res) => {
       if (headQ.rowCount) {
         const H = headQ.rows[0];
         const to = { email: H.email, name: H.customer_name || H.email };
-       const params = {
   const params = {
   customer_name: to.name || "お客様",
   support_email: process.env.SUPPORT_EMAIL || process.env.MAIL_FROM,
