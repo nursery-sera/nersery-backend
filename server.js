@@ -726,6 +726,7 @@ app.get("/api/admin/email-candidates/ship-date", adminAuth, async (_req, res) =>
           SELECT 1 FROM email_events e
            WHERE e.order_token = o.order_token
              AND e.event_type  = 'shipdate_notice'
+            AND e.status      = 'sent'
         )
       ORDER BY o.order_token, o.id DESC`;
     const { rows } = await pool.query(sql);
@@ -742,11 +743,11 @@ app.get("/api/admin/email-candidates/shipped", adminAuth, async (_req, res) => {
         COALESCE(NULLIF(o.name,''), CONCAT_WS(' ', NULLIF(o.last_name,''), NULLIF(o.first_name,''))) AS customer_name
       FROM orders_all o
       WHERE o.is_paid = TRUE
-        AND COALESCE(o.tracking_no,'') <> ''
         AND NOT EXISTS (
           SELECT 1 FROM email_events e
            WHERE e.order_token = o.order_token
              AND e.event_type  = 'shipped_notice'
+            AND e.status      = 'sent'
         )
       ORDER BY o.order_token, o.id DESC`;
     const { rows } = await pool.query(sql);
