@@ -831,11 +831,19 @@ app.post("/api/admin/send/shipped", adminAuth, async (req, res) => {
 ${shipMethod}
 ■ 追跡番号
 ${trackingNo}
-${trackingUrl ? `■ 追跡URL
+■ 追跡URL
 ${trackingUrl}` : ``}`.trim()
-          : `■ 配送方法
+          : `
+━━━━━━━━━━━━━━━━━━
+■ 発送日
+　〇月〇日
+
+■ 配送方法
 ${shipMethod}
-追跡番号はございません。通常より数日で到着いたしますので、今しばらくお待ちください。`.trim();
+
+■ お届け予定
+通常、発送日から 1〜2 日程度でのお届けとなります。
+━━━━━━━━━━━━━━━━━━`.trim();
 
         const to = { email: H.email, name: H.customer_name || H.email };
         const params = {
