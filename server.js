@@ -102,9 +102,16 @@ async function sendBrevoTemplate(templateId, to, params) {
   return json?.messageId || null;
 }
 // ===== 改行→<br> に変換（メールHTML用） =====
-function toHtmlLines(s = '') {
-  return String(s).replace(/\r\n|\r|\n/g, '<br>');
+function escapeHtml(s='') {
+  return String(s)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;');
 }
+function toHtmlLines(s='') {
+  return escapeHtml(s).replace(/\r\n|\r|\n/g, '<br>');
+}
+
 
 // ===== 注文明細ブロック（メール本文に差し込む） =====
 function buildOrderDetailBlockFromRows(rows) {
