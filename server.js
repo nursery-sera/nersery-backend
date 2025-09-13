@@ -754,7 +754,34 @@ app.get("/api/admin/email-candidates/shipped", adminAuth, async (_req, res) => {
     res.json(rows);
   } catch (e) { console.error(e); res.status(500).json({ error: "server error" }); }
 });
+// 追跡番号を保存（order_token 単位で全行更新）
+app.post("/api/admin/set-tracking", adminAuth, async (req, res) => {
+  // 1) DB接続が無ければ 500
+  if (!pool) return res.status(500).json({ error: "DB not available" });
+  try {
+    // 2) 管理画面から渡された値を受け取る
+    const token = String(req.body?.order_token || "").trim();   // ← 注文トークン
+    const v     = String(req.body?.tracking_no  ?? "").trim();  // ← 追跡番号（空文字で消去OK）
 
+    // 3) 必須チェック
+    if (!token) return res.status(400).json({ error: "order_token required" });
+
+    // 4) 同一 order_token の全行に tracking_no を一括反映
+    const q = `
+      UPDATE orders_all
+         SET tracking_no = $2
+       WHERE order_token = $1
+    `;
+    const r = await pool.query(q, [token, v]);
+
+    // 5) 反映件数を返す（商品が複数行なら複数件になる）
+    return res.json({ ok: true, updated: r.rowCount });
+  } catch (e) {
+    // 6) 予期せぬエラー
+    console.error("set-tracking error", e);
+    return res.status(500).json({ ok: false, error: "server error" });
+  }
+});
 // body: { items: [{ order_token: "...", ship_date_text: "2025/09/20 ごろ" }, ...] }
 app.post("/api/admin/send/ship-date", adminAuth, async (req, res) => {
   try {
