@@ -927,6 +927,37 @@ app.put("/api/admin/orders/:token/paid", adminAuth, async (req, res) => {
         WHERE order_token = $2`,
       [paid, token]
     );
+    
+        // ★ 支払い済みに変更された場合は、入金完了メールを送信
+    if (paid) {
+      try {
+        // 予約（冪等化・二重送信防止）
+        const eventId = await reserveEmail(pool, token, 'paid_notice', 'admin');
+        // 既にある場合は eventId が null（＝送信済み or 送信予約済み）
+        if (eventId && process.env.BREVO_TEMPLATE_PAID) {
+          const headQ = await pool.query("SELECT * FROM v_order_quick WHERE order_token=$1", [token]);
+          const rowsQ = await pool.query("SELECT * FROM orders_all    WHERE order_token=$1 ORDER BY id", [token]);
+          if (headQ.rowCount) {
+            const H = headQ.rows[0];
+            const to = { email: H.email, name: H.customer_name || H.email };
+            const params = {
+              customer_name: to.name || "お客様",
+              support_email: process.env.SUPPORT_EMAIL || process.env.MAIL_FROM,
+              order_detail_block_text: buildOrderDetailBlockFromRows(rowsQ.rows)
+            };
+            const mid = await sendBrevoTemplate(process.env.BREVO_TEMPLATE_PAID, to, params);
+            await finishEmailOk(pool, eventId, mid);
+          } else {
+            // 予約は立ったがヘッダが無い場合は失敗記録
+            await finishEmailFail(pool, token, 'paid_notice', 'order header not found');
+          }
+        }
+      } catch (e) {
+        await finishEmailFail(pool, token, 'paid_notice', e);
+        console.error("admin paid_notice send error:", e);
+        // 送信失敗しても API 自体は 200 を返す（UI操作は成功）
+      }
+    }
     res.json({ ok: true });
   } catch (e) {
     console.error(e);
