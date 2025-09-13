@@ -762,10 +762,10 @@ app.post("/api/admin/send/ship-date", adminAuth, async (req, res) => {
 
     let ok = 0, errors = [];
     for (const it of items) {
-      const token = String(it.order_token || '').trim();
-      const shipDateText = String(it.ship_date_text || '').trim();
-      if (!token || !shipDateText) { errors.push({ token, reason: 'missing token or ship_date_text' }); continue; }
-
+   const token = String(it.order_token || '').trim();
+const shipDateText = String(it.ship_date_text || '').trim();
+// ここを緩和：token があればOK（ship_date_text は空文字OK）
+if (!token) { errors.push({ token, reason: 'missing token' }); continue; }
       try {
         const eventId = await reserveEmail(pool, token, 'shipdate_notice', 'admin');
         if (!eventId) continue;
