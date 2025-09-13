@@ -79,6 +79,101 @@ const transporter = nodemailer.createTransport({
     pass: process.env.SMTP_PASS                  // メール(アプリ)パスワード
   }
 });
+
+// ===== Brevo: テンプレ送信（templateId + params） =====
+async function sendBrevoTemplate(templateId, to, params) {
+  if (!process.env.BREVO_API_KEY) throw new Error("BREVO_API_KEY not set");
+  const resp = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      "api-key": process.env.BREVO_API_KEY,
+      "content-type": "application/json",
+      "accept": "application/json"
+    },
+    body: JSON.stringify({
+      to: [{ email: to.email, name: to.name }],
+      templateId: Number(templateId),
+      params
+    })
+  });
+  const text = await resp.text();
+  let json; try { json = text ? JSON.parse(text) : null; } catch { json = { raw: text }; }
+  if (!resp.ok) throw new Error(`brevo:${resp.status} ${JSON.stringify(json)}`);
+  return json?.messageId || null;
+}
+
+// ===== 注文明細ブロック（メール本文に差し込む） =====
+function buildOrderDetailBlockFromRows(rows) {
+  const yen = (n) => `¥${Number(n||0).toLocaleString('ja-JP')}`;
+  const first = rows[0];
+  const itemsText = rows.map(r => {
+    const nm = (r.category && r.variety) ? `${r.category} ${r.variety}` : (r.product_name || r.variety || r.category || '商品');
+    const qty = Number(r.quantity||1);
+    const unit= yen(r.unit_price);
+    const line= yen(Number(r.unit_price||0)*qty);
+    return `・${nm}　${unit} × ${qty} = ${line}`;
+  }).join('\n');
+  const subtotal = rows.reduce((s,r)=> s + Number(r.unit_price||0)*Number(r.quantity||1), 0);
+  const shipping = Number(first?.shipping || 0);
+  const total    = Number(first?.total ?? (subtotal + shipping));
+  const addr = first?.address_full || [first?.prefecture, first?.city, first?.address, first?.building].filter(Boolean).join('');
+
+  return `
+【ご注文内容】
+
+${itemsText}
+
+小計：${yen(subtotal)}
+配送方法：${first?.shipping_option_text || ''}（送料 ${yen(shipping)}）
+合計：${yen(total)}
+
+────────────────────────
+
+■ ご注文情報
+・注文番号：${first?.order_token}
+・ご注文日時：${new Date(first?.created_at || Date.now()).toLocaleString('ja-JP', { timeZone:'Asia/Tokyo' })}
+・お名前：${first?.customer_name || first?.name || [first?.last_name, first?.first_name].filter(Boolean).join(' ')} 様
+・ご住所：${addr}
+・メールアドレス：${first?.email}
+${first?.note ? `・備考：${first.note}` : ''}
+
+■ 配送先情報
+・お名前：${first?.customer_name || first?.name || [first?.last_name, first?.first_name].filter(Boolean).join(' ')} 様
+・ご住所：${addr}
+・電話番号：${first?.phone || ''}
+
+■ お問い合わせ
+メール：${process.env.SUPPORT_EMAIL || process.env.MAIL_FROM || 'info@nurserysera.com'}
+`.trim();
+}
+
+// ===== email_events: 予約→確定ユーティリティ =====
+async function reserveEmail(pool, orderToken, eventType, actor='system') {
+  const r = await pool.query(
+    `INSERT INTO email_events(order_token, event_type, status, attempts)
+     VALUES ($1,$2,'reserved',0)
+     ON CONFLICT (order_token, event_type) DO NOTHING
+     RETURNING id`,
+    [orderToken, eventType]
+  );
+  return r.rowCount ? r.rows[0].id : null;
+}
+async function finishEmailOk(pool, eventId, messageId) {
+  await pool.query(
+    `UPDATE email_events
+       SET status='sent', attempts=attempts+1, provider_message_id=$1, sent_at=NOW()
+     WHERE id=$2`,
+    [messageId || null, eventId]
+  );
+}
+async function finishEmailFail(pool, orderToken, eventType, errText) {
+  await pool.query(
+    `UPDATE email_events
+       SET status='failed', attempts=attempts+1, error=$3
+     WHERE order_token=$1 AND event_type=$2`,
+    [orderToken, eventType, String(errText).slice(0, 800)]
+  );
+}
 // ====== HTML 配信（public優先）。GASタグ置換もここで実施 ======
 function candidateFiles(page) {
   return [
@@ -510,6 +605,29 @@ app.put("/api/orders/:token/paid", async (req, res) => {
     "UPDATE orders_all SET is_paid = TRUE, paid_at = now() WHERE order_token = $1",
     [token]
   );
+  
+  try {
+    const eventId = await reserveEmail(pool, token, 'paid_notice', 'system');
+    if (eventId && process.env.BREVO_TEMPLATE_PAID) {
+      const headQ = await pool.query("SELECT * FROM v_order_quick WHERE order_token=$1", [token]);
+      const rowsQ = await pool.query("SELECT * FROM orders_all    WHERE order_token=$1 ORDER BY id", [token]);
+      if (headQ.rowCount) {
+        const H = headQ.rows[0];
+        const to = { email: H.email, name: H.customer_name || H.email };
+        const params = {
+          customer_name: to.name || "お客様",
+          support_email: process.env.SUPPORT_EMAIL || process.env.MAIL_FROM,
+          order_detail_block: buildOrderDetailBlockFromRows(rowsQ.rows)
+        };
+        const mid = await sendBrevoTemplate(process.env.BREVO_TEMPLATE_PAID, to, params);
+        await finishEmailOk(pool, eventId, mid);
+      }
+    }
+  } catch (e) {
+    await finishEmailFail(pool, token, 'paid_notice', e);
+    console.error("paid_notice send error:", e);
+  }
+
   // 既存互換のまま残す（/api/orders 用）
   res.json({ ok: true });
 });
@@ -557,6 +675,149 @@ app.get("/api/admin/orders/:token/items", adminAuth, async (req, res) => {
     console.error(e);
     res.status(500).json({ error: "server error" });
   }
+});
+// 発送予定メール：未送候補（支払い済 & shipdate 未送）
+// ※ ship日付はテーブルに保存しない運用 → 送信時に文字列で渡す前提
+app.get("/api/admin/email-candidates/ship-date", adminAuth, async (_req, res) => {
+  try {
+    const sql = `
+      SELECT DISTINCT ON (o.order_token)
+        o.order_token, o.email,
+        COALESCE(NULLIF(o.name,''), CONCAT_WS(' ', NULLIF(o.last_name,''), NULLIF(o.first_name,''))) AS customer_name
+      FROM orders_all o
+      WHERE o.is_paid = TRUE
+        AND NOT EXISTS (
+          SELECT 1 FROM email_events e
+           WHERE e.order_token = o.order_token
+             AND e.event_type  = 'shipdate_notice'
+        )
+      ORDER BY o.order_token, o.id DESC`;
+    const { rows } = await pool.query(sql);
+    res.json(rows);
+  } catch (e) { console.error(e); res.status(500).json({ error: "server error" }); }
+});
+
+// 発送完了メール：未送候補（支払い済 & tracking_noあり & 未送）
+app.get("/api/admin/email-candidates/shipped", adminAuth, async (_req, res) => {
+  try {
+    const sql = `
+      SELECT DISTINCT ON (o.order_token)
+        o.order_token, o.email, o.shipping_option_text, o.tracking_no,
+        COALESCE(NULLIF(o.name,''), CONCAT_WS(' ', NULLIF(o.last_name,''), NULLIF(o.first_name,''))) AS customer_name
+      FROM orders_all o
+      WHERE o.is_paid = TRUE
+        AND COALESCE(o.tracking_no,'') <> ''
+        AND NOT EXISTS (
+          SELECT 1 FROM email_events e
+           WHERE e.order_token = o.order_token
+             AND e.event_type  = 'shipped_notice'
+        )
+      ORDER BY o.order_token, o.id DESC`;
+    const { rows } = await pool.query(sql);
+    res.json(rows);
+  } catch (e) { console.error(e); res.status(500).json({ error: "server error" }); }
+});
+
+// body: { items: [{ order_token: "...", ship_date_text: "2025/09/20 ごろ" }, ...] }
+app.post("/api/admin/send/ship-date", adminAuth, async (req, res) => {
+  try {
+    const items = Array.isArray(req.body?.items) ? req.body.items : [];
+    if (!items.length) return res.status(400).json({ error: "items required" });
+
+    let ok = 0, errors = [];
+    for (const it of items) {
+      const token = String(it.order_token || '').trim();
+      const shipDateText = String(it.ship_date_text || '').trim();
+      if (!token || !shipDateText) { errors.push({ token, reason: 'missing token or ship_date_text' }); continue; }
+
+      try {
+        const eventId = await reserveEmail(pool, token, 'shipdate_notice', 'admin');
+        if (!eventId) continue;
+
+        const headQ = await pool.query("SELECT * FROM v_order_quick WHERE order_token=$1", [token]);
+        const rowsQ = await pool.query("SELECT * FROM orders_all    WHERE order_token=$1 ORDER BY id", [token]);
+        if (!headQ.rowCount) throw new Error("order not found");
+        const H = headQ.rows[0];
+
+        const to = { email: H.email, name: H.customer_name || H.email };
+        const params = {
+          customer_name: to.name || "お客様",
+          support_email: process.env.SUPPORT_EMAIL || process.env.MAIL_FROM,
+          order_detail_block: buildOrderDetailBlockFromRows(rowsQ.rows),
+          ship_date_text: shipDateText
+        };
+        const mid = await sendBrevoTemplate(process.env.BREVO_TEMPLATE_SHIPDATE, to, params);
+        await finishEmailOk(pool, eventId, mid);
+        ok++;
+      } catch (e) {
+        await finishEmailFail(pool, token, 'shipdate_notice', e);
+        errors.push({ token, reason: String(e) });
+      }
+    }
+    res.json({ ok, ng_count: errors.length, errors });
+  } catch (e) { console.error(e); res.status(500).json({ error: "server error" }); }
+});
+
+app.post("/api/admin/send/shipped", adminAuth, async (req, res) => {
+  try {
+    const tokens = Array.isArray(req.body?.order_tokens) ? req.body.order_tokens : [];
+    if (!tokens.length) return res.status(400).json({ error: "order_tokens required" });
+
+    let ok = 0, errors = [];
+    for (const token of tokens) {
+      try {
+        const eventId = await reserveEmail(pool, token, 'shipped_notice', 'admin');
+        if (!eventId) continue;
+
+        const headQ = await pool.query("SELECT * FROM v_order_quick WHERE order_token=$1", [token]);
+        const rowsQ = await pool.query("SELECT * FROM orders_all    WHERE order_token=$1 ORDER BY id", [token]);
+        if (!headQ.rowCount) throw new Error("order not found");
+        const H = headQ.rows[0];
+
+        const shipMethod = H.shipping_option_text || '';
+        const trackingNo = H.tracking_no || '';
+
+        let trackingUrl = "";
+        if (trackingNo) {
+          const m = shipMethod;
+          if (/ヤマト|クロネコ|宅急便/i.test(m)) {
+            trackingUrl = `https://track.kuronekoyamato.co.jp/tracking?number=${encodeURIComponent(trackingNo)}`;
+          } else if (/日本郵便|ゆうパック|ゆうメール|郵便/i.test(m)) {
+            trackingUrl = `https://trackings.post.japanpost.jp/services/srv/search/direct?reqCodeNo1=${encodeURIComponent(trackingNo)}`;
+          } else if (/佐川|SG/i.test(m)) {
+            trackingUrl = `https://k2k.sagawa-exp.co.jp/p/sagawa/web/okurijoinput.jsp?okurijoNo=${encodeURIComponent(trackingNo)}`;
+          }
+        }
+
+        const tracking_block = trackingNo
+          ? `■ 配送方法
+${shipMethod}
+■ 追跡番号
+${trackingNo}
+${trackingUrl ? `■ 追跡URL
+${trackingUrl}` : ``}`.trim()
+          : `■ 配送方法
+${shipMethod}
+追跡番号はございません。通常より数日で到着いたしますので、今しばらくお待ちください。`.trim();
+
+        const to = { email: H.email, name: H.customer_name || H.email };
+        const params = {
+          customer_name: to.name || "お客様",
+          support_email: process.env.SUPPORT_EMAIL || process.env.MAIL_FROM,
+          order_detail_block: buildOrderDetailBlockFromRows(rowsQ.rows),
+          tracking_block
+        };
+
+        const mid = await sendBrevoTemplate(process.env.BREVO_TEMPLATE_SHIPPED, to, params);
+        await finishEmailOk(pool, eventId, mid);
+        ok++;
+      } catch (e) {
+        await finishEmailFail(pool, token, 'shipped_notice', e);
+        errors.push({ token, reason: String(e) });
+      }
+    }
+    res.json({ ok, ng_count: errors.length, errors });
+  } catch (e) { console.error(e); res.status(500).json({ error: "server error" }); }
 });
 
 // ===== 管理：支払いフラグの更新（チェックON/OFF：注文単位） =====
