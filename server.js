@@ -172,13 +172,20 @@ ${itemsText}
 ・メールアドレス：${first?.email}
 ${first?.note ? `・備考：${first.note}` : ''}
 
+
+
 ■ 配送先情報
 ・お名前：${customerName} 様
 ・ご住所：${addr}
 ・電話番号：${first?.phone || ''}
 
+
+
 ■ お問い合わせ
+お問い合わせページ:https://www.nurserysera.com/policy.html
 メール：${process.env.SUPPORT_EMAIL || process.env.MAIL_FROM || 'info@nurserysera.com'}
+LINE https://lin.ee/mFSu5FS
+Instagram https://www.instagram.com/nursery_sera?igsh=cWx2cTZ3cWNicGlz&utm_source=
 `.trim();
 }
 
