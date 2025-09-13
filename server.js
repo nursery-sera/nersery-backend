@@ -860,11 +860,11 @@ const tracking_block = (
 ■ 発送日
 　〇月〇日
 
-■ 配送方法
-${shipMethod}
-
 ■ お届け予定
 通常、発送日から 1〜2 日程度でのお届けとなります。
+
+■ 配送方法
+${shipMethod}
 
 ■ 追跡番号
 ${trackingNo}
