@@ -106,59 +106,64 @@ async function sendBrevoTemplate(templateId, to, params) {
 function buildOrderDetailBlockFromRows(rows) {
   const yen = (n) => `¥${Number(n||0).toLocaleString('ja-JP')}`;
   const first = rows[0];
+  if (!first) return '';
+
+  // 商品行
   const itemsText = rows.map(r => {
-    const nm = (r.category && r.variety) ? `${r.category} ${r.variety}` : (r.product_name || r.variety || r.category || '商品');
-    const qty = Number(r.quantity||1);
-    const unit= yen(r.unit_price);
-    const line= yen(Number(r.unit_price||0)*qty);
+    const nm = (r.category && r.variety)
+      ? `${r.category} ${r.variety}`
+      : (r.product_name || r.variety || r.category || '商品');
+    const qty  = Number(r.quantity||1);
+    const unit = yen(r.unit_price);
+    const line = yen(Number(r.unit_price||0) * qty);
     return `・${nm}　${unit} × ${qty} = ${line}`;
   }).join('\n');
+
+  // 金額類
   const subtotal = rows.reduce((s,r)=> s + Number(r.unit_price||0)*Number(r.quantity||1), 0);
   const shipping = Number(first?.shipping || 0);
   const total    = Number(first?.total ?? (subtotal + shipping));
-  const addr = first?.address_full || [first?.prefecture, first?.city, first?.address, first?.building].filter(Boolean).join('');
+
+  // 住所/氏名
+  const addr = first?.address_full
+    || [first?.prefecture, first?.city, first?.address, first?.building].filter(Boolean).join('');
+  const customerName =
+    first?.customer_name
+    || first?.name
+    || [first?.last_name, first?.first_name].filter(Boolean).join(' ').trim();
+
+  // 日時
+  const created = new Date(first?.created_at || Date.now())
+    .toLocaleString('ja-JP', { timeZone:'Asia/Tokyo' });
 
   return `
 ────────────────────────
 【ご注文内容】
 
-${display.items.map(it =>
-  `・${it.productName}　${it.unit_price}  × ${it.quantity} = ${it.line_total} `
-).join('\n')}
+${itemsText}
 
-小計：${display.subtotal}  
-配送方法：${display.shipping_name}（送料 ${display.shipping_cost}）  
-合計：${display.total}
+小計：${yen(subtotal)}
+配送方法：${first?.shipping_option_text || ''}（送料 ${yen(shipping)}）
+合計：${yen(total)}
 
 ────────────────────────
 
 ■ ご注文情報
-・注文番号：${display.order_id}  
-・ご注文日時：${display.order_datetime}  
-・お名前：${display.customer_name} 様  
-・お名前（フリガナ）：${display.customer_name_kana} 様  
-・ご住所：${display.shipping_address}  
-・メールアドレス：${display.email}
-${note && note.trim() ? `・備考：${note}` : ''}
-
+・注文番号：${first?.order_token}
+・ご注文日時：${created}
+・お名前：${customerName} 様
+・ご住所：${addr}
+・メールアドレス：${first?.email}
+${first?.note ? `・備考：${first.note}` : ''}
 
 ■ 配送先情報
-・お名前：${display.customer_name} 様  
-・ご住所：${display.shipping_address}
-・電話番号：${display.phone}
-
-
-■ 商品特性とお願い
-・本商品は組織培養株です。お受け取り後は順化（培養環境から育成環境へ慣らす作業）をお願いいたします。  
-・輸入後に当店で検品を行います。万一、著しい痛み等が確認された場合は迅速に返金対応いたします。  
-・個体の選別はできず、発送株はランダムとなります。あらかじめご了承ください。  
-・お届け先情報に誤りがあると配達できない場合があります。今一度ご確認ください。
+・お名前：${customerName} 様
+・ご住所：${addr}
+・電話番号：${first?.phone || ''}
 
 ■ お問い合わせ
-メール：${display.support_email}
-
-本メールは自動送信です。ご不明点や変更がある場合は、このメールにご返信いただくか、上記連絡先までご連絡ください。`
-    ).trim();
+メール：${process.env.SUPPORT_EMAIL || process.env.MAIL_FROM || 'info@nurserysera.com'}
+`.trim();
 }
 
 // ===== email_events: 予約→確定ユーティリティ =====
