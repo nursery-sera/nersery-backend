@@ -1,0 +1,209 @@
+<!doctype html>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>通知管理（iPhone対応）| Nursery Sera</title>
+<style>
+  body { font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans JP","Hiragino Kaku Gothic ProN",Meiryo,Arial,sans-serif; margin:12px; }
+  h2 { margin: 16px 0 8px; }
+  .row { display:flex; gap:8px; margin:8px 0; flex-wrap:wrap; }
+  input,button,select { font-size:16px; padding:10px; }
+  .btn { background:#111; color:#fff; border:none; border-radius:8px; padding:10px 14px; }
+  .btn.outline { background:#fff; color:#111; border:1px solid #111; }
+  .card { border:1px solid #eee; border-radius:10px; padding:12px; margin:10px 0; }
+  .muted { color:#666; font-size:12px; }
+  .token { font-family: ui-monospace, Menlo, Consolas, monospace; font-size:12px; color:#555; word-break: break-all; }
+  .tabs { display:flex; gap:8px; margin:10px 0; }
+  .tab { flex:1; text-align:center; padding:10px; border:1px solid #ddd; border-radius:8px; cursor:pointer; }
+  .tab.active { background:#111; color:#fff; border-color:#111; }
+  .hidden { display:none; }
+  table { width:100%; border-collapse:collapse; }
+  th, td { padding:8px; border-bottom:1px solid #eee; vertical-align: top; }
+  th { position:sticky; top:0; background:#fafafa; text-align:left; }
+  small { color:#666; }
+</style>
+
+<h2>通知管理</h2>
+
+<div class="card">
+  <div class="row">
+    <input id="admintoken" placeholder="ADMIN_TOKEN を入力" style="flex:1">
+    <button class="btn" id="saveToken">保存</button>
+  </div>
+  <div class="muted">※トークンはこの端末にローカル保存されます。</div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" data-tab="shipdate">発送予定日メール</div>
+  <div class="tab" data-tab="shipped">発送完了メール</div>
+</div>
+
+<!-- 発送予定日メール -->
+<section id="panel-shipdate">
+  <div class="row">
+    <button class="btn" id="loadShipDate">未送の候補を読み込む</button>
+  </div>
+  <div id="shipdateList"></div>
+  <div class="row">
+    <button class="btn" id="sendShipDate" disabled>選択に一括送信</button>
+    <button class="btn outline" id="clearShipDate">選択を全解除</button>
+  </div>
+  <div class="muted">テンプレID: <span id="tplShipdate">(BREVO_TEMPLATE_SHIPDATE)</span>. 送信時に各行の「予定日テキスト」をテンプレの <code>{{ params.ship_date_text }}</code> に差し込みます。</div>
+</section>
+
+<!-- 発送完了メール -->
+<section id="panel-shipped" class="hidden">
+  <div class="row">
+    <button class="btn" id="loadShipped">未送の候補を読み込む</button>
+  </div>
+  <div id="shippedList"></div>
+  <div class="row">
+    <button class="btn" id="sendShipped" disabled>選択に一括送信</button>
+    <button class="btn outline" id="clearShipped">選択を全解除</button>
+  </div>
+  <div class="muted">テンプレID: <span id="tplShipped">(BREVO_TEMPLATE_SHIPPED)</span>. 追跡番号と配送方法から追跡URLを自動付与します。</div>
+</section>
+
+<script>
+const API = (p)=> (window.API_BASE || (location.origin + '/api')) + p;
+const $ = (q)=> document.querySelector(q);
+const $$ = (q)=> Array.from(document.querySelectorAll(q));
+const LSKEY = 'admin_token';
+
+function toast(msg){ alert(msg); }
+
+// トークン保存/読込
+$('#admintoken').value = localStorage.getItem(LSKEY) || '';
+$('#saveToken').onclick = ()=>{ localStorage.setItem(LSKEY, $('#admintoken').value.trim()); toast('保存しました'); };
+
+// タブ切替
+$$('.tab').forEach(t => t.onclick = ()=>{
+  $$('.tab').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active');
+  const tab = t.dataset.tab;
+  $('#panel-shipdate').classList.toggle('hidden', tab!=='shipdate');
+  $('#panel-shipped').classList.toggle('hidden', tab!=='shipped');
+});
+
+// 共通：チェック状態からトークン配列を取得
+function selectedTokens(container){
+  return Array.from(container.querySelectorAll('input[type=checkbox].pick:checked')).map(x=>x.dataset.token);
+}
+
+// ===== 発送予定日 =====
+$('#loadShipDate').onclick = async ()=>{
+  const tok = $('#admintoken').value.trim(); if(!tok) return toast('ADMIN_TOKEN を入力');
+  const res = await fetch(API('/admin/email-candidates/ship-date'), { headers:{'x-admin-token':tok} });
+  if(!res.ok) return toast('取得失敗');
+  const rows = await res.json();
+  const wrap = $('#shipdateList');
+  if(!rows.length){ wrap.innerHTML = '<div class="muted">候補がありません。</div>'; $('#sendShipDate').disabled = true; return; }
+
+  let html = `<table><thead><tr>
+    <th style="width:36px"></th>
+    <th>顧客</th><th>予定日テキスト</th><th>order_token</th>
+  </tr></thead><tbody>`;
+  for(const r of rows){
+    const name = r.customer_name || r.email || '';
+    html += `<tr>
+      <td><input class="pick" type="checkbox" data-token="${r.order_token}" checked></td>
+      <td>${name}<br><small>${r.email||''}</small></td>
+      <td><input data-shipdate-for="${r.order_token}" placeholder="例）10月上旬ごろ" style="width:100%;"></td>
+      <td class="token">${r.order_token}</td>
+    </tr>`;
+  }
+  html += `</tbody></table>`;
+  wrap.innerHTML = html;
+  $('#sendShipDate').disabled = false;
+};
+$('#clearShipDate').onclick = ()=> { $$('#shipdateList .pick').forEach(c=> c.checked=false); };
+
+$('#sendShipDate').onclick = async ()=>{
+  const tok = $('#admintoken').value.trim(); if(!tok) return toast('ADMIN_TOKEN を入力');
+  const picks = selectedTokens($('#shipdateList'));
+  if(!picks.length) return toast('送る注文を選んでください');
+
+  const items = picks.map(tk => ({
+    order_token: tk,
+    ship_date_text: document.querySelector(`[data-shipdate-for="${tk}"]`)?.value?.trim() || ''
+  }));
+  if(items.some(x=>!x.ship_date_text)) return toast('予定日テキストが空の行があります');
+
+  if(!confirm(`${items.length}件に発送予定日メールを送信します。よろしいですか？`)) return;
+
+  const res = await fetch(API('/admin/send/ship-date'), {
+    method:'POST',
+    headers:{'content-type':'application/json','x-admin-token':tok},
+    body: JSON.stringify({ items })
+  });
+  const data = await res.json().catch(()=>({}));
+  if(!res.ok) return toast('送信失敗: ' + JSON.stringify(data));
+  toast(`送信完了: OK=${data.ok} / NG=${data.ng_count}`);
+  $('#loadShipDate').click();
+};
+
+// ===== 発送完了 =====
+$('#loadShipped').onclick = async ()=>{
+  const tok = $('#admintoken').value.trim(); if(!tok) return toast('ADMIN_TOKEN を入力');
+  const res = await fetch(API('/admin/email-candidates/shipped'), { headers:{'x-admin-token':tok} });
+  if(!res.ok) return toast('取得失敗');
+  const rows = await res.json();
+  const wrap = $('#shippedList');
+  if(!rows.length){ wrap.innerHTML = '<div class="muted">候補がありません（支払い済＆追跡番号あり＆未送のみ表示）。</div>'; $('#sendShipped').disabled=true; return; }
+
+  let html = `<table><thead><tr>
+    <th style="width:36px"></th>
+    <th>顧客</th><th>配送方法</th><th>追跡番号（編集可）</th><th>order_token</th>
+  </tr></thead><tbody>`;
+  for(const r of rows){
+    const name = r.customer_name || r.email || '';
+    html += `<tr>
+      <td><input class="pick" type="checkbox" data-token="${r.order_token}" checked></td>
+      <td>${name}<br><small>${r.email||''}</small></td>
+      <td>${r.shipping_option_text||''}</td>
+      <td>
+        <div class="row" style="gap:6px;align-items:center;">
+          <input style="flex:1" value="${r.tracking_no||''}" data-track-for="${r.order_token}">
+          <button class="btn outline" data-save-track="${r.order_token}">保存</button>
+        </div>
+        <small class="muted">保存すると即DBに反映→再読込で候補が更新されます。</small>
+      </td>
+      <td class="token">${r.order_token}</td>
+    </tr>`;
+  }
+  html += `</tbody></table>`;
+  wrap.innerHTML = html;
+  // 追跡番号保存
+  wrap.querySelectorAll('button[data-save-track]').forEach(btn=>{
+    btn.onclick = async ()=>{
+      const tok = $('#admintoken').value.trim(); if(!tok) return toast('ADMIN_TOKEN を入力');
+      const token = btn.dataset.saveTrack;
+      const v = document.querySelector(`[data-track-for="${token}"]`).value.trim();
+      const res2 = await fetch(API('/admin/set-tracking'), {
+        method:'POST', headers:{'content-type':'application/json','x-admin-token':tok},
+        body: JSON.stringify({ order_token: token, tracking_no: v })
+      });
+      if(!res2.ok) return toast('保存失敗');
+      toast('保存しました');
+      $('#loadShipped').click();
+    };
+  });
+  $('#sendShipped').disabled = false;
+};
+
+$('#clearShipped').onclick = ()=> { $$('#shippedList .pick').forEach(c=> c.checked=false); };
+
+$('#sendShipped').onclick = async ()=>{
+  const tok = $('#admintoken').value.trim(); if(!tok) return toast('ADMIN_TOKEN を入力');
+  const tokens = selectedTokens($('#shippedList'));
+  if(!tokens.length) return toast('送る注文を選んでください');
+  if(!confirm(`${tokens.length}件に発送完了メールを送信します。よろしいですか？`)) return;
+  const res = await fetch(API('/admin/send/shipped'), {
+    method:'POST',
+    headers:{'content-type':'application/json','x-admin-token':tok},
+    body: JSON.stringify({ order_tokens: tokens })
+  });
+  const data = await res.json().catch(()=>({}));
+  if(!res.ok) return toast('送信失敗: ' + JSON.stringify(data));
+  toast(`送信完了: OK=${data.ok} / NG=${data.ng_count}`);
+  $('#loadShipped').click();
+};
+</script>
