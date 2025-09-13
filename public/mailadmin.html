@@ -125,7 +125,6 @@ $('#sendShipDate').onclick = async ()=>{
     order_token: tk,
     ship_date_text: document.querySelector(`[data-shipdate-for="${tk}"]`)?.value?.trim() || ''
   }));
-  if(items.some(x=>!x.ship_date_text)) return toast('予定日テキストが空の行があります');
 
   if(!confirm(`${items.length}件に発送予定日メールを送信します。よろしいですか？`)) return;
 
