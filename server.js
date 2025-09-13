@@ -826,15 +826,10 @@ app.post("/api/admin/send/shipped", adminAuth, async (req, res) => {
           }
         }
 
-        const tracking_block = trackingNo
-          ? `■ 配送方法
-${shipMethod}
-■ 追跡番号
-${trackingNo}
-■ 追跡URL
-${trackingUrl}` : ``}`.trim()
-          : `
-━━━━━━━━━━━━━━━━━━
+        // ここは () で全体をくくって最後に .trim() を付ける
+const tracking_block = (
+  trackingNo
+    ? `━━━━━━━━━━━━━━━━━━
 ■ 発送日
 　〇月〇日
 
@@ -843,7 +838,24 @@ ${shipMethod}
 
 ■ お届け予定
 通常、発送日から 1〜2 日程度でのお届けとなります。
-━━━━━━━━━━━━━━━━━━`.trim();
+
+■ 追跡番号
+${trackingNo}
+
+■ 追跡URL
+${trackingUrl}
+━━━━━━━━━━━━━━━━━━`
+    : `━━━━━━━━━━━━━━━━━━
+■ 発送日
+　〇月〇日
+
+■ 配送方法
+${shipMethod}
+
+■ お届け予定
+通常、発送日から 1〜2 日程度でのお届けとなります。
+━━━━━━━━━━━━━━━━━━`
+).trim();
 
         const to = { email: H.email, name: H.customer_name || H.email };
         const params = {
