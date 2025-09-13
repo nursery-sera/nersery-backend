@@ -113,6 +113,10 @@ function toHtmlLines(s='') {
   return String(s).replace(/\r\n|\r|\n/g, '<br>');
 }
 
+// ===== 改行を <br> に変換する専用ヘルパー =====
+function nl2br(str = '') {
+  return String(str).replace(/\r\n|\r|\n/g, '<br>');
+}
 
 // ===== 注文明細ブロック（メール本文に差し込む） =====
 function buildOrderDetailBlockFromRows(rows) {
@@ -518,10 +522,11 @@ ${note && note.trim() ? `・備考：${note}` : ''}
 本メールは自動送信です。ご不明点や変更がある場合は、このメールにご返信いただくか、上記連絡先までご連絡ください。`
     ).trim();
 
-    // HTML版（<pre>で整形保持）
-    const htmlBody =
-      `<pre style="white-space:pre-wrap; font:14px/1.8 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', Meiryo, Arial, sans-serif;">${esc(textBody)}</pre>`;
-
+  // HTML版（改行を <br> に変換）
+const htmlBody = `
+<div style="font:14px/1.8 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans JP','Hiragino Kaku Gothic ProN',Meiryo,Arial,sans-serif;">
+  ${nl2br(textBody)}
+</div>`;
     // 件名
     const subject = `ご注文受付のお知らせ`;
 
