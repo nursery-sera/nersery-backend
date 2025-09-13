@@ -108,8 +108,9 @@ function escapeHtml(s='') {
     .replace(/</g,'&lt;')
     .replace(/>/g,'&gt;');
 }
+// HTMLタグはそのまま通し、改行だけ <br> に変換する
 function toHtmlLines(s='') {
-  return escapeHtml(s).replace(/\r\n|\r|\n/g, '<br>');
+  return String(s).replace(/\r\n|\r|\n/g, '<br>');
 }
 
 
