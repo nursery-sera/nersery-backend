@@ -646,10 +646,10 @@ app.put("/api/orders/:token/paid", async (req, res) => {
         const H = headQ.rows[0];
         const to = { email: H.email, name: H.customer_name || H.email };
        const params = {
+  const params = {
   customer_name: to.name || "お客様",
   support_email: process.env.SUPPORT_EMAIL || process.env.MAIL_FROM,
-  order_detail_block: buildOrderDetailBlockFromRows(rowsQ.rows),
-  order_detail_block_html: toHtmlLines(buildOrderDetailBlockFromRows(rowsQ.rows))
+  order_detail_block_text: buildOrderDetailBlockFromRows(rowsQ.rows) // ← テキストのみ
 };
         const mid = await sendBrevoTemplate(process.env.BREVO_TEMPLATE_PAID, to, params);
         await finishEmailOk(pool, eventId, mid);
@@ -775,10 +775,8 @@ app.post("/api/admin/send/ship-date", adminAuth, async (req, res) => {
         const params = {
   customer_name: to.name || "お客様",
   support_email: process.env.SUPPORT_EMAIL || process.env.MAIL_FROM,
-  order_detail_block: buildOrderDetailBlockFromRows(rowsQ.rows),
-  order_detail_block_html: toHtmlLines(buildOrderDetailBlockFromRows(rowsQ.rows)),
-  ship_date_text: shipDateText,
-  ship_date_text_html: toHtmlLines(shipDateText)
+  order_detail_block_text: buildOrderDetailBlockFromRows(rowsQ.rows),
+  ship_date_text: shipDateText
 };
         const mid = await sendBrevoTemplate(process.env.BREVO_TEMPLATE_SHIPDATE, to, params);
         await finishEmailOk(pool, eventId, mid);
@@ -838,10 +836,8 @@ ${shipMethod}
         const params = {
   customer_name: to.name || "お客様",
   support_email: process.env.SUPPORT_EMAIL || process.env.MAIL_FROM,
-  order_detail_block: buildOrderDetailBlockFromRows(rowsQ.rows),
-  order_detail_block_html: toHtmlLines(buildOrderDetailBlockFromRows(rowsQ.rows)),
-  tracking_block,
-  tracking_block_html: toHtmlLines(tracking_block)
+  order_detail_block_text: buildOrderDetailBlockFromRows(rowsQ.rows),
+  tracking_block_text: tracking_block
 };
 
         const mid = await sendBrevoTemplate(process.env.BREVO_TEMPLATE_SHIPPED, to, params);
