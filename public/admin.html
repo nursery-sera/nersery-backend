@@ -1,75 +1,980 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <title>nursery sera — 注文管理</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin - nursery sera</title>
   <style>
-    body{font-family:sans-serif;margin:40px;}
-    table{border-collapse:collapse;width:100%;}
-    th,td{border:1px solid #ccc;padding:6px 10px;text-align:left;font-size:14px;}
-    th{background:#eee;}
-    button{margin:10px 0;padding:6px 14px;font-size:14px;cursor:pointer;}
+    :root{
+      --pink:#f8c6dc;
+      --gray:#666;
+      --shadow:0 10px 24px rgba(0,0,0,.12);
+    }
+    html,body{margin:0;padding:0;font-family:Arial, sans-serif;background:#fff;color:#333}
+    .wrap{max-width:960px;margin:0 auto;padding:24px 16px}
+    h1{font-size:28px;margin:0 0 12px}
+    p.help{margin:0 0 18px;color:#666}
+
+    /* FAB */
+    .fab {
+      all: unset;
+      position: fixed; right: 20px; bottom: 20px; z-index: 10;
+      display: flex; align-items: center; justify-content: center;
+      width: 64px; height: 64px; border-radius: 50%;
+      background-color: #E60012; color: #fff;
+      font-size: 36px; font-weight: bold;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+      cursor: pointer; -webkit-tap-highlight-color: transparent;
+    }
+
+    /* パネル */
+    .panel{
+      position:fixed;left:0;right:0;bottom:0;transform:translateY(105%);
+      background:#fff;border-radius:24px 24px 0 0;box-shadow:var(--shadow);
+      padding:18px 16px 24px;transition:transform .3s ease;z-index:20;
+      max-width:960px;margin:0 auto;max-height:90vh;overflow:auto;
+    }
+    .panel.show{ transform:translateY(0); }
+    .panel h2{margin:4px 0 12px;font-size:22px}
+    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:10px 0}
+    .row label{display:block;font-size:14px;color:#555;margin-bottom:6px}
+    .col{flex:1 1 260px;min-width:240px}
+    input[type="text"],input[type="number"]{
+      width:100%;height:44px;border:1px solid #ddd;border-radius:10px;padding:0 12px;font-size:16px;
+    }
+    input[type="file"]{width:100%;}
+
+    .actions{display:flex;gap:12px;justify-content:flex-end;margin-top:12px}
+    .btn{
+      min-width:130px;height:44px;border-radius:10px;border:0;cursor:pointer;
+      padding:0 16px;font-size:16px;
+    }
+    .btn.primary{background:var(--pink)}
+    .btn.ghost{background:#fff;border:1px solid #ddd}
+    .btn.danger{background:#c2185b;color:#fff}
+
+    .card{border:1px solid #eee;border-radius:14px;padding:14px;margin:14px 0;}
+    .muted{color:#777;font-size:14px}
+    .ok{color:#0b8f00}
+    .err{color:#c2185b}
+
+    progress{width:100%;height:10px;margin-top:6px}
+    .thumbs{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+    .thumbs img{width:90px;height:90px;object-fit:cover;border-radius:8px;border:1px solid #eee}
+
+    .topbar{position:sticky;top:0;background:#fff;padding:12px 16px;border-bottom:1px solid #eee;z-index:5}
+    .topbar a{color:#333;text-decoration:none}
+    .foot{padding:24px 16px 60px;color:#777;text-align:center}
+
+    /* 一覧 */
+    #list{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+    .item{border:1px solid #eee;border-radius:12px;overflow:hidden;display:flex;flex-direction:column}
+    .item .imgs{display:flex;gap:6px;padding:10px;flex-wrap:wrap;background:#fafafa}
+    .item .imgs img{width:70px;height:70px;object-fit:cover;border-radius:6px;border:1px solid #eee}
+    .item .body{padding:12px}
+    .item .title{font-weight:bold}
+    .item .sub{color:#777;font-size:14px;margin-top:3px}
+    .item .ops{display:flex;gap:8px;margin-top:12px}
+
+    /* ▼複数商品フォーム（ミニマム） */
+    .prod{border:1px solid #eee;border-radius:12px;padding:12px;margin:10px 0;background:#fff;}
+    .prod .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+    .prod .idx{font-weight:bold}
+    .prod .mini{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    .prod .mini .thumbs{margin:0}
+
+    /* 操作ボタン（横並び・同サイズ） */
+    .actions{display:flex;justify-content:flex-end;align-items:center;gap:8px}
+    .actions .btn{min-width:100px;height:40px;font-size:14px;padding:0}
+    #bulkBtn,#cancelBtn,#saveBtn{flex:0 0 auto}
+
+    /* ▼ 追加：iPhoneではこの行だけ折り返し可＆自動計算ボタンを少し小さめに */
+    @media (max-width: 480px){
+      #panel .actions{flex-wrap:wrap;}
+      #autoCalcBtn{min-width:88px;height:36px;font-size:12px;}
+    }
+
+    /* ★追加：在庫トグルの見た目（既存デザインは流用：.btn.ghost） */
+    .seg { display:flex; gap:8px; }
+    .seg .btn { min-width:100px; height:40px; font-size:14px; padding:0; }
+    .seg .btn.active { color:#fff; }
+    .seg .btn[data-val="available"].active { background:#2e7d32; }
+    .seg .btn[data-val="soldout"].active  { background:#b00020; }
+
+/* ▼ Category nav (カテゴリナビ) */
+.catnav{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0 14px}
+.catbtn{
+  all:unset;cursor:pointer;padding:6px 12px;border:1px solid #ddd;border-radius:999px;
+  font-size:14px;background:#fff;-webkit-tap-highlight-color:transparent;
+}
+.catbtn.active{background:var(--pink);color:#333;border-color:transparent}
+
+/* ▼ Category heading (グループ見出し) */
+.catgroup{margin:18px 0 8px;font-weight:bold;font-size:16px;color:#333}
+
   </style>
 </head>
 <body>
-  <h1>注文データ一覧</h1>
-  <button id="csvBtn">CSVダウンロード</button>
-  <table id="ordersTable">
-    <thead>
-      <tr>
-        <th>ID</th><th>名前</th><th>住所</th><th>電話</th><th>希望日</th><th>登録日</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+  <div class="topbar"><div class="wrap"><a href="/">← 商品確認</a></div></div>
 
+  <div class="wrap">
+    <h1>Admin（商品追加 / 削除）</h1>
+    <p class="help">
+      右下の「＋」ボタン → 入力して「保存」で追加<br>
+      下の一覧から削除
+    </p>
+
+    <div id="lastResult" class="card muted">まだ作成していません。</div>
+
+    <div class="card">
+      <div><b>現在の設定</b></div>
+      <div class="muted" id="cfgView"></div>
+    </div>
+
+    <h2 style="margin-top:24px">現在の商品一覧</h2>
+<!-- ▼ Category filter (All / Alocasia / Anthurium / Monstera / Philodendron) -->
+<div id="catNav" class="catnav" aria-label="Category Filter"></div>
+<div id="list"></div>
+<!-- ▼ 商品名のみの一覧（ボタンで開閉） -->
+<div id="namesBox" class="card" style="display:none">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+    <b>商品名（カンマ区切り）</b>
+    <button id="namesClose" class="btn ghost" style="min-width:auto;height:32px;padding:0 10px">閉じる</button>
+  </div>
+  <textarea id="namesArea" rows="3" readonly
+    style="width:100%;border:1px solid #ddd;border-radius:8px;margin-top:8px;padding:8px"></textarea>
+</div>
+  </div>
+
+  <!-- 入力パネル（モード統合：最初から複数フォームのみ） -->
+  <div id="panel" class="panel" aria-hidden="true">
+    <h2>商品を追加</h2>
+<!-- ▼ テキスト一括取込（カテゴリ名 + 品種 + 価格 の連結文字列を解析） -->
+<div class="card" style="margin-top:8px">
+  <div class="muted" style="margin-bottom:6px">
+    例）PhilodendronCamelMarble18MonsteraMint13<br>
+AlocasiaJacqueline38AnthuriumRedCrystallinum25 のように記入して商品自動追加(空白や改行あってもいける)
+  </div>
+  <textarea id="bulkText" rows="3" style="width:100%;border:1px solid #ddd;border-radius:10px;padding:8px;font-size:16px"></textarea>
+  <div class="actions" style="justify-content:flex-start;margin-top:8px">
+    <button id="parseBtn" class="btn ghost">テキスト取込</button>
+  </div>
+</div>
+    <!-- ▼複数商品フォーム（常に表示） -->
+  <div id="multiWrap">
+  <div id="prods"></div>
+  <div class="actions" style="justify-content:flex-start">
+    <button id="addProdBtn" class="btn ghost">＋ 商品フォームを追加</button>
+    <button id="saveBtn" class="btn primary">保存</button>
+  </div>
+</div>
+
+    <!-- ▼アクション：自動計算 / 一括入力 / キャンセル / 保存 -->
+    <div class="actions">
+      <!-- ▼ 追加：自動計算ボタン（ここだけ追加） -->
+      <button id="autoCalcBtn" class="btn ghost">自動計算</button>
+
+      <button id="bulkBtn" class="btn ghost">一括入力</button>
+      <select id="bulkSelect" style="display:none;height:44px;border:1px solid #ddd;border-radius:10px;padding:0 8px">
+        <option value="">選択してください</option>
+        <option>Alocasia</option>
+        <option>Monstera</option>
+        <option>Philodendron</option>
+        <option>Anthurium</option>
+      </select>
+      <button id="cancelBtn" class="btn ghost">キャンセル</button>
+    
+    </div>
+  </div>
+
+  <!-- 右下の＋ -->
+  <button id="fab" class="fab" aria-label="add">＋</button>
+
+  <div class="foot">※コンニチワ。バブルスデス！</div>
+
+  <!-- Firebase SDK（モジュール） -->
   <script type="module">
-    // ===== パスワードガード（Firebase管理ページと同方式） =====
+    // ====== 超かんたんパスワードガード ======
     (function(){
-      const pass = sessionStorage.getItem('admin-pass') || prompt('パスワードを入力してください');
-      if (pass !== 'kohakurira') {
-        alert('不正アクセス検知：トップページに戻ります');
+      const pass = sessionStorage.getItem('admin-pass') || prompt('あなたの自己紹介をしてください');
+      if (pass !== 'こはくりら') {
+        alert('不審者追放システム発動');
         location.href = '/';
       } else {
         sessionStorage.setItem('admin-pass', pass);
       }
     })();
 
-    // ===== 注文データを読み込む関数 =====
-    async function loadOrders(){
-      try {
-        const res = await fetch("/api/orders");
-        if (!res.ok) {
-          throw new Error("データ取得に失敗しました");
-        }
-        const data = await res.json();
-        const tbody = document.querySelector("#ordersTable tbody");
-        tbody.innerHTML = "";
-        data.forEach(row=>{
-          const tr = document.createElement("tr");
-          tr.innerHTML = `
-            <td>${row.id}</td>
-            <td>${row.last_name} ${row.first_name}</td>
-            <td>${row.prefecture}${row.city}${row.address}${row.building}</td>
-            <td>${row.phone}</td>
-            <td>${row.delivery_date || "-"}</td>
-            <td>${new Date(row.created_at).toLocaleString()}</td>
-          `;
-          tbody.appendChild(tr);
+    // ====== Firebase 初期化 ======
+
+    // 編集モード用の状態
+    let editTargetId = null;                 // いま編集している商品の Firestore ID
+    let editExistingImages = [];             // 既存画像のURL（画像を選ばなければこれを維持）
+
+    // パネルの見出しを切り替え
+    function setPanelTitle(){
+      const h2 = document.querySelector('#panel h2');
+      h2.textContent = editTargetId ? '商品を編集' : '商品を追加';
+    }
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import {
+      getFirestore, doc, setDoc, updateDoc, serverTimestamp,
+      collection, getDocs, query, orderBy, deleteDoc
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import {
+      getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject, listAll
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+    const firebaseConfig = {
+      apiKey: "AIzaSyCVOfVGTlfTGRfpNggT55l3raCqjo7OcBo",
+      authDomain: "nursery-9bd14.firebaseapp.com",
+      projectId: "nursery-9bd14",
+      storageBucket: "nursery-9bd14.firebasestorage.app",
+      messagingSenderId: "123851517861",
+      appId: "1:123851517861:web:42afa474c5b6d62669024c",
+      measurementId: "G-J2S4HRGG45"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db  = getFirestore(app);
+    const st  = getStorage(app);
+
+    // 画面に設定を軽く表示
+    document.getElementById('cfgView').textContent =
+      `projectId=${firebaseConfig.projectId}, storageBucket=${firebaseConfig.storageBucket}`;
+
+    // ====== UI 参照 ======
+    const fab       = document.getElementById('fab');
+    const panel     = document.getElementById('panel');
+    const prodsEl   = document.getElementById('prods');
+    const addProdBtn= document.getElementById('addProdBtn');
+    const bulkBtn   = document.getElementById('bulkBtn');
+    const bulkSelect= document.getElementById('bulkSelect');
+    const saveBtn   = document.getElementById('saveBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const lastRes   = document.getElementById('lastResult');
+    const listEl    = document.getElementById('list');
+    const autoCalcBtn = document.getElementById('autoCalcBtn');
+const catNavEl  = document.getElementById('catNav');
+const namesBox   = document.getElementById('namesBox');
+const namesArea  = document.getElementById('namesArea');
+const namesClose = document.getElementById('namesClose');
+namesClose?.addEventListener('click', ()=>{ if (namesBox) namesBox.style.display='none'; });
+let docsCache = [];           // 全商品のキャッシュ
+let currentFilter = 'ALL';    // 'ALL' | 'Alocasia' | 'Anthurium' | 'Monstera' | 'Philodendron'
+
+    // ====== パネル開閉 ======
+    const openPanel  = ()=>{
+      setPanelTitle();
+      panel.classList.add('show');
+      panel.setAttribute('aria-hidden','false');
+    };
+    // いまの closePanel をこれに置き換え
+    const closePanel = ()=>{
+      panel.classList.remove('show');
+      panel.setAttribute('aria-hidden','true');
+      // ★ここでは editTargetId をリセットしない！
+      setPanelTitle();
+    };
+    fab.addEventListener('click', openPanel);
+    cancelBtn.addEventListener('click', (e)=>{
+      e.preventDefault();
+      // ★ キャンセル時に編集状態を捨てる
+      editTargetId = null;
+      editExistingImages = [];
+      prodsEl.innerHTML = '';
+      addProdBlock();
+      setPanelTitle();
+      closePanel();
+    });
+    // ▼一括入力：押すとプル表示、選ぶと全カテゴリへ反映
+    bulkBtn.addEventListener('click', (e)=>{
+      e.preventDefault();
+      bulkSelect.style.display = bulkSelect.style.display === 'none' ? 'inline-block' : 'none';
+      if (bulkSelect.style.display !== 'none') bulkSelect.focus();
+    });
+    bulkSelect.addEventListener('change', ()=>{
+      const v = bulkSelect.value.trim();
+      if (!v) return;
+      const cats = prodsEl.querySelectorAll('.m_category');
+      cats.forEach(input => { input.value = v; });
+      bulkSelect.style.display = 'none';
+    });
+
+    // ▼商品フォーム追加（常に最下部へ）
+    addProdBtn?.addEventListener('click', (e)=>{ e.preventDefault(); addProdBlock(); });
+
+    function addProdBlock(){
+      const idx = prodsEl.children.length + 1;
+      const el = document.createElement('div');
+      el.className = 'prod';
+      el.innerHTML = `
+        <div class="header">
+          <div class="idx">商品フォーム #${idx}</div>
+          <button type="button" class="btn danger removeBtn">削除</button>
+        </div>
+
+        <div class="mini">
+          <div style="flex:1 1 260px;min-width:240px">
+            <input class="m_images" type="file" accept="image/*" multiple />
+            <div class="muted">0〜2枚</div>
+            <div class="thumbs m_thumbs"></div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col">
+            <label>カテゴリネーム</label>
+            <input class="m_category" type="text" placeholder="例 Alocasia" />
+          </div>
+          <div class="col">
+            <label>バリエティーネーム</label>
+            <input class="m_variety" type="text" placeholder="例 Silver Dragon Variegata" />
+          </div>
+          <div class="col">
+            <label>金額</label>
+            <input class="m_price" type="number" inputmode="numeric" placeholder="例 3500" />
+          </div>
+        </div>
+
+        <!-- ★追加：在庫切替（デフォルト available） -->
+        <div class="col" style="flex-basis:100%">
+          <label>在庫状態</label>
+          <input class="m_status" type="hidden" value="available" />
+          <div class="seg">
+            <button type="button" class="btn ghost" data-val="available">在庫あり</button>
+            <button type="button" class="btn ghost" data-val="soldout">Sold Out</button>
+          </div>
+        </div>
+      `;
+      prodsEl.appendChild(el);
+
+      const rm = el.querySelector('.removeBtn');
+      rm.addEventListener('click', ()=>{ el.remove(); renumber(); });
+
+      const imgInput = el.querySelector('.m_images');
+      const tbox     = el.querySelector('.m_thumbs');
+      imgInput.addEventListener('change', ()=>{
+        tbox.innerHTML = '';
+        const files = [...(imgInput.files || [])].slice(0,2);
+        files.forEach(f=>{
+          const url = URL.createObjectURL(f);
+          const img = document.createElement('img');
+          img.src = url;
+          tbox.appendChild(img);
         });
-      } catch (err) {
-        console.error("読み込みエラー:", err);
-        alert("データの読み込み中にエラーが発生しました。");
+      });
+
+      // ★追加：在庫トグル（このフォーム専用）
+      const stHidden = el.querySelector('.m_status');
+      const segBtns  = el.querySelectorAll('.seg .btn');
+      segBtns.forEach(b => {
+        b.classList.toggle('active', b.dataset.val === stHidden.value);
+      });
+      segBtns.forEach(b => {
+        b.addEventListener('click', () => {
+          stHidden.value = b.dataset.val || 'available';
+          segBtns.forEach(x => x.classList.remove('active'));
+          b.classList.add('active');
+        });
+      });
+
+      function renumber(){
+        [...prodsEl.children].forEach((c,i)=>{
+          const title = c.querySelector('.idx');
+          if (title) title.textContent = `商品フォーム #${i+1}`;
+        });
       }
     }
 
-    // ===== CSVボタン =====
-    document.getElementById("csvBtn").addEventListener("click", ()=>{
-      window.location = "/api/orders/csv";
-    });
+    // 起動時に1ブロック用意
+    addProdBlock();
 
-    // ===== ページ読み込み時に実行 =====
-    loadOrders();
+    function setStatus(msg){
+      lastRes.innerHTML = `<div class="muted">${msg}</div>`;
+    }
+    function lockUI(lock){
+      saveBtn.disabled = lock;
+      cancelBtn.disabled = lock;
+      fab.disabled = lock;
+    }
+
+    // ▼ 追加：自動計算（全フォームの「金額」を1.5倍）
+    autoCalcBtn?.addEventListener('click', (e)=>{
+      e.preventDefault();
+      const prices = prodsEl.querySelectorAll('.m_price');
+      let changed = 0;
+      prices.forEach(inp=>{
+        const v = Number((inp.value || '').trim());
+        if (Number.isFinite(v)){
+          const nv = Math.round(v * 150 * 1.5);  // ← 1.5倍（四捨五入）
+          inp.value = String(nv);
+          changed++;
+        }
+      });
+      setStatus(changed ? `金額を自動計算しました（${changed}件）` : '金額の入力がありませんでした');
+    });
+    function openEdit(id, data){
+      editTargetId = id;
+      editExistingImages = Array.isArray(data.images) ? data.images.slice(0,2) : [];
+      // 1フォームだけにして既存値を流し込む
+      prodsEl.innerHTML = '';
+      addProdBlock(); // 空フォームを1つ作る
+      const block = prodsEl.querySelector('.prod');
+
+      block.querySelector('.m_category').value = data.categoryName || '';
+      block.querySelector('.m_variety').value  = data.varietyName  || '';
+      block.querySelector('.m_price').value    = Number(data.price||0);
+
+      // 既存サムネを表示（ファイルは未選択のまま）
+      const tbox = block.querySelector('.m_thumbs');
+      tbox.innerHTML = '';
+      editExistingImages.forEach(u=>{
+        const im = document.createElement('img');
+        im.src = u; tbox.appendChild(im);
+      });
+
+      // ★追加：在庫状態をUIに反映
+      const stHidden = block.querySelector('.m_status');
+      const segBtns  = block.querySelectorAll('.seg .btn');
+      const cur = (data.status === 'soldout') ? 'soldout' : 'available';
+      if (stHidden) stHidden.value = cur;
+      segBtns.forEach(b => {
+        b.classList.toggle('active', b.dataset.val === cur);
+      });
+
+      // ヒントを表示（画像を選ばなければ現状維持）
+      const hint = document.createElement('div');
+      hint.className = 'muted';
+      hint.textContent = '※画像を選択しなければ既存画像をそのまま使います（最大2枚）。';
+      block.querySelector('.mini').appendChild(hint);
+
+      // パネルを開く
+      openPanel();
+    }
+    // ====== 保存（編集/追加 両対応の完成版） ======
+    async function saveProduct(){
+      lockUI(true);
+      try{
+        setStatus('保存の準備中…');
+
+        const blocks = [...prodsEl.querySelectorAll('.prod')];
+        if (!blocks.length){
+          alert('商品フォームを追加してください');
+          setStatus('商品フォームがありません');
+          lockUI(false);
+          return;
+        }
+
+        // ★ いま編集しているIDを退避（処理の途中でリセットされても安全にするため）
+        const targetId = editTargetId;
+
+        // 編集中は1フォームのみ扱う
+        const targets = targetId ? blocks.slice(0,1) : blocks;
+
+        const mustBeValid = (cat, var_, price)=>{
+          if (!cat){ alert('カテゴリーネームを入力してください'); return false; }
+          if (!var_){ alert('バラエティーネームを入力してください'); return false; }
+          if (!Number.isFinite(price) || price < 0){ alert('金額は0以上の数字で入力してください'); return false; }
+          return true;
+        };
+
+        // ====== 編集（1件更新） ======
+        if (targetId){
+          const b  = targets[0];
+          const cat= b.querySelector('.m_category')?.value.trim() || '';
+          const va = b.querySelector('.m_variety')?.value.trim()  || '';
+          const pr = Number((b.querySelector('.m_price')?.value || '').trim());
+          const fs = [...(b.querySelector('.m_images')?.files || [])].slice(0,2);
+          const stv= b.querySelector('.m_status')?.value || 'available'; // ★追加
+
+          if (!mustBeValid(cat, va, pr)) { setStatus('入力不備があります'); lockUI(false); return; }
+
+          // 入力パネルは閉じる（※ targetId は変数に退避済み）
+          closePanel();
+          setStatus('画像処理中…');
+
+          // 画像：選択されていれば置き換え、なければ既存を維持
+          let urls = editExistingImages.slice();
+          if (fs.length){
+            urls = [];
+            for (let i=0; i<fs.length; i++){
+              const f = fs[i];
+              const { blob, mime, name } = await compressImage(f, 1200, 0.78);
+              const path = `products/${targetId}/${Date.now()}_${i}_${sanitizeName(name)}`;
+              const storageRef = ref(st, path);
+              const task = uploadBytesResumable(storageRef, blob, { contentType: mime });
+              const url = await new Promise((resolve, reject)=>{
+                task.on('state_changed', s=>{
+                  const pct = Math.round((s.bytesTransferred / s.totalBytes) * 100);
+                  setStatus(`画像 ${i+1}/${fs.length} をアップロード中… ${pct}%`);
+                }, reject, async ()=>{
+                  const u = await getDownloadURL(task.snapshot.ref);
+                  resolve(u);
+                });
+              });
+              urls.push(url);
+            }
+          }
+
+          setStatus('Firestore を更新中…');
+          await updateDoc(doc(collection(db,'products'), targetId), {
+            categoryName: cat,
+            varietyName : va,
+            price       : pr,
+            images      : urls,
+            status      : stv,                 // ★追加
+            updatedAt   : serverTimestamp()
+          });
+
+          lastRes.innerHTML = `<div class="ok"><b>更新しました：</b> ${targetId}</div>`;
+          await loadList();
+
+          // ★ 成功したら編集状態をクリアしてフォームを初期化
+          editTargetId = null;
+          editExistingImages = [];
+          prodsEl.innerHTML = '';
+          addProdBlock();
+          setPanelTitle();
+
+          setStatus('更新が完了しました。');
+          return;
+        }
+
+        // ====== 新規追加（複数対応） ======
+        const queue = [];
+        for (const b of targets){
+          const cat= b.querySelector('.m_category')?.value.trim() || '';
+          const va = b.querySelector('.m_variety')?.value.trim()  || '';
+          const pr = Number((b.querySelector('.m_price')?.value || '').trim());
+          const fs = [...(b.querySelector('.m_images')?.files || [])].slice(0,2);
+          const stv= b.querySelector('.m_status')?.value || 'available'; // ★追加
+          if (!mustBeValid(cat, va, pr)) { setStatus('入力不備があります'); lockUI(false); return; }
+          queue.push({ categoryName:cat, varietyName:va, priceNum:pr, files:fs, status:stv }); // ★追加
+        }
+
+        closePanel();
+        setStatus(`${queue.length}件の保存を開始します…`);
+
+        const createdIds = [];
+        for (let qi=0; qi<queue.length; qi++){
+          const item = queue[qi];
+          setStatus(`(${qi+1}/${queue.length}) 画像アップロードの準備中…`);
+
+          const newRef = doc(collection(db, 'products'));
+          const newId  = newRef.id;
+
+          const urls = [];
+          for (let i=0;i<item.files.length;i++){
+            const f = item.files[i];
+            const { blob, mime, name } = await compressImage(f, 1200, 0.78);
+            const path = `products/${newId}/${Date.now()}_${i}_${sanitizeName(name)}`;
+            const storageRef = ref(st, path);
+            const task = uploadBytesResumable(storageRef, blob, { contentType: mime });
+            const url = await new Promise((resolve, reject)=>{
+              task.on('state_changed', s=>{
+                const pct = Math.round((s.bytesTransferred / s.totalBytes) * 100);
+                setStatus(`(${qi+1}/${queue.length}) 画像 ${i+1}/${item.files.length} をアップロード中… ${pct}%`);
+              }, reject, async ()=>{
+                const u = await getDownloadURL(task.snapshot.ref);
+                resolve(u);
+              });
+            });
+            urls.push(url);
+          }
+
+          setStatus(`(${qi+1}/${queue.length}) Firestore へ保存中…`);
+          await setDoc(newRef, {
+            categoryName: item.categoryName,
+            varietyName : item.varietyName,
+            price       : item.priceNum,
+            images      : urls,
+            status      : item.status || 'available',   // ★追加
+            createdAt   : serverTimestamp()
+          });
+          createdIds.push(newId);
+          setStatus(`(${qi+1}/${queue.length}) 保存完了。次を処理します…`);
+        }
+
+        lastRes.innerHTML = `
+          <div class="ok"><b>保存に成功しました（${createdIds.length}件）。</b></div>
+          <div class="muted" style="max-height:160px;overflow:auto">
+            ${createdIds.map(id=>`<div>ID: <code>${id}</code></div>`).join('')}
+          </div>
+          <div style="margin-top:8px"><a href="/" target="_blank">サイトで確認（index）</a></div>
+        `;
+        prodsEl.innerHTML = '';
+        addProdBlock();
+        await loadList();
+        setStatus('すべての保存が完了しました。');
+
+      }catch(err){
+        console.error(err);
+        alert('保存中にエラーが発生しました');
+        lastRes.innerHTML = `<div class="err"><b>エラー：</b> ${String((err && err.message) || err)}</div>`;
+        setStatus('エラーが発生しました。');
+      }finally{
+        lockUI(false);
+      }
+    }
+
+    // ===== 画像を圧縮&リサイズ（最長辺 1200, 品質 0.78） =====
+    async function compressImage(file, maxSize = 1200, quality = 0.78) {
+      const bitmap = await createImageBitmap(file).catch(async () => {
+        const url = URL.createObjectURL(file);
+        const img = await new Promise((res, rej) => {
+          const im = new Image();
+          im.onload = () => res(im);
+          im.onerror = rej;
+          im.src = url;
+        });
+        URL.revokeObjectURL(url);
+        return img;
+      });
+
+      const w = bitmap.width, h = bitmap.height;
+      let targetW = w, targetH = h;
+      if (Math.max(w, h) > maxSize) {
+        if (w >= h) { targetW = maxSize; targetH = Math.round(h * (maxSize / w)); }
+        else        { targetH = maxSize; targetW = Math.round(w * (maxSize / h)); }
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = targetW;
+      canvas.height = targetH;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(bitmap, 0, 0, targetW, targetH);
+
+      const blob = await new Promise((resolve) => {
+        canvas.toBlob((b) => resolve(b), 'image/jpeg', quality);
+      });
+
+      const safeName = (file.name || 'image').replace(/\.[^.]+$/, '') + '.jpg';
+      return { blob, mime: 'image/jpeg', name: safeName };
+    }
+
+    function sanitizeName(name){
+      return name.replace(/[^\w.\-]+/g,'_');
+    }
+
+    // クリック系
+    document.getElementById('saveBtn').addEventListener('click', (e)=>{ e.preventDefault(); saveProduct(); });
+
+    // ====== 一覧の取得＆表示（既存のまま） ======
+    async function loadList(){
+  listEl.innerHTML = '<div class="muted">読み込み中…</div>';
+  try{
+    let docs = [];
+    try{
+      const q = query(collection(db,'products'), orderBy('createdAt','desc'));
+      const snap = await getDocs(q);
+      docs = snap.docs;
+    }catch{
+      const snap = await getDocs(collection(db,'products'));
+      docs = snap.docs;
+    }
+
+    // ▼ 変更点：キャッシュして描画関数へ
+    docsCache = docs;
+    renderNav();   // ナビ（All / Alocasia / Anthurium / Monstera / Philodendron）
+    renderList();  // 現在のフィルターに応じて描画
+
+  }catch(err){
+    console.error(err);
+    listEl.innerHTML = `<div class="err">読み込みエラー：${String(err && err.message || err)}</div>`;
+  }
+}
+
+    async function deleteProduct(id){
+      try{
+        const folderRef = ref(st, `products/${id}`);
+        try{
+          const res = await listAll(folderRef);
+          for (const itemRef of res.items){ await deleteObject(itemRef); }
+          for (const dirRef of res.prefixes){
+            const sub = await listAll(dirRef);
+            for (const itemRef of sub.items){ await deleteObject(itemRef); }
+          }
+        }catch(storageErr){
+          console.warn('storage delete warn:', storageErr?.message || storageErr);
+        }
+        await deleteDoc(doc(collection(db,'products'), id));
+        lastRes.innerHTML = `<div class="ok"><b>削除しました：</b> ${id}</div>`;
+      }catch(err){
+        console.error(err);
+        alert('削除に失敗しました');
+        lastRes.innerHTML = `<div class="err"><b>削除エラー：</b> ${String(err && err.message || err)}</div>`;
+      }
+    }
+
+// Group by category（カテゴリでまとめる）
+function groupByCategory(items){
+  const map = new Map();
+  items.forEach(d=>{
+    const data = d.data();
+    const cat = (data.categoryName || 'Uncategorized');
+    if(!map.has(cat)) map.set(cat, []);
+    map.get(cat).push(d);
+  });
+  // 表示順（固定）
+  const order = ['Alocasia','Anthurium','Monstera','Philodendron'];
+  return Array.from(map.entries()).sort((a,b)=>{
+    const ia = order.indexOf(a[0]); const ib = order.indexOf(b[0]);
+    if(ia === -1 && ib === -1) return a[0].localeCompare(b[0]);
+    if(ia === -1) return 1; if(ib === -1) return -1;
+    return ia - ib;
+  });
+}
+
+// Render category nav（カテゴリナビ生成）
+function renderNav(){
+  const cats = ['ALL','Alocasia','Anthurium','Monstera','Philodendron'];
+  if(!catNavEl) return;
+  catNavEl.innerHTML = '';
+  cats.forEach(c=>{
+    const b = document.createElement('button');
+    b.className = 'catbtn' + (currentFilter===c ? ' active':'');
+    b.textContent = (c==='ALL' ? 'All' : c);
+    b.addEventListener('click', ()=>{
+      currentFilter = c;
+      renderNav();
+      renderList();
+      // カテゴリ切替時は“商品名だけ枠”を閉じる
+      if (namesBox) namesBox.style.display = 'none';
+    });
+    catNavEl.appendChild(b);
+  });
+
+  // ▼ 追加：商品名だけ表示ボタン
+  const nb = document.createElement('button');
+  nb.className = 'catbtn';
+  nb.textContent = 'Names';
+  nb.title = '商品名だけを1枠に表示';
+  nb.addEventListener('click', showNamesBox);
+  catNavEl.appendChild(nb);
+}
+
+// Render list（一覧描画：フィルターあり/なし）
+function renderList(){
+  if(!docsCache.length){
+    listEl.innerHTML = '<div class="muted">商品はまだありません。</div>';
+    return;
+  }
+  listEl.innerHTML = '';
+
+  // 単一カテゴリ フィルター
+  if(currentFilter !== 'ALL'){
+    const filtered = docsCache.filter(d => {
+      const data = d.data();
+      return (data.categoryName || 'Uncategorized') === currentFilter;
+    });
+    if(!filtered.length){
+      listEl.innerHTML = `<div class="muted">「${currentFilter}」には商品がありません。</div>`;
+      return;
+    }
+    filtered.forEach(d=>{
+      const data = d.data();
+      const id   = d.id;
+      const imgs = Array.isArray(data.images) ? data.images : [];
+      const el = document.createElement('div');
+      el.className = 'item';
+      el.innerHTML = `
+        <div class="imgs">
+          ${imgs.length ? imgs.map(u=>`<img src="${u}" alt="">`).join('') : '<span class="muted">（画像なし）</span>'}
+        </div>
+        <div class="body">
+          <div class="title">${escapeHtml(data.categoryName || '')}</div>
+          <div class="sub">${escapeHtml(data.varietyName || '')}</div>
+          <div class="sub">¥ ${Number(data.price||0).toLocaleString()}</div>
+          <div class="sub muted">ID: <code>${id}</code></div>
+          <div class="ops">
+            <button class="btn ghost"  data-edit="${id}">編集</button>
+            <button class="btn danger" data-del="${id}">削除</button>
+          </div>
+        </div>`;
+      listEl.appendChild(el);
+      el.querySelector('[data-edit]')?.addEventListener('click', ()=> openEdit(id, data));
+      el.querySelector('[data-del]')?.addEventListener('click', async ()=>{
+        if (!confirm('この商品を削除しますか？（画像も削除）')) return;
+        await deleteProduct(id);
+        await loadList();
+      });
+    });
+    return;
+  }
+
+  // ALL：カテゴリごとに見出し＋グリッドで表示
+  const groups = groupByCategory(docsCache);
+  groups.forEach(([cat, arr])=>{
+    const h = document.createElement('div');
+    h.className = 'catgroup';
+    h.textContent = cat;
+    listEl.appendChild(h);
+
+    const grid = document.createElement('div');
+    grid.style.display = 'grid';
+    grid.style.gridTemplateColumns = 'repeat(auto-fill,minmax(260px,1fr))';
+    grid.style.gap = '14px';
+    listEl.appendChild(grid);
+
+    arr.forEach(d=>{
+      const data = d.data();
+      const id   = d.id;
+      const imgs = Array.isArray(data.images) ? data.images : [];
+      const el = document.createElement('div');
+      el.className = 'item';
+      el.innerHTML = `
+        <div class="imgs">
+          ${imgs.length ? imgs.map(u=>`<img src="${u}" alt="">`).join('') : '<span class="muted">（画像なし）</span>'}
+        </div>
+        <div class="body">
+          <div class="title">${escapeHtml(data.categoryName || '')}</div>
+          <div class="sub">${escapeHtml(data.varietyName || '')}</div>
+          <div class="sub">¥ ${Number(data.price||0).toLocaleString()}</div>
+          <div class="sub muted">ID: <code>${id}</code></div>
+          <div class="ops">
+            <button class="btn ghost"  data-edit="${id}">編集</button>
+            <button class="btn danger" data-del="${id}">削除</button>
+          </div>
+        </div>`;
+      grid.appendChild(el);
+      el.querySelector('[data-edit]')?.addEventListener('click', ()=> openEdit(id, data));
+      el.querySelector('[data-del]')?.addEventListener('click', async ()=>{
+        if (!confirm('この商品を削除しますか？（画像も削除）')) return;
+        await deleteProduct(id);
+        await loadList();
+      });
+    });
+  });
+}
+
+function showNamesBox(){
+  // 要素存在チェック（無ければ何もしない）
+  if (!namesBox || !namesArea) return;
+
+  // すでに表示中なら閉じる（トグル動作）
+  if (namesBox.style.display !== 'none') {
+    namesBox.style.display = 'none';
+    return;
+  }
+
+  // データが無い場合も空で開く（コピー用途）
+  const all = Array.isArray(docsCache) ? docsCache : [];
+
+  // 現在のフィルターを反映
+  const src = (currentFilter==='ALL')
+    ? all
+    : all.filter(d => (d.data().categoryName || 'Uncategorized') === currentFilter);
+
+  // "Category Variety" を "、" で連結
+  const names = src.map(d=>{
+    const data = d.data?.() || d.data(); // どちらでも動く保険
+    const c = (data?.categoryName || '').trim();
+    const v = (data?.varietyName  || '').trim();
+    return `${c}${c&&v?' ':''}${v}`.trim();
+  }).filter(Boolean);
+
+  namesArea.value = names.join('、 ');
+
+  // 表示して見える位置までスクロール＆選択状態に
+  namesBox.style.display = 'block';
+  namesBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  namesArea.focus();
+  namesArea.select();
+}
+
+    function escapeHtml(s){
+      return String(s).replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+    }
+
+    // 初回ロード
+    loadList();
+    // ====== 文字列 → フォーム自動生成（カテゴリ/品種/金額の振り分け） ======
+    const KNOWN_CATEGORIES = ["Monstera", "Alocasia", "Philodendron", "Anthurium"];
+
+    // 品種の見た目を少し整える（"SummerGlory" → "Summer Glory"）
+    function prettifyVariety(s){
+      if (!s) return "";
+      // キャメルケースを分割
+      let t = s.replace(/([a-z])([A-Z])/g, '$1 $2');
+      // 連続大文字語も適度に分割
+      t = t.replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2');
+      return t.trim();
+    }
+
+    // テキスト全体を解析して [{category, variety, price}, ...] で返す
+    function parseProductsFromText(text){
+      const trimmed = String(text || '').replace(/\s+/g, ''); // 改行や空白は除去（連結想定）
+      if (!trimmed) return [];
+
+      // カテゴリを大文字小文字無視で OR 化
+      const catAlt = KNOWN_CATEGORIES.join('|');
+      // パターン: (カテゴリ)(数字以外1文字以上)(数字1～6桁)
+      // 例: Philodendron SummerGlory 25
+      const re = new RegExp(`(${catAlt})([^0-9]+?)(\\d{1,6})`, 'gi');
+
+      const out = [];
+      let m;
+      while ((m = re.exec(trimmed)) !== null){
+        const category = m[1];             // キャプチャ①: カテゴリ
+        const varietyRaw = m[2] || '';     // キャプチャ②: 品種生文字
+        const priceStr = m[3] || '';       // キャプチャ③: 数字
+        const priceNum = Number(priceStr);
+
+        if (!category || !Number.isFinite(priceNum)) continue;
+
+        // 品種から余計な記号は軽く削除
+        const variety = prettifyVariety(varietyRaw.replace(/[_\-]+/g,' ').trim());
+
+        out.push({ categoryName: category, varietyName: variety, priceNum: priceNum });
+      }
+      return out;
+    }
+
+    // フォームに1件反映
+    // 既存の appendProdToForm をこの実装に置き換え
+    function appendProdToForm({ categoryName, varietyName, priceNum }){
+      // 1) まず“空のフォーム”(#1が空ならそれ)を探す
+      const blocks = [...prodsEl.querySelectorAll('.prod')];
+      const isEmpty = (b)=>{
+        const cat = b.querySelector('.m_category')?.value.trim() || '';
+        const va  = b.querySelector('.m_variety')?.value.trim()  || '';
+        const pr  = b.querySelector('.m_price')?.value.trim()    || '';
+        const fs  = (b.querySelector('.m_images')?.files || []).length;
+        return !cat && !va && !pr && fs === 0;
+      };
+      let target = blocks.find(isEmpty);
+
+      // 2) 空きが無ければ新規フォームを1つ追加
+      if (!target){
+        addProdBlock();
+        target = prodsEl.lastElementChild;
+      }
+      if (!target) return;
+
+      // 3) 値を反映
+      const cat = target.querySelector('.m_category');
+      const va  = target.querySelector('.m_variety');
+      const pr  = target.querySelector('.m_price');
+
+      if (cat) cat.value = categoryName || '';
+      if (va)  va.value  = varietyName  || '';
+      if (pr)  pr.value  = Number.isFinite(priceNum) ? String(priceNum) : '';
+    }
+
+    // 取込ボタン
+    document.getElementById('parseBtn')?.addEventListener('click', (e)=>{
+      e.preventDefault();
+      const src = document.getElementById('bulkText')?.value || '';
+      const items = parseProductsFromText(src);
+
+      if (!items.length){
+        setStatus('解析できる商品が見つかりませんでした（カテゴリ名+品種+数字の連結で入力してください）');
+        return;
+      }
+
+      items.forEach(appendProdToForm);
+      setStatus(`${items.length}件をフォームに追加しました`);
+    });
   </script>
 </body>
 </html>
