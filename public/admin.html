@@ -211,6 +211,8 @@ AlocasiaJacqueline38AnthuriumRedCrystallinum25 のように記入して商品自
     let editTargetId = null;                 // いま編集している商品の Firestore ID
     let editExistingImages = [];             // 既存画像のURL（画像を選ばなければこれを維持）
 
+    const MAX_IMAGES = 10;
+
     // パネルの見出しを切り替え
     function setPanelTitle(){
       const h2 = document.querySelector('#panel h2');
@@ -316,7 +318,7 @@ let currentFilter = 'ALL';    // 'ALL' | 'Alocasia' | 'Anthurium' | 'Monstera' |
         <div class="mini">
           <div style="flex:1 1 260px;min-width:240px">
             <input class="m_images" type="file" accept="image/*" multiple />
-            <div class="muted">0〜2枚</div>
+            <div class="muted">0〜10枚</div>
             <div class="thumbs m_thumbs"></div>
           </div>
         </div>
@@ -355,7 +357,7 @@ let currentFilter = 'ALL';    // 'ALL' | 'Alocasia' | 'Anthurium' | 'Monstera' |
       const tbox     = el.querySelector('.m_thumbs');
       imgInput.addEventListener('change', ()=>{
         tbox.innerHTML = '';
-        const files = [...(imgInput.files || [])].slice(0,2);
+        const files = [...(imgInput.files || [])].slice(0,MAX_IMAGES);
         files.forEach(f=>{
           const url = URL.createObjectURL(f);
           const img = document.createElement('img');
@@ -415,7 +417,7 @@ let currentFilter = 'ALL';    // 'ALL' | 'Alocasia' | 'Anthurium' | 'Monstera' |
     });
     function openEdit(id, data){
       editTargetId = id;
-      editExistingImages = Array.isArray(data.images) ? data.images.slice(0,2) : [];
+      editExistingImages = Array.isArray(data.images) ? data.images.slice(0,MAX_IMAGES) : [];
       // 1フォームだけにして既存値を流し込む
       prodsEl.innerHTML = '';
       addProdBlock(); // 空フォームを1つ作る
@@ -445,7 +447,7 @@ let currentFilter = 'ALL';    // 'ALL' | 'Alocasia' | 'Anthurium' | 'Monstera' |
       // ヒントを表示（画像を選ばなければ現状維持）
       const hint = document.createElement('div');
       hint.className = 'muted';
-      hint.textContent = '※画像を選択しなければ既存画像をそのまま使います（最大2枚）。';
+      hint.textContent = '※画像を選択しなければ既存画像をそのまま使います（最大10枚）。';
       block.querySelector('.mini').appendChild(hint);
 
       // パネルを開く
@@ -484,7 +486,7 @@ let currentFilter = 'ALL';    // 'ALL' | 'Alocasia' | 'Anthurium' | 'Monstera' |
           const cat= b.querySelector('.m_category')?.value.trim() || '';
           const va = b.querySelector('.m_variety')?.value.trim()  || '';
           const pr = Number((b.querySelector('.m_price')?.value || '').trim());
-          const fs = [...(b.querySelector('.m_images')?.files || [])].slice(0,2);
+          const fs = [...(b.querySelector('.m_images')?.files || [])].slice(0,MAX_IMAGES);
           const stv= b.querySelector('.m_status')?.value || 'available'; // ★追加
 
           if (!mustBeValid(cat, va, pr)) { setStatus('入力不備があります'); lockUI(false); return; }
@@ -546,7 +548,7 @@ let currentFilter = 'ALL';    // 'ALL' | 'Alocasia' | 'Anthurium' | 'Monstera' |
           const cat= b.querySelector('.m_category')?.value.trim() || '';
           const va = b.querySelector('.m_variety')?.value.trim()  || '';
           const pr = Number((b.querySelector('.m_price')?.value || '').trim());
-          const fs = [...(b.querySelector('.m_images')?.files || [])].slice(0,2);
+          const fs = [...(b.querySelector('.m_images')?.files || [])].slice(0,MAX_IMAGES);
           const stv= b.querySelector('.m_status')?.value || 'available'; // ★追加
           if (!mustBeValid(cat, va, pr)) { setStatus('入力不備があります'); lockUI(false); return; }
           queue.push({ categoryName:cat, varietyName:va, priceNum:pr, files:fs, status:stv }); // ★追加
