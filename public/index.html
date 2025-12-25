@@ -1438,7 +1438,7 @@ if (dsp) dsp.textContent = '1';
 
   // ==== 1商品カード（既存の関数をそのまま呼ぶ）====
 function ProductCard({ d, id }) {
-  const imgs   = Array.isArray(d.images) ? d.images.slice(0, 2) : [];
+  const imgs   = Array.isArray(d.images) ? d.images.slice(0, 10) : [];
   const price  = Number(d.price || 0);
   const status = (d.status || 'available'); // 'available' | 'soldout'（在庫状態）
 
