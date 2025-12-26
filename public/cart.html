@@ -314,7 +314,7 @@
   .category-menu li,
   .footer-links a { color: inherit; }
 
-  /* オプション行：テキスト風セレクト＋矢印は文字 */
+  /* オプション行：テキスト風セレクト＋矢印は文字（※今回はselectを使わないがCSSは残してOK） */
   .option-inline{ display:flex; align-items:center; gap:0; }
   .option-select{
     display:inline-block;
@@ -345,42 +345,36 @@
   font-family: 'Noto Serif JP', serif;
   font-size: 44px;
   color: #333;
-  display: flex;            /* ← 追加：内側をフレックスにして */
+  display: flex;
   flex-direction: column;
   align-items: flex-start;
-  justify-content: flex-end;/* ← 追加：下端に文字を寄せる（下に揃う） */
+  justify-content: flex-end;
   width: 100%;
   position: relative;
   line-height: 1.1;
   min-width: 0;
   margin-top: 0;
 
-  /* ★ここがポイント：最大フォント(44px)×行間(1.1)×2行 ≒ 96.8px を確保 */
-  height: 98px;             /* ← 追加：固定の高さ（ズレ防止の“枠”） */
-  overflow: hidden;         /* ← 追加：はみ出しガード */
-padding-bottom: 10px;
+  height: 98px;
+  overflow: hidden;
+  padding-bottom: 10px;
 }
-
-/* 上に固定スペース（既存のまま） */
 .item-name::before{
   content:"";
   display:block;
   height:0px;
 }
-
-/* 2段固定の内側ラッパー：文字はここで縮むだけ（枠の高さは不変） */
 .name-shrink{
   display: flex;
   flex-direction: column;
   font-size: 44px;
   line-height: 1.1;
-  width: 100%;              /* ← 追加：横幅を枠にフィット */
+  width: 100%;
 }
 
-  /* カテゴリ名（1行固定） */
   .item-category{
     color:#555;
-    margin-bottom:px;   /* 元コードを維持（値は無効だが見た目は不変） */
+    margin-bottom:px;
     opacity:0.9;
     white-space: nowrap;
     overflow: visible;
@@ -388,11 +382,10 @@ padding-bottom: 10px;
     display: block;
   }
 
-  /* バリエティ名（1行固定） */
   .item-variety{
     text-align:right;
     direction:ltr;
-    margin-top:0px;   /* 最後の宣言を採用（-10px → 0px） */
+    margin-top:0px;
     opacity:0.8;
     white-space: nowrap;
     overflow: visible;
@@ -400,76 +393,66 @@ padding-bottom: 10px;
     display: block;
   }
 
-.sum-row.total span:first-child{  /* 左側の「注文合計金額」ラベルだけ */
-  transform: translateX(-20px);  /* ← 左へ10pxずらす */
+.sum-row.total span:first-child{
+  transform: translateX(-20px);
 }
-.sum-row.total span:last-child{   /* 右側の合計金額だけ */
-  transform: translateX(20px);   /* ← 右へ10pxずらす */
+.sum-row.total span:last-child{
+  transform: translateX(20px);
 }
 
-/* 未選択エラー時の軽い強調（きょうちょう） */
+/* 未選択エラー用（今回は使わないが残してOK） */
 .option-select.invalid { border-bottom: 1px solid #c00; }
 
-
 /* --- カルーセル用（横スライド＋ドット） --- */
-/* スライダー本体（ほんたい） */
 .thumb-slider{
   position: relative;
   width: 100%;
-  height: 100%;           /* 親の .cart-thumb が正方形なので、その中で100%にフィット */
+  height: 100%;
 }
-
-/* 横スクロールするトラック（なかみの横並びレーン） */
 .thumb-track{
   display: flex;
   width: 100%;
   height: 100%;
-  overflow-x: auto;                /* 指で左右（さゆう）にスクロール */
-  scroll-snap-type: x mandatory;   /* スナップで1枚ずつ止まる */
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
   gap: 0;
-  /* スクロールバー非表示（ひひょうじ） */
   scrollbar-width: none;
 }
 .thumb-track::-webkit-scrollbar{ display: none; }
 
-/* 1枚ぶんのスライド */
 .thumb-slide{
-  flex: 0 0 100%;                  /* 常に枠の幅ちょうど */
+  flex: 0 0 100%;
   height: 100%;
-  scroll-snap-align: center;       /* 真ん中で止まる */
+  scroll-snap-align: center;
   position: relative;
-  cursor: zoom-in;                 /* 既存の拡大モーダルに合わせる */
+  cursor: zoom-in;
 }
 .thumb-slide img{
   width: 100%; height: 100%;
   object-fit: cover; display: block;
 }
 
-/* 下部（かぶ）に並ぶドット */
 .thumb-dots{
   position: absolute;
   left: 0; right: 0; bottom: 8px;
   display: flex; justify-content: center; gap: 6px;
   pointer-events: auto;
 }
-/* --- ドットを正円に強制 --- */
 .thumb-dot {
   width: 8px !important;
   height: 8px !important;
-  border-radius: 50% !important;   /* 完全な円 */
+  border-radius: 50% !important;
   background: #ccc !important;
   opacity: .7 !important;
   border: none !important;
   box-shadow: none !important;
-
-  padding: 0 !important;          /* 余白を消す */
-  line-height: 0 !important;      /* テキスト高さを消す */
-  display: inline-block !important; /* flexによる縦伸び防止 */
+  padding: 0 !important;
+  line-height: 0 !important;
+  display: inline-block !important;
 }
-
 .thumb-dot.active {
-  background: #333 !important;     /* 選択中だけ濃い */
+  background: #333 !important;
   opacity: 1 !important;
 }
 </style>
@@ -487,7 +470,7 @@ padding-bottom: 10px;
 
   <div class="category-menu" id="categoryMenu">
     <h1 class="category-header">MENU</h1>
-<h2 class="category-subtitle">Category</h2>
+    <h2 class="category-subtitle">Category</h2>
     <ul>
       <li onclick="go('/?page=index')">All</li>
       <li onclick="go('/?page=index&liked=1')">like♡</li>
@@ -495,14 +478,15 @@ padding-bottom: 10px;
       <li onclick="go('/?page=index&cat=alocasia')">Alocasia</li>
       <li onclick="go('/?page=index&cat=anthurium')">Anthurium</li>
       <li onclick="go('/?page=index&cat=philodendron')">Philodendron</li>
-</ul>
-<h2 class="category-subtitle">Contact</h2>
-<ul class="contact-links">
-  <li><a href="https://www.instagram.com/nursery_sera?igsh=cWx2cTZ3cWNicGlz&utm_source=" target="_blank">Instagram</a></li>
-  <li><a href="https://lin.ee/mFSu5FS" target="_blank">LINE</a></li>
-  <li><a href="https://www.threads.net/@nursery_sera?igshid=NTc4MTIwNjQ2YQ==" target="_blank">Threads</a></li>
-  <li><a href="#" onclick="go('/policy.html')">お問い合わせ</a></li>
-</ul>
+    </ul>
+
+    <h2 class="category-subtitle">Contact</h2>
+    <ul class="contact-links">
+      <li><a href="https://www.instagram.com/nursery_sera?igsh=cWx2cTZ3cWNicGlz&utm_source=" target="_blank">Instagram</a></li>
+      <li><a href="https://lin.ee/mFSu5FS" target="_blank">LINE</a></li>
+      <li><a href="https://www.threads.net/@nursery_sera?igshid=NTc4MTIwNjQ2YQ==" target="_blank">Threads</a></li>
+      <li><a href="#" onclick="go('/policy.html')">お問い合わせ</a></li>
+    </ul>
   </div>
   <div class="overlay" id="overlay" onclick="closeMenu()"></div>
 
@@ -513,7 +497,6 @@ padding-bottom: 10px;
     <div class="cart-area">
       <div id="cartContainer"></div>
 
-      <!-- 小計〜合計（オプション: プルダウン） -->
       <div id="totalPrice" class="total"></div>
 
       <div class="cart-actions">
@@ -524,9 +507,8 @@ padding-bottom: 10px;
   </div>
 
   <footer>
-    
     <div class="footer-links">
- <a href="<?= url ?>?page=policy">お問い合わせ</a>
+      <a href="<?= url ?>?page=policy">お問い合わせ</a>
       <a href="#" onclick="go('/policy.html')">各種ポリシー</a>
       <a href="#" onclick="go('/policy.html')">利用規約</a>
       <a href="#" onclick="go('/policy.html')">特定商取引法に基づく表記</a>
@@ -538,421 +520,316 @@ padding-bottom: 10px;
   </div>
 
   <script>
-
 (function(){
   const MIN_PX = 14;  // 下限
-
-  function fitRow(row){                 // row は .item-name
+  function fitRow(row){
     if (!row) return;
     const target = row.querySelector('.name-shrink');
     if (!target) return;
-
-    // 内側だけリセットしてから縮める
     target.style.fontSize = '';
     let size  = parseFloat(getComputedStyle(target).fontSize) || 44;
     let guard = 80;
-
-    // "親の幅(row.clientWidth)" に収まるまで target を縮小
     while (target.scrollWidth > row.clientWidth && size > MIN_PX && guard-- > 0){
       size -= 1;
       target.style.fontSize = size + 'px';
     }
   }
-
   function fitCartNames(){
     document.querySelectorAll('.item-name').forEach(fitRow);
   }
-
   window.__fitCartNames = fitCartNames;
 })();
-
-
 
   const BASE = window.location.origin;
   function go(path){ window.top.location.href = new URL(path, BASE).toString(); }
 
-    function toggleMenu(event) {
-      const menu = document.getElementById("categoryMenu");
-      const overlay = document.getElementById("overlay");
-      const isVisible = menu.classList.contains("show");
-      if (!isVisible) {
-        document.body.style.overflow = "hidden";
+  function toggleMenu(event) {
+    const menu = document.getElementById("categoryMenu");
+    const overlay = document.getElementById("overlay");
+    const isVisible = menu.classList.contains("show");
+    if (!isVisible) document.body.style.overflow = "hidden";
+    else document.body.style.overflow = "";
+    menu.classList.toggle("show", !isVisible);
+    overlay.classList.toggle("show", !isVisible);
+  }
+
+  function closeMenu() {
+    document.getElementById("categoryMenu").classList.remove("show");
+    document.getElementById("overlay").classList.remove("show");
+    document.body.style.overflow = "";
+  }
+
+  function loadCart() {
+    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    const container = document.getElementById("cartContainer");
+    const totalEl = document.getElementById("totalPrice");
+    container.innerHTML = "";
+    let subtotal = 0;
+
+    if (cart.length === 0) {
+      container.innerHTML = "<p style='text-align:center'>カートは空です。</p>";
+      totalEl.innerHTML = "";
+      return;
+    }
+
+    cart.forEach((item, i) => {
+      const div = document.createElement("div");
+      div.className = "cart-item";
+
+      const imgSrc   = (item.image || "").trim();
+      const category = (item.category || "").trim();
+      const variety  = (item.variety  || item.name || "").trim();
+      const unit     = Number(item.price || 0);
+      const quantity = Number(item.quantity || 1);
+
+      subtotal += (isFinite(unit) ? unit : 0) * (isFinite(quantity) ? quantity : 1);
+
+      const images = Array.isArray(item.images) && item.images.length
+        ? item.images
+        : (imgSrc ? [imgSrc] : []);
+
+      let imgHTML = "";
+      if (images.length === 0) {
+        imgHTML = "";
+      } else if (images.length === 1) {
+        imgHTML = `
+          <div class="cart-thumb" onclick="openImageModal('${images[0]}')">
+            <img src="${images[0]}" alt="">
+          </div>`;
       } else {
-        document.body.style.overflow = "";
-      }
-      menu.classList.toggle("show", !isVisible);
-      overlay.classList.toggle("show", !isVisible);
-    }
-    function closeMenu() {
-      document.getElementById("categoryMenu").classList.remove("show");
-      document.getElementById("overlay").classList.remove("show");
-      document.body.style.overflow = "";
-    }
+        const slides = images.map(u => `
+          <div class="thumb-slide" onclick="openImageModal('${u}')">
+            <img src="${u}" alt="">
+          </div>`).join("");
 
-    function loadCart() {
-      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-      const container = document.getElementById("cartContainer");
-      const totalEl = document.getElementById("totalPrice");
-      container.innerHTML = "";
-      let subtotal = 0;
+        const dots = images.map((_,j) => `
+          <button class="thumb-dot ${j===0?'active':''}" type="button"
+                  onclick="thumbGo(this, ${j})" aria-label="${j+1}枚目"></button>`).join("");
 
-      if (cart.length === 0) {
-        container.innerHTML = "<p style='text-align:center'>カートは空です。</p>";
-        totalEl.innerHTML = "";
-        return;
+        imgHTML = `
+          <div class="cart-thumb">
+            <div class="thumb-slider">
+              <div class="thumb-track" onscroll="onThumbScroll(this)">
+                ${slides}
+              </div>
+              <div class="thumb-dots">
+                ${dots}
+              </div>
+            </div>
+          </div>`;
       }
 
-     cart.forEach((item, i) => {
-  const div = document.createElement("div");
-  div.className = "cart-item";
-
-  // ここで安全な値に丸める（NaN / undefined 対策。見た目は変えない）
-  const imgSrc   = (item.image || "").trim();
-  const category = (item.category || "").trim();
-  const variety  = (item.variety  || item.name || "").trim();
-  const unit     = Number(item.price || 0);
-  const quantity = Number(item.quantity || 1);
-
-  // 小計に加算（NaNを避ける）
-  subtotal += (isFinite(unit) ? unit : 0) * (isFinite(quantity) ? quantity : 1);
-
-   // 画像が複数ある場合はカルーセル（item.images が配列）。なければ単画像。
-  const images = Array.isArray(item.images) && item.images.length
-    ? item.images
-    : (imgSrc ? [imgSrc] : []);
-
-  let imgHTML = "";
-  if (images.length === 0) {
-    imgHTML = "";
-  } else if (images.length === 1) {
-    // 従来どおりの単画像（見た目とサイズは同じ）
-    imgHTML = `
-      <div class="cart-thumb" onclick="openImageModal('${images[0]}')">
-        <img src="${images[0]}" alt="">
-      </div>`;
-  } else {
-    // 複数画像 → カルーセル（横スライド＋ドット）
-    const slides = images.map(u => `
-      <div class="thumb-slide" onclick="openImageModal('${u}')">
-        <img src="${u}" alt="">
-      </div>`).join("");
-
-    const dots = images.map((_,j) => `
-      <button class="thumb-dot ${j===0?'active':''}" type="button"
-              onclick="thumbGo(this, ${j})" aria-label="${j+1}枚目"></button>`).join("");
-
-    imgHTML = `
-      <div class="cart-thumb">
-        <div class="thumb-slider">
-          <div class="thumb-track" onscroll="onThumbScroll(this)">
-            ${slides}
+      div.innerHTML = `
+        ${imgHTML}
+        <div class="item-info">
+          <p class="item-name">
+            <span class="name-shrink">
+              <span class="item-category">${category}</span>
+              <span class="item-variety">${variety}</span>
+            </span>
+          </p>
+          <p class="item-price">価格　：　¥${(unit * quantity).toLocaleString()}（税込）</p>
+          <div class="quantity-control">
+            <span class="quantity-label">数量　：</span>
+            <button onclick="changeQuantity(${i}, -1)">−</button>
+            <input type="number" min="1" value="${isFinite(quantity) ? quantity : 1}" onchange="updateQuantity(${i}, this.value)">
+            <button onclick="changeQuantity(${i}, 1)">＋</button>
           </div>
-          <div class="thumb-dots">
-            ${dots}
-          </div>
+          <button class="remove-btn" onclick="removeItem(${i})">✖削除</button>
         </div>
-      </div>`;
-  }
-
-  div.innerHTML = `
-    ${imgHTML}
-    <div class="item-info">
-      <p class="item-name">
-  <span class="name-shrink">
-    <span class="item-category">${category}</span>
-    <span class="item-variety">${variety}</span>
-  </span>
-</p>
-      <p class="item-price">価格　：　¥${(unit * quantity).toLocaleString()}（税込）</p>
-      <div class="quantity-control">
-        <span class="quantity-label">数量　：</span>
-        <button onclick="changeQuantity(${i}, -1)">−</button>
-        <input type="number" min="1" value="${isFinite(quantity) ? quantity : 1}" onchange="updateQuantity(${i}, this.value)">
-        <button onclick="changeQuantity(${i}, 1)">＋</button>
-      </div>
-      <button class="remove-btn" onclick="removeItem(${i})">✖削除</button>
-    </div>
-  `;
-  container.appendChild(div);
-});
-
-      // サマリー（プルダウン式オプション・送料行・案内文）
-      totalEl.innerHTML = `
-        <div class="sum-row"><span>小計</span><span id="sum-subtotal">¥0</span></div>
-
-    
-
-<div class="sum-row" style="align-items:center;">
-  <div class="option-inline" style="white-space:nowrap; position:relative;">
-    <label>配送方法</label>
-    <span id="opt-measure" class="opt-measure"></span>
-    <select id="opt-select" class="option-select">
-      <!-- 選択肢は JS が数量・小計に応じて動的生成（どうてき せいせい：自動で作る） -->
-      <option value="">を選択</option>
-    </select>
-    <span class="option-caret" aria-hidden="true">∨</span>
-  </div>
-  <!-- 右側に「送料¥〇〇」を表示 -->
-  <span id="sum-shipping" style="min-width:8em; text-align:right;">¥0</span>
-</div>
-
-<div class="sum-hr"></div>
-
-<div class="sum-row total">
-  <span>注文合計金額</span>
-  <span id="sum-total">¥0</span>
-</div>
-
-<div style="text-align:left; font-size:20px; line-height:1.7; font-weight:200; margin-top:14px;">
-
-
-<div>・通常時：速達550円／ヤマト運輸1100円</div>
-<div>・数量3株以上：速達無料／ヤマト運輸550円</div>
- <div>・北海道・沖縄・離島の方は第四種郵便のみになります。</div>
-<div>・発送は10月中旬頃を予定しております。</div>
-<div>・組織培養株のため、ご購入後に順化作業が必要となります。</div>
-<div>・輸入後に品質確認を行い、品質が悪い場合や植物に痛みが確認された場合には</div>
-<div style="padding-left:1em;">迅速に返金対応をさせていただきます。なお、輸入の特性上、株を選んでお届けすることはできず発送する株はランダムとなりますので、あらかじめご了承ください。</div>
-
-</div>
-
       `;
-
-      // 初期反映（しょきはんえい：最初の表示に数値を反映）
-      updateSummaryNumbers(subtotal);
-      sizeOption(); // 選択中のテキスト幅に合わせてセレクトを縮める
-
-      // 変更イベント（へんこういべんと：プルダウン変更時に再計算＋再フィット）
-      const sel = document.getElementById('opt-select');
-sel && sel.addEventListener('change', () => {
-  sel.classList.remove('invalid');             // ★未選択エラー見た目を解除
-  sizeOption();
-  updateSummaryNumbers(subtotal);
-  requestAnimationFrame(() => window.__fitCartNames?.());
-});
-
-      // 描画が終わったフレームで1回だけフィット（はみ出す前に調整）
-      requestAnimationFrame(() => window.__fitCartNames?.());
-
-      // 画面サイズ変更（resize：りさいず）でも再フィット ※初回だけバインド（ばいんど：1回だけ登録）
-      if (!window.__cartFitBound){
-        window.addEventListener('resize', () => window.__fitCartNames?.(), { passive:true });
-        window.__cartFitBound = true;
-      }
- initAllThumbs();
-
-    }
-
-    // 送料の基本計算（小計で変化）
-// ★配送金額テーブル（てーぶる：表）を返す
-function calcShippingOptions(subtotal, totalQty){
-  // 10株以上 or 3万円以上 → 全部0円
-  if (totalQty >= 8 || subtotal >= 25000){
-    return {
-      "第四種郵便速達": 0,
-      "ヤマト運輸": 0
-    };
-  }
-  
-  // 3株以上
-  if (totalQty >= 3){
-    return {
-      "第四種郵便速達": 0,
-      "ヤマト運輸": 550
-    };
-  }
-  // 通常
-  return {
-    "第四種郵便速達": 550,
-    "ヤマト運輸": 1100
-  };
-}
-    function yen(n){ return '¥' + Number(n||0).toLocaleString(); }
-
-function updateSummaryNumbers(subtotal){
-  const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-  const totalQty = cart.reduce((s,it)=> s + Number(it.quantity||0), 0);
-
-  // 条件ごとの送料一覧（いちらん）を取得
-  const options = calcShippingOptions(subtotal, totalQty);
-  const sel = document.getElementById('opt-select');
-
-  // プルダウンを毎回作り直し（在庫や数量の変化に追随）
-  if (sel){
-    const currentName = sel.value || "";
-    sel.innerHTML = '<option value="">を選択</option>';
-    Object.entries(options).forEach(([name,cost])=>{
-      const opt = document.createElement('option');
-      opt.value = name;                     // ← DB保存は「名前」
-      opt.dataset.cost = String(cost);      // ← 表示計算用に金額を持たせる
-      opt.textContent = `${name}　送料¥${cost.toLocaleString()}`;
-      sel.appendChild(opt);
-    });
-    // 直前の選択を可能なら維持
-    if (currentName){
-      const found = Array.from(sel.options).find(o=>o.value===currentName);
-      if (found) sel.value = currentName;
-    }
-  }
-
-  // 選択値の取得
-  const selected = sel ? sel.options[sel.selectedIndex] : null;
-  const shippingCost = selected ? Number(selected.dataset.cost||0) : 0;
-
-  // 数字を反映
-  const sumSubtotal = document.getElementById('sum-subtotal');
-  const sumShipping = document.getElementById('sum-shipping');
-  const sumTotal    = document.getElementById('sum-total');
-
-  if(sumSubtotal) sumSubtotal.textContent = yen(subtotal);
-  if(sumShipping) sumShipping.textContent = yen(shippingCost);
-  if(sumTotal)    sumTotal.textContent    = yen(subtotal + shippingCost);
-}
-
-    // 選択中テキスト幅に応じて select を縮め、直後の「∨」を常に真横に配置
-    function sizeOption(){
-      const sel = document.getElementById('opt-select');
-      const meter = document.getElementById('opt-measure');
-      if(!sel || !meter) return;
-      const cs = getComputedStyle(sel);
-      meter.style.font = cs.font;
-      meter.textContent = sel.options[sel.selectedIndex].text;
-      sel.style.width = (meter.offsetWidth + 2) + 'px';
-    }
-
-    function changeQuantity(index, delta) {
-      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-      cart[index].quantity = (cart[index].quantity || 1) + delta;
-      if (cart[index].quantity < 1) cart[index].quantity = 1;
-      localStorage.setItem('cart', JSON.stringify(cart));
-      loadCart();
-    }
-
-    function updateQuantity(index, value) {
-      const qty = parseInt(value);
-      if (isNaN(qty) || qty < 1) return;
-      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-      cart[index].quantity = qty;
-      localStorage.setItem('cart', JSON.stringify(cart));
-      loadCart();
-    }
-
-    function removeItem(index) {
-      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-      cart.splice(index, 1);
-      localStorage.setItem('cart', JSON.stringify(cart));
-      loadCart();
-    }
-    
-    // 小計だけ計算（subtotalだけ使い回したいとき用）
-function getCartSubtotal(){
-  const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-  return cart.reduce((s, it) => s + Number(it.price || 0) * Number(it.quantity || 1), 0);
-}
-
-    // 注文ボタン：遷移直前に「合計情報のスナップショット」を保存してから order へ
-function goToOrder() {
-  const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-  if (cart.length === 0) {
-    alert("カートが空です");
-    return;
-  }
-  const normalized = cart.map(it => ({
-    ...it,
-    productId: it.productId ?? it.id ?? null,
-    productName: it.productName ?? it.variety ?? it.name ?? ''
-  }));
-  localStorage.setItem('cart', JSON.stringify(normalized));
-
-  const subtotal = cart.reduce((s, it) => s + Number(it.price || 0) * Number(it.quantity || 1), 0);
-  const sel = document.getElementById('opt-select');
-  const selected = sel ? sel.options[sel.selectedIndex] : null;
-
-  // ★必須チェック（ひっすちぇっく）：未選択なら止める
-  if (!sel || !sel.value) {
-    sel?.classList.add('invalid');                         // 見た目で分かるようにする
-    alert("配送方法を選択してください");
-    try {
-      sel?.focus();
-      sel?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    } catch(e) {}
-    return;                                                // ここで終了（進ませない）
-  }
-
-  const shippingName = selected ? selected.value : "";
-  const shippingCost = selected ? Number(selected.dataset.cost || 0) : 0;
-
-  const total = subtotal + shippingCost;
-
-  const checkout = {
-    subtotal,
-    shippingCost,
-    total,
-    shippingName,
-    paymentMethod: 'bank_transfer'
-  };
-  localStorage.setItem('checkout', JSON.stringify(checkout));
-  window.top.location.href = '<?= url ?>?page=order';
-}
-    function goToindex() {
-      window.top.location.href = '<?= url ?>?page=index';
-    }
-
-    function openImageModal(url) {
-      const modal = document.getElementById("imageModal");
-      const img = document.getElementById("modalImage");
-      img.src = url;
-      modal.style.display = "flex";
-    }
-
-    function closeImageModal() {
-      document.getElementById("imageModal").style.display = "none";
-    }
-
-    window.onload = loadCart;
-
-    let lastScrollY = window.scrollY;
-    const titleBar = document.getElementById("titleBar");
-    const threshold = 10;
-
-    window.addEventListener("scroll", () => {
-      const currentScrollY = window.scrollY;
-      const diff = currentScrollY - lastScrollY;
-      if (Math.abs(diff) < threshold) return;
-      titleBar.style.top = diff < 0 ? "-50px" : "-200px";
-      lastScrollY = currentScrollY;
+      container.appendChild(div);
     });
 
-// --- カルーセル制御（せいぎょ） ---
-function thumbGo(dotBtn, slideIndex){
-  const slider = dotBtn.closest('.thumb-slider');
-  if (!slider) return;
-  const track = slider.querySelector('.thumb-track');
-  if (!track) return;
-  track.scrollTo({ left: track.clientWidth * slideIndex, behavior: 'smooth' });
+    // サマリー（配送方法：ヤマト運輸固定）
+    totalEl.innerHTML = `
+      <div class="sum-row"><span>小計</span><span id="sum-subtotal">¥0</span></div>
 
-  // ドットのアクティブ更新
-  const dots = slider.querySelectorAll('.thumb-dot');
-  dots.forEach((d,k)=> d.classList.toggle('active', k===slideIndex));
-}
+      <div class="sum-row" style="align-items:center;">
+        <div class="option-inline" style="white-space:nowrap; position:relative;">
+          <label>配送方法</label>
+          <span style="margin-left:12px;">ヤマト運輸</span>
+        </div>
+        <span id="sum-shipping" style="min-width:8em; text-align:right;">¥0</span>
+      </div>
 
-function onThumbScroll(track){
-  // いま見えているスライド番号を丸めて算出
-  const idx = Math.round(track.scrollLeft / Math.max(1, track.clientWidth));
-  const slider = track.closest('.thumb-slider');
-  if (!slider) return;
-  const dots = slider.querySelectorAll('.thumb-dot');
-  dots.forEach((d,k)=> d.classList.toggle('active', k===idx));
-}
+      <div class="sum-hr"></div>
 
-// 初期（しょき）に一度だけ、表示状態に合わせてドットを整える
-function initAllThumbs(){
-  document.querySelectorAll('.thumb-slider').forEach(slider=>{
+      <div class="sum-row total">
+        <span>注文合計金額</span>
+        <span id="sum-total">¥0</span>
+      </div>
+
+      <div style="text-align:left; font-size:20px; line-height:1.7; font-weight:200; margin-top:14px;">
+        <div>・送料　ヤマト運輸1100円</div>
+        <div>・数量3株以上送料半額</div>
+        <div>・北海道・沖縄・離島の方は第四種郵便のみになります。</div>
+        <div>・発送は1月下旬頃を予定しております。</div>
+        <div>・組織培養株のため、ご購入後に順化作業が必要となります。</div>
+        <div>・輸入後に品質確認を行い、品質が悪い場合や植物に痛みが確認された場合には</div>
+        <div style="padding-left:1em;">迅速に返金対応をさせていただきます。なお、輸入の特性上、株を選んでお届けすることはできず発送する株はランダムとなりますので、あらかじめご了承ください。</div>
+      </div>
+    `;
+
+    updateSummaryNumbers(subtotal);
+
+    requestAnimationFrame(() => window.__fitCartNames?.());
+
+    if (!window.__cartFitBound){
+      window.addEventListener('resize', () => window.__fitCartNames?.(), { passive:true });
+      window.__cartFitBound = true;
+    }
+
+    initAllThumbs();
+  }
+
+  // ★ヤマト運輸のみ / 小計25000以上で無料は廃止（無料条件は数量8以上だけ）
+  function calcShippingOptions(subtotal, totalQty){
+    if (totalQty >= 8){
+      return { "ヤマト運輸": 0 };
+    }
+    if (totalQty >= 3){
+      return { "ヤマト運輸": 550 };
+    }
+    return { "ヤマト運輸": 1100 };
+  }
+
+  function yen(n){ return '¥' + Number(n||0).toLocaleString(); }
+
+  function updateSummaryNumbers(subtotal){
+    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    const totalQty = cart.reduce((s,it)=> s + Number(it.quantity||0), 0);
+
+    const options = calcShippingOptions(subtotal, totalQty);
+    const shippingCost = Number(options["ヤマト運輸"] || 0);
+
+    const sumSubtotal = document.getElementById('sum-subtotal');
+    const sumShipping = document.getElementById('sum-shipping');
+    const sumTotal    = document.getElementById('sum-total');
+
+    if(sumSubtotal) sumSubtotal.textContent = yen(subtotal);
+    if(sumShipping) sumShipping.textContent = yen(shippingCost);
+    if(sumTotal)    sumTotal.textContent    = yen(subtotal + shippingCost);
+  }
+
+  function changeQuantity(index, delta) {
+    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    cart[index].quantity = (cart[index].quantity || 1) + delta;
+    if (cart[index].quantity < 1) cart[index].quantity = 1;
+    localStorage.setItem('cart', JSON.stringify(cart));
+    loadCart();
+  }
+
+  function updateQuantity(index, value) {
+    const qty = parseInt(value);
+    if (isNaN(qty) || qty < 1) return;
+    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    cart[index].quantity = qty;
+    localStorage.setItem('cart', JSON.stringify(cart));
+    loadCart();
+  }
+
+  function removeItem(index) {
+    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    cart.splice(index, 1);
+    localStorage.setItem('cart', JSON.stringify(cart));
+    loadCart();
+  }
+
+  function getCartSubtotal(){
+    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    return cart.reduce((s, it) => s + Number(it.price || 0) * Number(it.quantity || 1), 0);
+  }
+
+  function goToOrder() {
+    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    if (cart.length === 0) {
+      alert("カートが空です");
+      return;
+    }
+    const normalized = cart.map(it => ({
+      ...it,
+      productId: it.productId ?? it.id ?? null,
+      productName: it.productName ?? it.variety ?? it.name ?? ''
+    }));
+    localStorage.setItem('cart', JSON.stringify(normalized));
+
+    const subtotal = cart.reduce((s, it) => s + Number(it.price || 0) * Number(it.quantity || 1), 0);
+    const totalQty = cart.reduce((s,it)=> s + Number(it.quantity||0), 0);
+
+    const options = calcShippingOptions(subtotal, totalQty);
+    const shippingName = "ヤマト運輸";
+    const shippingCost = Number(options["ヤマト運輸"] || 0);
+
+    const total = subtotal + shippingCost;
+
+    const checkout = {
+      subtotal,
+      shippingCost,
+      total,
+      shippingName,
+      paymentMethod: 'bank_transfer'
+    };
+    localStorage.setItem('checkout', JSON.stringify(checkout));
+    window.top.location.href = '<?= url ?>?page=order';
+  }
+
+  function goToindex() {
+    window.top.location.href = '<?= url ?>?page=index';
+  }
+
+  function openImageModal(url) {
+    const modal = document.getElementById("imageModal");
+    const img = document.getElementById("modalImage");
+    img.src = url;
+    modal.style.display = "flex";
+  }
+
+  function closeImageModal() {
+    document.getElementById("imageModal").style.display = "none";
+  }
+
+  window.onload = loadCart;
+
+  let lastScrollY = window.scrollY;
+  const titleBar = document.getElementById("titleBar");
+  const threshold = 10;
+
+  window.addEventListener("scroll", () => {
+    const currentScrollY = window.scrollY;
+    const diff = currentScrollY - lastScrollY;
+    if (Math.abs(diff) < threshold) return;
+    titleBar.style.top = diff < 0 ? "-50px" : "-200px";
+    lastScrollY = currentScrollY;
+  });
+
+  // --- カルーセル制御 ---
+  function thumbGo(dotBtn, slideIndex){
+    const slider = dotBtn.closest('.thumb-slider');
+    if (!slider) return;
     const track = slider.querySelector('.thumb-track');
     if (!track) return;
-    onThumbScroll(track);
-  });
-}
+    track.scrollTo({ left: track.clientWidth * slideIndex, behavior: 'smooth' });
+
+    const dots = slider.querySelectorAll('.thumb-dot');
+    dots.forEach((d,k)=> d.classList.toggle('active', k===slideIndex));
+  }
+
+  function onThumbScroll(track){
+    const idx = Math.round(track.scrollLeft / Math.max(1, track.clientWidth));
+    const slider = track.closest('.thumb-slider');
+    if (!slider) return;
+    const dots = slider.querySelectorAll('.thumb-dot');
+    dots.forEach((d,k)=> d.classList.toggle('active', k===idx));
+  }
+
+  function initAllThumbs(){
+    document.querySelectorAll('.thumb-slider').forEach(slider=>{
+      const track = slider.querySelector('.thumb-track');
+      if (!track) return;
+      onThumbScroll(track);
+    });
+  }
   </script>
 </body>
 </html>
