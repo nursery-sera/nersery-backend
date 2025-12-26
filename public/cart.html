@@ -688,6 +688,9 @@
     if (totalQty >= 8){
       return { "ヤマト運輸": 0 };
     }
+      if (subtotal >= 60000){
+    return { "ヤマト運輸": 0 };
+  }
     if (subtotal >= 30000){
     return { "ヤマト運輸": 550 };
   }
