@@ -759,7 +759,7 @@ const maxQty = (Number.isFinite(mx) && mx >= 1) ? Math.min(100, mx) : 100;
 
     const copy = {
       categoryName: data.categoryName || '',
-      varietyName : (data.varietyName || '') + ' (copy)', // いらなければ消してOK
+      varietyName : (data.varietyName || '', // いらなければ消してOK
       price       : Number(data.price || 0),
       images      : Array.isArray(data.images) ? data.images.slice(0, MAX_IMAGES) : [],
       status      : (data.status === 'soldout') ? 'soldout' : 'available',
