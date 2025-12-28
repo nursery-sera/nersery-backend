@@ -685,12 +685,13 @@
     initAllThumbs();
   }
 // ★「10株セット」がカートに入っているか判定する関数
+// ★「10株set」or「5株set」がカートに入っているか判定
 function hasTenSetItem(cart){
   return cart.some(it => {
     const title = String(
       it.productName ?? it.variety ?? it.name ?? ""
-    );
-    return title.includes("10株set");
+    ).normalize("NFKC");
+    return title.includes("10株set") || title.includes("5株set");
   });
 }
 
