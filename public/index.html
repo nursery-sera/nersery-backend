@@ -1438,7 +1438,7 @@ function ProductCard({ d, id }) {
   const imgs   = Array.isArray(d.images) ? d.images.slice(0, 10) : [];
   const price  = Number(d.price || 0);
   const status = (d.status || 'available'); // 'available' | 'soldout'（在庫状態）
-
+　const maxQty = Math.max(1, Math.min(100, Number(d.maxQty ?? 100)));
   const trackRef = useRef(null);
   const pagerRef = useRef(null);
 
@@ -1487,7 +1487,7 @@ function ProductCard({ d, id }) {
     const menu = document.querySelector(`.qty-menu[data-for="${`qty-${id}`}"]`);
 
     if (sel && !sel.options.length) {
-      for (let i = 1; i <= 100; i++) {
+for (let i = 1; i <= maxQty; i++) {
         const op = document.createElement('option'); op.value = i; op.textContent = i;
         sel.appendChild(op);
       }
@@ -1496,7 +1496,7 @@ function ProductCard({ d, id }) {
     if (dsp) dsp.textContent = '1';
 
     if (menu && !menu.children.length) {
-      for (let i = 1; i <= 100; i++) {
+for (let i = 1; i <= maxQty; i++) {
         const it = document.createElement('div');
         it.className = 'qty-item'; it.textContent = i;
         it.addEventListener('click', () => {
@@ -1516,7 +1516,7 @@ function ProductCard({ d, id }) {
       dspBtn?.removeEventListener('click', toggleQtyMenu);
       document.removeEventListener('click', closeAll);
     };
-  }, [id]);
+}, [id, maxQty]);
 
   return React.createElement(
   'article',
