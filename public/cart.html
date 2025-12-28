@@ -682,23 +682,40 @@
 
     initAllThumbs();
   }
+// ★「10株セット」がカートに入っているか判定する関数
+function hasTenSetItem(cart){
+  return cart.some(it => {
+    const title = String(
+      it.productName ?? it.variety ?? it.name ?? ""
+    );
+    return title.includes("10株set");
+  });
+}
 
-  // ★ヤマト運輸のみ / 小計25000以上で無料は廃止（無料条件は数量8以上だけ）
-  function calcShippingOptions(subtotal, totalQty){
-    if (totalQty >= 8){
-      return { "ヤマト運輸": 0 };
-    }
-      if (subtotal >= 60000){
+// ★送料計算
+function calcShippingOptions(subtotal, totalQty){
+  const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+
+  // ① 10株セットが入っていたら最優先で送料無料
+  if (hasTenSetItem(cart)){
     return { "ヤマト運輸": 0 };
   }
-    if (subtotal >= 30000){
+
+  // ② 既存ルール
+  if (totalQty >= 8){
+    return { "ヤマト運輸": 0 };
+  }
+  if (subtotal >= 60000){
+    return { "ヤマト運輸": 0 };
+  }
+  if (subtotal >= 30000){
     return { "ヤマト運輸": 550 };
   }
-    if (totalQty >= 3){
-      return { "ヤマト運輸": 550 };
-    }
-    return { "ヤマト運輸": 1100 };
+  if (totalQty >= 3){
+    return { "ヤマト運輸": 550 };
   }
+  return { "ヤマト運輸": 1100 };
+}
 
   function yen(n){ return '¥' + Number(n||0).toLocaleString(); }
 
