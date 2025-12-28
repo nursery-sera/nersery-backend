@@ -497,7 +497,7 @@ function closeMenu() {
     const data = await res.json();
     if (!res.ok || !data.ok) throw new Error(data.error || "送信に失敗しました。");
 
-    resultEl.textContent = "ありがとうございました。お問い合わせを受け付けました。";
+    resultEl.textContent = "送信完了";
     form.reset();
   } catch (err) {
     console.error(err);
