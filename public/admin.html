@@ -351,6 +351,15 @@ let currentFilter = 'ALL';    // 'ALL' | 'Alocasia' | 'Anthurium' | 'Monstera' |
             <button type="button" class="btn ghost" data-val="soldout">Sold Out</button>
           </div>
         </div>
+        <!-- ★追加：商品ページ表示（デフォルト true） -->
+<div class="col" style="flex-basis:100%; margin-top:10px">
+  <label>商品ページ表示</label>
+  <input class="m_visible" type="hidden" value="true" />
+  <div class="seg visseg">
+    <button type="button" class="btn ghost" data-val="true">表示</button>
+    <button type="button" class="btn ghost" data-val="false">非表示</button>
+  </div>
+</div>
       `;
       prodsEl.appendChild(el);
 
@@ -383,6 +392,19 @@ let currentFilter = 'ALL';    // 'ALL' | 'Alocasia' | 'Anthurium' | 'Monstera' |
           b.classList.add('active');
         });
       });
+      // ★追加：表示トグル（このフォーム専用）
+const vHidden = el.querySelector('.m_visible');
+const vBtns   = el.querySelectorAll('.visseg .btn');
+if (vHidden && vBtns.length) {
+  vBtns.forEach(b => b.classList.toggle('active', b.dataset.val === vHidden.value));
+  vBtns.forEach(b => {
+    b.addEventListener('click', () => {
+      vHidden.value = b.dataset.val || 'true';
+      vBtns.forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+    });
+  });
+}
 
       function renumber(){
         [...prodsEl.children].forEach((c,i)=>{
@@ -448,6 +470,12 @@ let currentFilter = 'ALL';    // 'ALL' | 'Alocasia' | 'Anthurium' | 'Monstera' |
       segBtns.forEach(b => {
         b.classList.toggle('active', b.dataset.val === cur);
       });
+      // ★追加：visible をUIに反映（未設定は true 扱い）
+const vHidden = block.querySelector('.m_visible');
+const vBtns   = block.querySelectorAll('.visseg .btn');
+const vcur = (data.visible === false) ? 'false' : 'true';
+if (vHidden) vHidden.value = vcur;
+vBtns.forEach(b => b.classList.toggle('active', b.dataset.val === vcur));
 
       // ヒントを表示（画像を選ばなければ現状維持）
       const hint = document.createElement('div');
@@ -493,6 +521,7 @@ let currentFilter = 'ALL';    // 'ALL' | 'Alocasia' | 'Anthurium' | 'Monstera' |
           const pr = Number((b.querySelector('.m_price')?.value || '').trim());
           const fs = [...(b.querySelector('.m_images')?.files || [])].slice(0,MAX_IMAGES);
           const stv= b.querySelector('.m_status')?.value || 'available'; // ★追加
+          const vis = (b.querySelector('.m_visible')?.value === 'false') ? false : true;
 const mx = Number((b.querySelector('.m_maxqty')?.value || '').trim());
 const maxQty = (Number.isFinite(mx) && mx >= 1) ? Math.min(100, mx) : 100;
           if (!mustBeValid(cat, va, pr)) { setStatus('入力不備があります'); lockUI(false); return; }
@@ -531,6 +560,7 @@ const maxQty = (Number.isFinite(mx) && mx >= 1) ? Math.min(100, mx) : 100;
             price       : pr,
             images      : urls,
             status      : stv,                 // ★追加
+            visible     : vis,
 　　　　　　　　maxQty      : maxQty,
             updatedAt   : serverTimestamp()
           });
@@ -557,10 +587,11 @@ const maxQty = (Number.isFinite(mx) && mx >= 1) ? Math.min(100, mx) : 100;
           const pr = Number((b.querySelector('.m_price')?.value || '').trim());
           const fs = [...(b.querySelector('.m_images')?.files || [])].slice(0,MAX_IMAGES);
           const stv= b.querySelector('.m_status')?.value || 'available'; // ★追加
+          const vis = (b.querySelector('.m_visible')?.value === 'false') ? false : true;
 const mx = Number((b.querySelector('.m_maxqty')?.value || '').trim());
 const maxQty = (Number.isFinite(mx) && mx >= 1) ? Math.min(100, mx) : 100;
           if (!mustBeValid(cat, va, pr)) { setStatus('入力不備があります'); lockUI(false); return; }
-          queue.push({ categoryName:cat, varietyName:va, priceNum:pr, files:fs, status:stv, maxQty }); // ★追加
+          queue.push({ categoryName:cat, varietyName:va, priceNum:pr, files:fs, status:stv, visible:vis, maxQty }); // ★追加
         }
 
         closePanel();
@@ -600,6 +631,7 @@ const maxQty = (Number.isFinite(mx) && mx >= 1) ? Math.min(100, mx) : 100;
             price       : item.priceNum,
             images      : urls,
             status      : item.status || 'available',   // ★追加
+            visible     : item.visible !== false,
 　　　　　　　　maxQty: item.maxQty ?? 100,
             createdAt   : serverTimestamp()
           });
