@@ -693,6 +693,29 @@ function hasTenSetItem(cart){
   });
 }
 
+function getEffectiveQty(cart){
+  return cart.reduce((sum, it) => {
+    const title = String(
+      it.productName ?? it.variety ?? it.name ?? ""
+    ).normalize("NFKC");
+
+    const qty = Number(it.quantity || 0);
+    if (!qty) return sum;
+
+    // 「2パック」→ 2株換算
+    if (/2\s*パック/.test(title)) {
+      return sum + qty * 2;
+    }
+
+    // その他「パック」→ 3株換算
+    if (title.includes("パック")) {
+      return sum + qty * 3;
+    }
+
+    return sum + qty;
+  }, 0);
+}
+
 // ★送料計算
 function calcShippingOptions(subtotal, totalQty){
   const cart = JSON.parse(localStorage.getItem('cart') || '[]');
@@ -722,7 +745,7 @@ function calcShippingOptions(subtotal, totalQty){
 
   function updateSummaryNumbers(subtotal){
     const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-    const totalQty = cart.reduce((s,it)=> s + Number(it.quantity||0), 0);
+const totalQty = getEffectiveQty(cart);
 
     const options = calcShippingOptions(subtotal, totalQty);
     const shippingCost = Number(options["ヤマト運輸"] || 0);
@@ -779,7 +802,7 @@ function calcShippingOptions(subtotal, totalQty){
     localStorage.setItem('cart', JSON.stringify(normalized));
 
     const subtotal = cart.reduce((s, it) => s + Number(it.price || 0) * Number(it.quantity || 1), 0);
-    const totalQty = cart.reduce((s,it)=> s + Number(it.quantity||0), 0);
+const totalQty = getEffectiveQty(cart);
 
     const options = calcShippingOptions(subtotal, totalQty);
     const shippingName = "ヤマト運輸";
