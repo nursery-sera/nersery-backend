@@ -729,7 +729,7 @@ function calcShippingOptions(subtotal, totalQty){
   if (totalQty >= 5){
     return { "ヤマト運輸": 0 };
   }
-  if (subtotal >= 30001){
+  if (subtotal >= 60000){
     return { "ヤマト運輸": 0 };
   }
   if (subtotal >= 30000){
