@@ -336,6 +336,10 @@ let currentFilter = 'ALL';    // 'ALL' | 'Alocasia' | 'Anthurium' | 'Monstera' |
             <label>金額</label>
             <input class="m_price" type="number" inputmode="numeric" placeholder="例 3500" />
           </div>
+          <div class="col">
+  <label>一回に選べる最大数</label>
+  <input class="m_maxqty" type="number" inputmode="numeric" placeholder="例 2（未入力=100）" />
+</div>
         </div>
 
         <!-- ★追加：在庫切替（デフォルト available） -->
@@ -426,6 +430,7 @@ let currentFilter = 'ALL';    // 'ALL' | 'Alocasia' | 'Anthurium' | 'Monstera' |
       block.querySelector('.m_category').value = data.categoryName || '';
       block.querySelector('.m_variety').value  = data.varietyName  || '';
       block.querySelector('.m_price').value    = Number(data.price||0);
+      block.querySelector('.m_maxqty').value = Number(data.maxQty ?? 100);
 
       // 既存サムネを表示（ファイルは未選択のまま）
       const tbox = block.querySelector('.m_thumbs');
@@ -488,7 +493,8 @@ let currentFilter = 'ALL';    // 'ALL' | 'Alocasia' | 'Anthurium' | 'Monstera' |
           const pr = Number((b.querySelector('.m_price')?.value || '').trim());
           const fs = [...(b.querySelector('.m_images')?.files || [])].slice(0,MAX_IMAGES);
           const stv= b.querySelector('.m_status')?.value || 'available'; // ★追加
-
+const mx = Number((b.querySelector('.m_maxqty')?.value || '').trim());
+const maxQty = (Number.isFinite(mx) && mx >= 1) ? Math.min(100, mx) : 100;
           if (!mustBeValid(cat, va, pr)) { setStatus('入力不備があります'); lockUI(false); return; }
 
           // 入力パネルは閉じる（※ targetId は変数に退避済み）
@@ -525,6 +531,7 @@ let currentFilter = 'ALL';    // 'ALL' | 'Alocasia' | 'Anthurium' | 'Monstera' |
             price       : pr,
             images      : urls,
             status      : stv,                 // ★追加
+　　　　　　　　maxQty      : maxQty,
             updatedAt   : serverTimestamp()
           });
 
@@ -550,8 +557,10 @@ let currentFilter = 'ALL';    // 'ALL' | 'Alocasia' | 'Anthurium' | 'Monstera' |
           const pr = Number((b.querySelector('.m_price')?.value || '').trim());
           const fs = [...(b.querySelector('.m_images')?.files || [])].slice(0,MAX_IMAGES);
           const stv= b.querySelector('.m_status')?.value || 'available'; // ★追加
+const mx = Number((b.querySelector('.m_maxqty')?.value || '').trim());
+const maxQty = (Number.isFinite(mx) && mx >= 1) ? Math.min(100, mx) : 100;
           if (!mustBeValid(cat, va, pr)) { setStatus('入力不備があります'); lockUI(false); return; }
-          queue.push({ categoryName:cat, varietyName:va, priceNum:pr, files:fs, status:stv }); // ★追加
+          queue.push({ categoryName:cat, varietyName:va, priceNum:pr, files:fs, status:stv, maxQty }); // ★追加
         }
 
         closePanel();
@@ -591,6 +600,7 @@ let currentFilter = 'ALL';    // 'ALL' | 'Alocasia' | 'Anthurium' | 'Monstera' |
             price       : item.priceNum,
             images      : urls,
             status      : item.status || 'available',   // ★追加
+　　　　　　　　maxQty: item.maxQty ?? 100,
             createdAt   : serverTimestamp()
           });
           createdIds.push(newId);
