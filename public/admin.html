@@ -749,6 +749,38 @@ const maxQty = (Number.isFinite(mx) && mx >= 1) ? Math.min(100, mx) : 100;
         lastRes.innerHTML = `<div class="err"><b>削除エラー：</b> ${String(err && err.message || err)}</div>`;
       }
     }
+    
+    async function duplicateProduct(srcId, data){
+  try{
+    setStatus('複製中…');
+
+    const newRef = doc(collection(db, 'products'));
+    const newId  = newRef.id;
+
+    const copy = {
+      categoryName: data.categoryName || '',
+      varietyName : (data.varietyName || '') + ' (copy)', // いらなければ消してOK
+      price       : Number(data.price || 0),
+      images      : Array.isArray(data.images) ? data.images.slice(0, MAX_IMAGES) : [],
+      status      : (data.status === 'soldout') ? 'soldout' : 'available',
+      visible     : (data.visible === false) ? false : true,
+      maxQty      : Number.isFinite(Number(data.maxQty)) ? Number(data.maxQty) : 100,
+      createdAt   : serverTimestamp(),
+      duplicatedFrom: srcId
+    };
+
+    await setDoc(newRef, copy);
+
+    lastRes.innerHTML = `<div class="ok"><b>複製しました：</b> ${newId}</div>`;
+    setStatus('複製が完了しました。');
+
+  }catch(err){
+    console.error(err);
+    alert('複製に失敗しました');
+    lastRes.innerHTML = `<div class="err"><b>複製エラー：</b> ${String(err?.message || err)}</div>`;
+    setStatus('複製でエラーが発生しました。');
+  }
+}
 
 // Group by category（カテゴリでまとめる）
 function groupByCategory(items){
@@ -832,16 +864,24 @@ function renderList(){
           <div class="sub muted">ID: <code>${id}</code></div>
           <div class="ops">
             <button class="btn ghost"  data-edit="${id}">編集</button>
+            <button class="btn ghost"  data-dup="${id}">複製</button>
             <button class="btn danger" data-del="${id}">削除</button>
           </div>
         </div>`;
       listEl.appendChild(el);
       el.querySelector('[data-edit]')?.addEventListener('click', ()=> openEdit(id, data));
-      el.querySelector('[data-del]')?.addEventListener('click', async ()=>{
-        if (!confirm('この商品を削除しますか？（画像も削除）')) return;
-        await deleteProduct(id);
-        await loadList();
-      });
+
+el.querySelector('[data-dup]')?.addEventListener('click', async ()=>{
+  if (!confirm('この商品を複製しますか？（画像URLも同じになります）')) return;
+  await duplicateProduct(id, data);
+  await loadList();
+});
+
+el.querySelector('[data-del]')?.addEventListener('click', async ()=>{
+  if (!confirm('この商品を削除しますか？（画像も削除）')) return;
+  await deleteProduct(id);
+  await loadList();
+});
     });
     return;
   }
@@ -877,16 +917,24 @@ function renderList(){
           <div class="sub muted">ID: <code>${id}</code></div>
           <div class="ops">
             <button class="btn ghost"  data-edit="${id}">編集</button>
+            <button class="btn ghost"  data-dup="${id}">複製</button>
             <button class="btn danger" data-del="${id}">削除</button>
           </div>
         </div>`;
       grid.appendChild(el);
       el.querySelector('[data-edit]')?.addEventListener('click', ()=> openEdit(id, data));
-      el.querySelector('[data-del]')?.addEventListener('click', async ()=>{
-        if (!confirm('この商品を削除しますか？（画像も削除）')) return;
-        await deleteProduct(id);
-        await loadList();
-      });
+
+el.querySelector('[data-dup]')?.addEventListener('click', async ()=>{
+  if (!confirm('この商品を複製しますか？（画像URLも同じになります）')) return;
+  await duplicateProduct(id, data);
+  await loadList();
+});
+
+el.querySelector('[data-del]')?.addEventListener('click', async ()=>{
+  if (!confirm('この商品を削除しますか？（画像も削除）')) return;
+  await deleteProduct(id);
+  await loadList();
+});
     });
   });
 }
