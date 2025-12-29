@@ -562,11 +562,13 @@ opacity:0.9;
   margin: 10px 0;
 }
 
-.product-name {
-  overflow: hidden;
-  text-overflow: ellipsis; /* はみ出しを一瞬でも隠す */
-  white-space: nowrap;
+.product-name{
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
 }
+
+  </style>
 
   </style>
 
@@ -1207,18 +1209,30 @@ if (dsp) dsp.textContent = '1';
       fitNameBinary(el);
     }
   }
+ // ▼ 追加：variety-name を「はみ出したら小さく」フィット
+  function fitAllVariety(){
+    const list = Array.from(document.querySelectorAll('.variety-name'))
+      .filter(el => el.offsetParent !== null);
+    for (const el of list) {
+      el.style.fontSize = '';  // まず戻す
+      fitNameBinary(el);       // 同じ二分探索ロジックを流用
+    }
+  }
+
 
   // ▼ 実行スケジューラ（すけじゅーら）
   let pending = false;
-  function scheduleFit(){
+    function scheduleFit(){
     if (pending) return;
     pending = true;
     requestAnimationFrame(() => {
       pending = false;
       fitAll();
+      fitAllVariety(); // ← 追加
     });
   }
 
+  // ✅ React 完了後だけ実行（DOM 構築中には走らせない）
   // ✅ React 完了後だけ実行（DOM 構築中には走らせない）
   document.addEventListener('products-rendered', scheduleFit);
 
