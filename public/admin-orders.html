@@ -198,28 +198,28 @@ async function loadView() {
     }
 
     const paidParam = paidOnly.checked ? '?paid=1' : '';
-   const data = await callApi(`/view/${currentView}${paidParam}`);
-const rows = Array.isArray(data) ? data : [data];
+    const data = await callApi(`/view/${currentView}${paidParam}`);
+    const rows = Array.isArray(data) ? data : [data];
 
-// ★ 基本情報ビュー用：商品名×個数を仮想カラムに補完
-if (currentView === 'v_orders_summary') {
-  for (const r of rows) {
-    if (!r.products && r.product_name) {
-      const q = r.quantity ?? r.total_qty ?? r.qty ?? '';
-      r.products = (q !== '' && q != null) ? `${r.product_name} × ${q}` : `${r.product_name}`;
+    // ★ 基本情報ビュー用：商品名×個数を仮想カラムに補完
+    if (currentView === 'v_orders_summary') {
+      for (const r of rows) {
+        if (!r.products && r.product_name) {
+          const q = r.quantity ?? r.total_qty ?? r.qty ?? '';
+          r.products = (q !== '' && q != null) ? `${r.product_name} × ${q}` : `${r.product_name}`;
+        }
+      }
     }
-  }
-}
 
-// ★ 基本情報ビュー用：サブトータル（小計）をフロントで計算して埋め込む
-if (currentView === 'v_orders_summary') {
-  for (const r of rows) {
-    const total    = Number(r.order_total ?? r.total ?? 0);
-    const shipping = Number(r.shipping ?? 0);
-    const subtotal = (isFinite(total) ? total : 0) - (isFinite(shipping) ? shipping : 0);
-    r.order_subtotal = subtotal;
-  }
-}
+    // ★ 基本情報ビュー用：サブトータル（小計）をフロントで計算して埋め込む
+    if (currentView === 'v_orders_summary') {
+      for (const r of rows) {
+        const total    = Number(r.order_total ?? r.total ?? 0);
+        const shipping = Number(r.shipping ?? 0);
+        const subtotal = (isFinite(total) ? total : 0) - (isFinite(shipping) ? shipping : 0);
+        r.order_subtotal = subtotal;
+      }
+    }
 
     // ★ 単株集計で上書き・補完
     if (currentView === 'v_products_totals') {
@@ -247,13 +247,12 @@ if (currentView === 'v_orders_summary') {
       }
     }
 
-
-// ★ 行のソート（全ビュー共通：新しい順）
-rows.sort((a,b)=>{
-  const ta = getSortTime(a);
-  const tb = getSortTime(b);
-  return NEW_FIRST ? (tb - ta) : (ta - tb);
-});
+    // ★ 行のソート（全ビュー共通：新しい順）
+    rows.sort((a,b)=>{
+      const ta = getSortTime(a);
+      const tb = getSortTime(b);
+      return NEW_FIRST ? (tb - ta) : (ta - tb);
+    });
 
     let columns = autoColumnsFor(currentView, rows);
     currentRows = rows;
@@ -267,7 +266,6 @@ rows.sort((a,b)=>{
 
 // 列選択
 function autoColumnsFor(view, rows){
-  
   if (view === 'v_payment_check') {
     const pref = ['order_token','last_kana','first_kana','order_total','is_paid','created_at'];
     return pickColumns(rows, pref);
@@ -282,32 +280,31 @@ function autoColumnsFor(view, rows){
     const prefAll  = ['all_items_qty','all_items_amount','paid_items_qty','paid_items_amount'];
     return pickColumns(rows, paidOnly.checked ? prefPaid : prefAll);
   }
-// ★ 発送仕分け（人別）：指定順＋ picked は仮想カラムとして表示
-if (view === 'v_shipping_picklist_by_person') {
-  const pref = [
-    'order_token',          // トークン
-    'name',                 // 氏名
-    'product',              // 商品
-    'picked',               // ピック（確認） ← 仮想
-    'quantity',             // 数量（あれば）
-    'quantity_paid',        // 支払い済み数量
-    'is_paid',              // 支払い（unit_id があれば1株単位で反映）
-    'shipping_option_text', // 配送方法
-    'first_order_at'        // 初回注文日
-  ];
-  return pickColumns(rows, pref, ['picked']); // ← 仮想 picked を強制表示
-}
- if (view === 'v_shipping_labels') {
-  const pref = ['order_token','name','zipcode','prefecture','city','address','building','is_paid','created_at'];
-  return pickColumns(rows, pref);
-}
+  // ★ 発送仕分け（人別）：指定順＋ picked は仮想カラムとして表示
+  if (view === 'v_shipping_picklist_by_person') {
+    const pref = [
+      'order_token',
+      'name',
+      'product',
+      'picked',
+      'quantity',
+      'quantity_paid',
+      'is_paid',
+      'shipping_option_text',
+      'first_order_at'
+    ];
+    return pickColumns(rows, pref, ['picked']);
+  }
+  if (view === 'v_shipping_labels') {
+    const pref = ['order_token','name','zipcode','prefecture','city','address','building','is_paid','created_at'];
+    return pickColumns(rows, pref);
+  }
 
-// ★どの条件にも当てはまらない場合は元のキー順を返す
-return rows.length ? Object.keys(rows[0]) : [];
-} // ← autoColumnsFor をここで閉じる
+  // ★どの条件にも当てはまらない場合は元のキー順を返す
+  return rows.length ? Object.keys(rows[0]) : [];
+}
 function pickColumns(rows, pref, virtual = []){
   const has = rows.length ? Object.keys(rows[0]) : [];
-  // データに無くても virtual に入っているキーは残す
   const ordered = pref.filter(k => has.includes(k) || virtual.includes(k));
   const others  = has.filter(k => !ordered.includes(k));
   return [...ordered, ...others];
@@ -321,18 +318,47 @@ function renderError(msg){
   tbody.innerHTML = `<tr><td style="white-space:normal">${msg}<br>※ サーバーに <code>GET /api/view/:name</code> を追加してください。</td></tr>`;
 }
 
+// ★★★★★ ここが今回の追加：行が「支払い済み」かの統一判定 ★★★★★
+function isRowPaid(row){
+  // 1株単位ビュー：その行自身の is_paid を使う
+  if (currentView === 'v_shipping_picklist_each_unit') {
+    return !!row.is_paid;
+  }
+
+  // 発送仕分け（人別）：quantity_paid >= quantity を優先
+  if (currentView === 'v_shipping_picklist_by_person') {
+    const q  = Number(row.quantity ?? row.qty ?? 0);
+    const qp = Number(row.quantity_paid ?? 0);
+    if (q > 0) return qp >= q;
+    // 数量が取れない場合はフォールバックへ
+  }
+
+  // それ以外：トークンが取れれば「全株支払い済み」判定
+  const token = tokenForRow(row);
+  if (token) return isTokenFullyPaid(token);
+
+  // 最後の保険
+  return !!row.is_paid;
+}
+
 // レンダリング
 function renderRows(rows, columns){
   const thead = document.querySelector('#grid thead');
   const tbody = document.querySelector('#grid tbody');
   const keyword = (q.value || '').trim().toLowerCase();
 
-thead.innerHTML = '<tr>' + columns.map(c => `<th>${escapeHtml(labelOf(c))}</th>`).join('') + '</tr>';
+  thead.innerHTML = '<tr>' + columns.map(c => `<th>${escapeHtml(labelOf(c))}</th>`).join('') + '</tr>';
 
   let filtered = rows;
-  if (keyword) filtered = rows.filter(r => JSON.stringify(r).toLowerCase().includes(keyword));
-  if (paidOnly.checked && filtered.length && Object.prototype.hasOwnProperty.call(filtered[0], 'is_paid')) {
-    // is_paid は表示時に単株基準へ差し替えるので、このフィルタは描画内で判定
+
+  // 検索フィルタ
+  if (keyword) {
+    filtered = filtered.filter(r => JSON.stringify(r).toLowerCase().includes(keyword));
+  }
+
+  // ★ 支払い済みだけ表示：行ごとにフィルタ（ここが本命）
+  if (paidOnly.checked) {
+    filtered = filtered.filter(r => isRowPaid(r));
   }
 
   tbody.innerHTML = filtered.map(row => {
@@ -348,6 +374,7 @@ thead.innerHTML = '<tr>' + columns.map(c => `<th>${escapeHtml(labelOf(c))}</th>`
 
       // is_paid（表示と挙動を単株基準に統一）
       if (col === 'is_paid') {
+
         // 1) 単株行（unit_id があれば1株単位更新）
         if ((row.unit_id || row.unitId) && (currentView === 'v_shipping_picklist_each_unit' || currentView === 'v_shipping_picklist_by_person')) {
           const unitId  = row.unit_id || row.unitId;
@@ -357,24 +384,20 @@ thead.innerHTML = '<tr>' + columns.map(c => `<th>${escapeHtml(labelOf(c))}</th>`
             <div><input type="checkbox" ${checked} onchange="toggleUnitPaid('${escapeAttr(unitId)}', this.checked)"></div>
           </td>`;
         }
-        
-          if (currentView === 'v_shipping_picklist_by_person') {
-    const q  = Number(row.quantity ?? row.qty ?? 0);
-    const qp = Number(row.quantity_paid ?? 0);
-    const fully = q > 0 ? (qp >= q) : !!v; // 数量が取れないときは元の値でフォールバック
-    if (paidOnly.checked && !fully) return `<td style="display:none"></td>`;
-    return `<td><label class="badge ${fully ? 'paid':'unpaid'}">${fully ? '支払い済み':'未払い'}</label></td>`;
-  }
 
+        // 2) 発送仕分け（人別）：quantity_paid >= quantity で支払い済み表示
+        if (currentView === 'v_shipping_picklist_by_person') {
+          const q  = Number(row.quantity ?? row.qty ?? 0);
+          const qp = Number(row.quantity_paid ?? 0);
+          const fully = q > 0 ? (qp >= q) : !!v;
+          return `<td><label class="badge ${fully ? 'paid':'unpaid'}">${fully ? '支払い済み':'未払い'}</label></td>`;
+        }
 
-
-        // 2) 注文ヘッダ行（基本情報/入金確認/宛名）：トークンが全株支払い済みならON
+        // 3) 注文ヘッダ行（基本情報/入金確認/宛名）：トークンが全株支払い済みならON
         const token = tokenForRow(row);
         const fully = token ? isTokenFullyPaid(token) : !!v;
         const checked = fully ? 'checked' : '';
         const disabled = token ? '' : 'disabled';
-        // paidOnly フィルタ（表示側）対応
-        if (paidOnly.checked && !fully) return `<td style="display:none"></td>`;
 
         return `<td>
           <label class="badge ${fully ? 'paid':'unpaid'}">${fully ? '支払い済み':'未払い'}</label>
@@ -388,11 +411,12 @@ thead.innerHTML = '<tr>' + columns.map(c => `<th>${escapeHtml(labelOf(c))}</th>`
       }
 
       const nowrap = (col.includes('address'))
-  ? 'style="white-space:normal; max-width:280px;"' : '';
+        ? 'style="white-space:normal; max-width:280px;"' : '';
       return `<td ${nowrap}>${escapeHtml(v)}</td>`;
     }).join('') + '</tr>';
   }).join('');
 }
+
 // ===== 列ラベルの日本語化（英名カラム→表示名） =====
 const COL_JA = {
   order_token: 'トークン',
@@ -433,30 +457,29 @@ const COL_JA = {
   unit_id: 'ユニットID'
 };
 function labelOf(col){ return COL_JA[col] || col; }
+
 // ユーティリティ
 function escapeHtml(v){
   if (v === null || v === undefined) return '';
   return String(v).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
 }
 function escapeAttr(v){ return String(v).replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+
 // ===== 共通ソートユーティリティ =====
 const NEW_FIRST = true; // ★ 新しい順（上に来る）
 
 function toTime(v){
   if (!v) return 0;
-  // "YYYY-MM-DD HH:mm:ss" でも安全に Date.parse できるように
   const t = Date.parse(String(v).replace(' ', 'T'));
   return Number.isNaN(t) ? 0 : t;
 }
-
 function getSortTime(row){
-  // 並びの優先キー（存在するものを使用）
-  // created_at → first_order_at → paid_at → updated_at の順
   return toTime(row.created_at || row.first_order_at || row.paid_at || row.updated_at);
 }
-
 function formatDate(v){
-  try{ const d = new Date(v); if (isNaN(d)) return v;
+  try{
+    const d = new Date(v);
+    if (isNaN(d)) return v;
     const z = n => String(n).padStart(2,'0');
     return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}`;
   }catch(_){ return v; }
