@@ -854,7 +854,7 @@ app.post("/api/admin/send/shipped", adminAuth, async (req, res) => {
         if (trackingNo) {
           const m = shipMethod;
           if (/ヤマト|クロネコ|宅急便/i.test(m)) {
-            trackingUrl = `https://track.kuronekoyamato.co.jp/tracking?number=${encodeURIComponent(trackingNo)}`;
+            trackingUrl = `https://toi.kuronekoyamato.co.jp/cgi-bin/tneko`;
           } else if (/日本郵便|ゆうパック|ゆうメール|郵便/i.test(m)) {
             trackingUrl = `https://trackings.post.japanpost.jp/services/srv/search/direct?reqCodeNo1=${encodeURIComponent(trackingNo)}`;
           } else if (/佐川|SG/i.test(m)) {
